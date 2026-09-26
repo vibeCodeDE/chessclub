@@ -1,0 +1,91 @@
+:root {
+  --ink: #1a1a2e;
+  --accent: #0f3460;
+  --bg: #f7f7f9;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  color: #fff;
+}
+
+.brand {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.nav-toggle summary {
+  cursor: pointer;
+  font-size: 1.5rem;
+  list-style: none;
+}
+
+.nav-toggle summary::-webkit-details-marker { display: none; }
+
+.nav-toggle nav {
+  position: absolute;
+  right: 1rem;
+  top: 3.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--accent);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 0.75rem;
+  min-width: 10rem;
+  z-index: 10;
+}
+
+.nav-toggle nav a {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.35rem 0.5rem;
+}
+
+.nav-toggle nav a:hover { background: rgba(255, 255, 255, 0.15); }
+
+@media (min-width: 48rem) {
+  .nav-toggle summary { display: none; }
+  .nav-toggle nav {
+    position: static;
+    flex-direction: row;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    min-width: 0;
+  }
+}
+
+.container {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.table-wrap { overflow-x: auto; }
+
+.site-footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: #666;
+}

@@ -1,0 +1,173 @@
+# PRD: Schachvereins-Software
+
+**Status:** Freigegeben v1.1 — Antworten auf Offene Fragen eingearbeitet
+**Datum:** 2026-09-26
+
+---
+
+## 1. Ziel & Zielgruppe
+
+**Was bauen wir?** Eine selbst gehostete Web-Software für einen Schachverein (< 200 Mitglieder), die die Vereinsverwaltung zentral abbildet: Mitglieder, Beiträge, Turniere, Spielbetrieb, Kommunikation und Buchhaltung.
+
+**Für wen?**
+
+| Persona | Rolle | Hauptbedürfnis |
+|---|---|---|
+| Vorstand (Kassenwart, Schriftführer, 1. Vorsitzender) | Admin | Volle Übersicht, DSGVO-konforme Verwaltung, wenig Aufwand |
+| Mannschaftskapitän | Mitarbeiter | Aufstellung melden, Ergebnisse erfassen |
+| Mitglied | Leser/Bearbeiter eigener Daten | Beitragsstand, Anmeldung zu Turnieren, eigene Daten einsehen |
+| Öffentlichkeit (optional) | Gast | Turniertermine, Ergebnisse, Beitrittsinfo |
+
+**Erfolg bedeutet:** Der Vorstand kann Mitglieder, Beiträge und Turniere ohne Excel-Dateien und ohne Zusatztools pflegen; alle Daten liegen DSGVO-konform auf eigener Infrastruktur.
+
+---
+
+## 2. Plattform & Rahmenbedingungen
+
+- **Typ:** Web-App, selbst gehostet (Vereinsserver oder kleiner Host beim deutschen Anbieter)
+- **Sprache:** Deutsch (UI und Daten)
+- **Skalierung:** Single-Tenant, eine Vereinsdatenbank, ≤ 200 Mitglieder, ≤ 20 gleichzeitige Nutzer
+- **Harte Anforderung:** DSGVO — Datenhaltung ausschließlich in der EU/DE, Lösch- und Auskunftspflichten abbildbar, Protokollierung von Zugriffen auf Personendaten
+- **Interop:** Ergebnisexport/-import in gängigen Formaten (z. B. ChessResults-tauglicher CSV-/Textexport) — kein Zwang zu einem Fremdsystem
+
+### Tech-Stack (bestätigt)
+
+- **Backend:** Django (Python) — Admin-Oberfläche, Auth, CSRF, ORM; der Vorstand braucht kein Framework-Wissen, die meiste Pflege läuft über Djangos fertige Admin-Oberfläche
+- **Datenbank:** PostgreSQL
+- **Frontend:** Server-seitig gerendert (Django Templates + Tailwind) — keine getrennte SPA nötig
+- **Deployment:** Docker Compose (App + DB + Backups) auf vereinseigenem Server, TLS via Reverse Proxy
+- **Website:** keine vorhandene — die App ist die öffentliche Präsenz (Startseite mit News/Terminen)
+
+---
+
+## 3. Funktionale Anforderungen
+
+Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
+
+### 3.1 Mitgliederverwaltung (M)
+
+- M1.1 Stammprofil: Name, Geburtsdatum, Anschrift, E-Mail, Telefon, Eintritts-/Austrittsdatum
+- M1.2 Rollen & Berechtigungen: Admin (Vorstand), Kapitän, Mitglied, Gast
+- M1.3 Mitgliederstatus: aktiv, passiv, ausgetreten (historisiert — kein Löschen, sondern Deaktivieren)
+- M1.4 Selbstbedienung: Mitglied sieht eigene Daten und reicht **Änderungswünsche** ein; Admin prüft und gibt frei (kein direktes Editieren)
+- M1.5 Listen: Filter/Suche, CSV-Export (kein Altbestand vorhanden → kein Import nötig)
+- M1.6 Sonstige Personen: Förderer/ehemalige Mitglieder als passive Einträge
+
+### 3.2 Beitragsverwaltung (M)
+
+- M2.1 Beitragssätze konfigurierbar (z. B. Erwachsene, Jugendliche, Familien, ermäßigt)
+- M2.2 Jährliche Beitragsläufe: automatische Rechnungsstellung für alle aktiven Mitglieder
+- M2.3 SEPA-Mandate: Mandat je Mitglied verwalten (Referenz, Datum, Status); Einzug erfolgt **bankseitig manuell** durch den Verein — die Software erfasst nur Mandat + Zahlungsstatus, **kein** automatisierter Einzug über Banking-API
+- M2.3b Zahlungserfassung alternativ: Überweisung und Barzahlung manuell buchen
+- M2.4 Mahnwesen: automatische offene-Beitrags-Übersicht, Mahnbrief als PDF
+- M2.5 Kassenbuch-Sicht: Zahlungen je Mitglied, Jahresübersicht für den Kassenbericht
+
+### 3.3 Turniere & Ergebnisse (M/S)
+
+- M3.1 Turnier anlegen: Datum, Ort, Format (Schweizer/Reihenfolge/Rapid/Blitz), Anmeldeschluss
+- M3.2 Anmeldung: öffentlich oder für Mitglieder, Startgeld-Status
+- M3.3 Ergebniserfassung: Rundeneingabe, automatische Zwischenwertung (Schweizer System)
+- S3.4 Paarungen: automatische Paarung nach Schweizer System (z. B. Bibliothek/Matcher)
+- S3.5 Export: Ergebnisliste drucken + Export für ChessResults-Import
+- K3.6 DSB-Meldeformate
+
+### 3.4 Spielbetrieb / Mannschaften (M/S)
+
+- M4.1 Mannschaften anlegen (1. Mannschaft, 2. Mannschaft, Jugend)
+- M4.2 Ligaspiele: Termine, Gegner, Heim/Auswärts
+- M4.3 Aufstellung: Kapitän trägt Aufstellung ein, Fristenverwaltung
+- M4.4 Ergebnisse je Liga-Match (Einzelbretter → Mannschaftsergebnis)
+- S4.5 automatische Tabellenberechnung je Liga
+
+### 3.5 Kommunikation (M/S)
+
+- M5.1 Ankündigungen/News im Portal (mit Archiv)
+- M5.2 E-Mail-Versand an Mitglieder-/Gruppenverteilung (opt-in-Status je Person)
+- S5.3 Newsletter-Routine (quartalsweise), Versandprotokoll
+- K5.4 SMS/E-Mail-Erinnerungen an Turniertermine
+
+### 3.6 Buchhaltung (S)
+
+- S6.1 Einnahmen/Ausgaben-Kassenbuch mit Kategorien
+- S6.2 Beleg-/Bezeichnungsfelder pro Buchung, Jahresabschlussansicht (CSV-Export für Steuerberater)
+- K6.3 Anbindung an DATEV-Export
+- **Abgrenzung:** keine vollständige Buchhaltungssoftware — Finanzamt-Export reicht als Schnittstelle
+
+### 3.7 Gemeinsame Anforderungen
+
+- M7.1 Dashboard: offene Beiträge, anstehende Termine, letzte Anmeldungen
+- M7.2 Rollenbasierte Navigation (Menüs je Rolle)
+- M7.3 Audit-Log: wer hat Personendaten wann geändert (DSGVO-Nachweis)
+
+---
+
+## 4. Nicht-funktionale Anforderungen
+
+### 4.1 DSGVO (harte Anforderung)
+
+- N1.1 Datenhaltung nur in EU/DE; keine Drittanbieter-Tracker, kein externes CDN
+- N1.2 Auskunftsanfragen: personenbezogene Daten eines Mitglieds als PDF exportierbar
+- N1.3 Löschpfrecht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Steuer-/Aufbewahrungsfristen beachten)
+- N1.4 Verzeichnis von Verarbeitungstätigkeiten: Maschinenlesbare Exportfunktion der Datenkategorien
+- N1.5 Protokollierung von Logins und Zugriffen auf Personendaten (mindestens 12 Monate)
+- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S)
+
+### 4.2 Sonstige NFR
+
+- N2.1 **Verfügbarkeit:** 99 % im Vereinsalltag; nächtliches automatisches Backup, Wiederherstellungstest dokumentiert
+- N2.2 **Performance:** Seitenladen < 1 s im LAN/DSL; Suchergebnisse < 500 ms
+- N2.3 **Bedienbarkeit:** Tablet-tauglich (Aufstellung am Spieltag), Barrierefreiheit mind. WCAG 2.1 AA bei Kernflächen
+- N2.6 **Mobil:** Alle Kernflächen funktionieren ab 360 px Breite (Responsive, Mobile-First-Layout); Navigation als Burger-Menü; Tabellen scrollbar statt zerbrochen
+- N2.7 **Installierbarkeit (PWA):** App lässt sich auf Homescreen/Startmenü installieren (Web-App-Manifest + Service Worker), öffnet sich in eigenem Fenster ohne Browser-Chrome, Icons für iOS/Android; Basis-Offline-Anzeige der Startseite/letzten News
+- N2.4 **Wartbarkeit:** Updatepfad per `docker compose pull`; Datenmigrationen versioniert
+- N2.5 **Beobachtbarkeit:** strukturierte Logs, Fehlerbenachrichtigung an Admin-E-Mail
+
+---
+
+## 5. Nicht im Scope (v1)
+
+- Multi-Tenant / mehrere Vereine in einer Instanz
+- Native Mobile-Apps im App Store (PWA-Installation genügt — kein Store-Review, kein zweiter Codestand)
+- Vollständige Finanzbuchhaltung / DATEV-Buchführung
+- Livestream/Streaming, Spielpaarungs-Server für Online-Schach
+- Integration in DSB-Mitgliedschaftsportale (nur Export)
+
+---
+
+## 6. Meilensteine
+
+| M | Inhalt | Abnahme |
+|---|---|---|
+| M1 | Auth, Rollen, Mitgliederstammdaten, Änderungswunsch-Workflow | Vorstand legt Mitglieder an, Änderungswunsch-Testlauf |
+| M2 | Beitragsläufe, Zahlungserfassung, Mahnung, Dashboard | Jahresbeitragslauf als Testlauf komplett |
+| M3 | Mannschaften, Aufstellung, Ligaspiele | Beispielspiel Erfassen + Tabelle |
+| M4 | Turniere inkl. Anmeldung & Schweizer Paarung | Testturnier über 3 Runden gespielt |
+| M5 | Kommunikation (News + E-Mail), Kassenbuch | Testversand an Gruppe, Kassenexport |
+| M6 | DSGVO-Härte: Export/Löschfristen/Audit, Backups, 2FA | DSGVO-Checkliste abgehakt |
+| M7 | Mobil: Responsive-Feinschliff + PWA-Installation (iOS/Android) | App auf Homescreen installiert, 360-px-Check bestanden |
+
+---
+
+## 7. Erfolgskriterien
+
+- Beitragslauf für 150 Mitglieder in < 10 Minuten erstellt und exportiert
+- Keine Excel-Dateien mehr für Mitglieder oder Beiträge als primäre Quelle
+- Turnierergebnisse nach letzten Runden in < 2 Minuten erfasst und veröffentlicht
+- Startseite und Anmeldung funktionieren auf dem Smartphone (getestet auf 360 px) und lassen sich als App auf dem Homescreen installieren
+- Auskunftsanfrage eines Mitglieds: ein Klick → vollständiges PDF
+- Wiederherstellung aus Backup erfolgreich getestet innerhalb von 4 h
+- Kassenbericht für den Vorstand ohne Nachbearbeitung erstellbar
+
+---
+
+## 8. Offene Fragen — erledigt
+
+| # | Frage | Entscheidung |
+|---|---|---|
+| 1 | Tech-Stack | **Django** bestätigt; Nutzer ist neu mit Django → App soll möglichst über Djangos Admin + einfache Views abgebildet werden, Wartungsdoku im Repo |
+| 2 | SEPA-Einzug | **Kein echter automatisierter Einzug** — Software verwaltet Mandate und Zahlungsstatus, Einzug manuell bankseitig |
+| 3 | Selbstbedienung | **Änderungswunsch-Workflow**, kein direktes Editieren |
+| 4 | Bestehende Website | **Keine** — App liefert auch die öffentliche Startseite |
+| 5 | Hosting | **Selbst gehostet** durch den Verein (Docker Compose) |
+| 6 | Altbestand | **Keiner** — keine CSV-Importfunktion nötig |
+| 7 | Beitragseinzug | Beiträge werden **per SEPA-Lastschrift** eingezogen (bankseitig, manuell) |
