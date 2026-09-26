@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Anmelden – Schachverein{% endblock %}
+
+{% block content %}
+<h1>Anmelden</h1>
+<form method="post" class="auth-form">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <p class="form-error">{{ form.non_field_errors }}</p>
+  {% endif %}
+  {% for field in form %}
+    <p>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    </p>
+  {% endfor %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <button type="submit">Anmelden</button>
+</form>
+<p><a href="{% url 'core:password_reset' %}">Passwort vergessen?</a></p>
+{% endblock %}

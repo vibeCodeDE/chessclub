@@ -13,8 +13,15 @@
     <details class="nav-toggle">
       <summary aria-label="Menü öffnen">☰</summary>
       <nav>
-        <a href="/">Startseite</a>
-        <a href="/admin/">Anmelden</a>
+        {% for link in nav_links %}
+          <a href="{{ link.url }}">{{ link.label }}</a>
+        {% endfor %}
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'core:logout' %}">
+            {% csrf_token %}
+            <button type="submit">Abmelden</button>
+          </form>
+        {% endif %}
       </nav>
     </details>
   </header>
