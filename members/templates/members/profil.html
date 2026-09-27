@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Mein Profil – Schachverein{% endblock %}
+
+{% block content %}
+<h1>Mein Profil</h1>
+
+{% if not member %}
+<p>Für dieses Konto ist kein Mitgliedsprofil hinterlegt. Wende dich an die Vorstandschaft, wenn das nicht stimmt.</p>
+{% else %}
+<p><span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span></p>
+
+<dl>
+  <dt>Name</dt>
+  <dd>{{ member.nachname }}, {{ member.vorname }}</dd>
+  <dt>Geburtsdatum</dt>
+  <dd>{{ member.geburtsdatum|date:"d.m.Y"|default:"—" }}</dd>
+  <dt>Anschrift</dt>
+  <dd>
+    {% if member.strasse %}{{ member.strasse }}, {% endif %}{{ member.plz }} {{ member.ort }}
+    {% if not member.strasse and not member.plz and not member.ort %}—{% endif %}
+  </dd>
+  <dt>E-Mail</dt>
+  <dd>{% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% else %}—{% endif %}</dd>
+  <dt>Telefon</dt>
+  <dd>{{ member.telefon|default:"—" }}</dd>
+  <dt>Eintrittsdatum</dt>
+  <dd>{{ member.eintrittsdatum|date:"d.m.Y" }}</dd>
+</dl>
+
+<h2>Änderungswunsch einreichen</h2>
+<p>Deine Stammdaten ändern wir nicht direkt. Reiche einen Wunsch ein – die Vorstandschaft prüft und gibt ihn frei.</p>
+
+<form method="post" action="{% url 'members:profil' %}" class="auth-form">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <p>
+    <label for="{{ form.feld.id_for_label }}">{{ form.feld.label }}</label>
+    {{ form.feld }}
+    {% for error in form.feld.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+  </p>
+  <p>
+    <label for="{{ form.wunschwert.id_for_label }}">{{ form.wunschwert.label }}</label>
+    {{ form.wunschwert }}
+    {% for error in form.wunschwert.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+  </p>
+  <button type="submit">Änderungswunsch einreichen</button>
+</form>
+
+<h2>Meine Änderungswünsche</h2>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Feld</th>
+        <th>Wunschwert</th>
+        <th>Status</th>
+        <th>Eingereicht</th>
+        <th>Entscheidung</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for change_request in change_requests %}
+        <tr>
+          <td>{{ change_request.get_feld_display }}</td>
+          <td>{{ change_request.wunschwert }}</td>
+          <td><span class="badge badge-{{ change_request.status }}">{{ change_request.get_status_display }}</span></td>
+          <td>{{ change_request.eingereicht_am|date:"d.m.Y H:i" }}</td>
+          <td>
+            {% if change_request.entschieden_am %}
+              {{ change_request.get_status_display }} am {{ change_request.entschieden_am|date:"d.m.Y H:i" }}
+              von {{ change_request.entschieden_von|default:"—" }}
+              {% if change_request.kommentar %}<br><em>{{ change_request.kommentar }}</em>{% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5">Noch keine Änderungswünsche eingereicht.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

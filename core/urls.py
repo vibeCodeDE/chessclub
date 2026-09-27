@@ -8,7 +8,6 @@ app_name = "core"
 urlpatterns = [
     path("", views.home, name="home"),
     path("health/", views.health, name="health"),
-    path("profil/", views.profil, name="profil"),
     path(
         "anmelden/",
         auth_views.LoginView.as_view(template_name="registration/login.html"),

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Änderungswünsche – Schachverein{% endblock %}
+
+{% block content %}
+<h1>Änderungswünsche</h1>
+<p>{{ open_count }} offene Wünsche. Erst die Freigabe überträgt den Wert ins Stammdatenblatt.</p>
+
+<h2>Offen</h2>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Mitglied</th>
+        <th>Feld</th>
+        <th>Aktuell</th>
+        <th>Gewünscht</th>
+        <th>Eingereicht</th>
+        <th>Aktion</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for change_request in open_requests %}
+        <tr>
+          <td><a href="{% url 'members:member_detail' change_request.member.pk %}">{{ change_request.member }}</a></td>
+          <td>{{ change_request.get_feld_display }}</td>
+          <td>{{ change_request.aktueller_wert|default:"—" }}</td>
+          <td>{{ change_request.wunschwert }}</td>
+          <td>
+            {{ change_request.eingereicht_am|date:"d.m.Y H:i" }}
+            {% if change_request.eingereicht_von %}<br>von {{ change_request.eingereicht_von }}{% endif %}
+          </td>
+          <td>
+            <form class="inline-form" method="post" action="{% url 'members:change_request_approve' change_request.pk %}">
+              {% csrf_token %}
+              <button type="submit">Freigeben</button>
+            </form>
+            <form class="inline-form" method="post" action="{% url 'members:change_request_reject' change_request.pk %}">
+              {% csrf_token %}
+              <input type="text" name="kommentar" maxlength="500" placeholder="Grund (optional)" aria-label="Ablehnungsgrund">
+              <button type="submit" class="secondary">Ablehnen</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6">Keine offenen Änderungswünsche.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Entschieden</h2>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Mitglied</th>
+        <th>Feld</th>
+        <th>Gewünscht</th>
+        <th>Status</th>
+        <th>Eingereicht</th>
+        <th>Entscheidung</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for change_request in decided_requests %}
+        <tr>
+          <td><a href="{% url 'members:member_detail' change_request.member.pk %}">{{ change_request.member }}</a></td>
+          <td>{{ change_request.get_feld_display }}</td>
+          <td>{{ change_request.wunschwert }}</td>
+          <td><span class="badge badge-{{ change_request.status }}">{{ change_request.get_status_display }}</span></td>
+          <td>{{ change_request.eingereicht_am|date:"d.m.Y H:i" }}</td>
+          <td>
+            {{ change_request.entschieden_am|date:"d.m.Y H:i" }}
+            von {{ change_request.entschieden_von|default:"—" }}
+            {% if change_request.kommentar %}<br><em>{{ change_request.kommentar }}</em>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6">Noch keine Entscheidungen getroffen.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

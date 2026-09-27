@@ -6,7 +6,7 @@ Details & Akzeptanzkriterien: `tasks/plan.md` · Spez: `docs/prd.md`
 - [x] T1: Projekt-Scaffold + Docker (Django, Postgres, Compose, Basis-Template mobile-first ab 360 px) — Verify: `docker compose up` + `pytest` + 360/768/1280 px Check ✅ 3 Tests grün, Screenshots geprüft
 - [x] T2: Auth, Rollen (admin/kapitaen/mitglied), rollenbasierte Navigation — Verify: `pytest core/` ✅ 20+ Tests grün, Login/Logout/Reset + Menüs per DOM verifiziert, Abweisung per 403/Redirect-Tests (`core/tests/test_access.py`)
 - [x] T3: Mitgliederstammdaten + Admin + Liste/Filter — Verify: `pytest members/` ✅ 33 Tests grün, Admin anlegen/suchen/filtern (kein Delete), Statuswechsel historisiert, Detail + CSV-Export, Layout 360/1280 px geprüft
-- [ ] T4: Selbstbedienung + Änderungswunsch-Workflow (Admin-Freigabe) — Verify: `pytest members/`
+- [x] T4: Selbstbedienung + Änderungswunsch-Workflow (Admin-Freigabe) — Verify: `pytest members/` ✅ 27 neue Tests (`members/tests/test_selfservice.py`), 85 grün gesamt; Workflow im Browser durchklickt (Einreichung → Freigabe/Ablehnung → Audit-Eintrag), Layout 360/1280 px ohne Overflow; **Hinweis für T5:** `core/models.py` mit `AuditLog` existiert schon (Freigabe/Ablehnung schreibt Einträge) – T5 ergänzt Signale (Stammdaten + Login) + Admin-Ansicht darauf; Nav-Eintrag `members:change_request_list`; Profil liegt in `members` (`/profil/`), nicht mehr in `core`
 - [ ] T5: Audit-Log + Login-Protokoll — Verify: `pytest core/`
 - [ ] ☑ Checkpoint 1: Rollen-Flow manuell, alle Tests grün, Review
 

@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -118,3 +118,94 @@ class MemberStatusChange(models.Model):
 
     def __str__(self):
         return f"{self.member}: {self.von} → {self.nach}"
+
+
+# PRD M1.4: Mitglieder ändern nichts direkt, sondern reichen Wünsche für
+# genau diese Felder ein; alles andere (Status, Daten, Beträge) bleibt Admin-Sache.
+EDITABLE_FIELDS = {
+    "strasse": "Straße/Nr.",
+    "plz": "PLZ",
+    "ort": "Ort",
+    "email": "E-Mail",
+    "telefon": "Telefon",
+}
+
+
+def clean_member_value(feld, value):
+    """Validiert ``value`` als neuen Wert für das Mitgliedsfeld ``feld``.
+
+    Gibt den bereinigten Wert zurück, sonst :class:`ValidationError`.
+    """
+    if feld not in EDITABLE_FIELDS:
+        raise ValidationError({"feld": "Für dieses Feld sind keine Änderungswünsche möglich."})
+    try:
+        model_field = Member._meta.get_field(feld)
+    except FieldDoesNotExist:
+        raise ValidationError({"feld": "Unbekanntes Feld."})
+    try:
+        return model_field.clean(value, None)
+    except ValidationError as exc:
+        raise ValidationError({"wunschwert": exc.messages})
+
+
+class ChangeRequest(models.Model):
+    """Änderungswunsch eines Mitglieds (PRD M1.4).
+
+    Ohne Freigabe durch die Vorstand bleibt das Stammdatum unangetastet;
+    erst die Freigabe überträgt den Wert und schreibt einen Audit-Eintrag.
+    """
+
+    class Status(models.TextChoices):
+        EINGEREICHT = "eingereicht", "Eingereicht"
+        FREIGEGEBEN = "freigegeben", "Freigegeben"
+        ABGELEHNT = "abgelehnt", "Abgelehnt"
+
+    member = models.ForeignKey(
+        Member,
+        verbose_name="Mitglied",
+        on_delete=models.CASCADE,
+        related_name="change_requests",
+    )
+    feld = models.CharField("Feld", max_length=20, choices=list(EDITABLE_FIELDS.items()))
+    wunschwert = models.CharField("Wunschwert", max_length=200)
+    status = models.CharField(
+        "Status",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.EINGEREICHT,
+    )
+    eingereicht_von = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Eingereicht von",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="change_requests",
+    )
+    eingereicht_am = models.DateTimeField("Eingereicht am", auto_now_add=True)
+    entschieden_von = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Entschieden von",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="change_decisions",
+    )
+    entschieden_am = models.DateTimeField("Entschieden am", null=True, blank=True)
+    kommentar = models.CharField("Kommentar", max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["-eingereicht_am"]
+
+    def __str__(self):
+        return f"{self.member}: {self.get_feld_display()} → {self.wunschwert}"
+
+    @property
+    def aktueller_wert(self):
+        """Der derzeit im Stammdatenbestand stehende Wert (Anzeige im Review)."""
+        return str(getattr(self.member, self.feld, "") or "")
+
+    def clean(self):
+        super().clean()
+        if self.feld and self.wunschwert:
+            clean_member_value(self.feld, self.wunschwert)

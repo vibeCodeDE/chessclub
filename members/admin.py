@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Member, MemberStatusChange
+from .models import ChangeRequest, Member, MemberStatusChange
 
 
 class MemberStatusChangeInline(admin.TabularInline):
@@ -29,3 +29,29 @@ class MemberAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj._changed_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(ChangeRequest)
+class ChangeRequestAdmin(admin.ModelAdmin):
+    """Einsicht only – Freigabe/Ablehnung läuft ausschließlich über die UI (T4)."""
+
+    list_display = ("member", "feld", "wunschwert", "status", "eingereicht_am", "entschieden_von")
+    list_filter = ("status", "feld")
+    search_fields = ("member__nachname", "member__vorname", "wunschwert")
+    readonly_fields = (
+        "member",
+        "feld",
+        "wunschwert",
+        "status",
+        "eingereicht_von",
+        "eingereicht_am",
+        "entschieden_von",
+        "entschieden_am",
+        "kommentar",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

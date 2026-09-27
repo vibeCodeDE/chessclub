@@ -1,12 +1,19 @@
 import csv
 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
+from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
 
-from .models import Member
+from .forms import ChangeRequestForm
+from .models import ChangeRequest, Member, clean_member_value
 
 
 def _parse_filters(request):
@@ -93,3 +100,126 @@ def member_export(request):
             ]
         )
     return response
+
+
+@login_required
+def profil(request):
+    """Selbstbedienung: eigene Daten ansehen, Änderungswunsch einreichen (PRD M1.4)."""
+    member = Member.objects.filter(user=request.user).first()
+
+    if request.method == "POST":
+        form = ChangeRequestForm(request.POST, member=member)
+        if member is None:
+            messages.error(
+                request, "Für dieses Konto ist kein Mitgliedsprofil hinterlegt."
+            )
+        elif form.is_valid():
+            ChangeRequest.objects.create(
+                member=member,
+                feld=form.cleaned_data["feld"],
+                wunschwert=form.cleaned_data["wunschwert"],
+                eingereicht_von=request.user,
+            )
+            messages.success(
+                request,
+                "Änderungswunsch eingereicht – die Vorstandschaft prüft ihn.",
+            )
+            return redirect("members:profil")
+    else:
+        form = ChangeRequestForm(member=member)
+
+    context = {
+        "member": member,
+        "form": form,
+        "change_requests": member.change_requests.all() if member else [],
+    }
+    return render(request, "members/profil.html", context)
+
+
+@role_required(ADMIN_GROUP)
+def change_request_list(request):
+    open_requests = (
+        ChangeRequest.objects.filter(status=ChangeRequest.Status.EINGEREICHT)
+        .select_related("member", "eingereicht_von")
+        .order_by("eingereicht_am")
+    )
+    decided_requests = (
+        ChangeRequest.objects.exclude(status=ChangeRequest.Status.EINGEREICHT)
+        .select_related("member", "eingereicht_von", "entschieden_von")
+        .order_by("-eingereicht_am")
+    )
+    context = {
+        "open_requests": open_requests,
+        "decided_requests": decided_requests,
+        "open_count": open_requests.count(),
+    }
+    return render(request, "members/change_request_list.html", context)
+
+
+def _finish_decision(request, change_request, status, aktion, text):
+    change_request.status = status
+    change_request.entschieden_von = request.user
+    change_request.entschieden_am = timezone.now()
+    change_request.save()
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion=aktion,
+        text=text,
+        member=change_request.member,
+    )
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def change_request_approve(request, pk):
+    change_request = get_object_or_404(
+        ChangeRequest, pk=pk, status=ChangeRequest.Status.EINGEREICHT
+    )
+    member = change_request.member
+    try:
+        value = clean_member_value(change_request.feld, change_request.wunschwert)
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "Der Wunschwert kann nicht übernommen werden: " + " ".join(exc.messages),
+        )
+        return redirect("members:change_request_list")
+
+    label = change_request.get_feld_display()
+    old_value = str(getattr(member, change_request.feld) or "")
+    setattr(member, change_request.feld, value)
+    member.save()
+
+    _finish_decision(
+        request,
+        change_request,
+        ChangeRequest.Status.FREIGEGEBEN,
+        "Änderungswunsch freigegeben",
+        f"{member}: {label}: „{old_value}“ → „{value}“",
+    )
+    messages.success(
+        request, f"Änderungswunsch von {member} freigegeben und übernommen."
+    )
+    return redirect("members:change_request_list")
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def change_request_reject(request, pk):
+    change_request = get_object_or_404(
+        ChangeRequest, pk=pk, status=ChangeRequest.Status.EINGEREICHT
+    )
+    change_request.kommentar = request.POST.get("kommentar", "").strip()[:500]
+
+    _finish_decision(
+        request,
+        change_request,
+        ChangeRequest.Status.ABGELEHNT,
+        "Änderungswunsch abgelehnt",
+        f"{change_request.member}: {change_request.get_feld_display()} → "
+        f"„{change_request.wunschwert}“ (keine Übernahme)",
+    )
+    messages.info(
+        request, f"Änderungswunsch von {change_request.member} abgelehnt."
+    )
+    return redirect("members:change_request_list")
