@@ -132,6 +132,71 @@ body {
 
 .table-wrap { overflow-x: auto; }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.filter-bar input[type="text"],
+.filter-bar select {
+  padding: 0.5rem;
+  font: inherit;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.filter-bar button,
+.button-link {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.table-wrap table.data {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.table-wrap table.data th,
+.table-wrap table.data td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.table-wrap table.data th { background: #eef1f6; }
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: #e5e7eb;
+}
+
+.badge-aktiv { background: #d1fae5; color: #065f46; }
+.badge-passiv { background: #fef3c7; color: #92400e; }
+.badge-ausgetreten { background: #fee2e2; color: #991b1b; }
+
 .site-footer {
   text-align: center;
   padding: 1rem;

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}{{ member.nachname }}, {{ member.vorname }} – Schachverein{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'members:member_list' %}">← Zur Mitgliederliste</a></p>
+
+<h1>{{ member.vorname }} {{ member.nachname }}</h1>
+
+<p><span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span></p>
+
+<dl>
+  <dt>Geburtsdatum</dt>
+  <dd>{{ member.geburtsdatum|date:"d.m.Y"|default:"—" }}</dd>
+  <dt>Anschrift</dt>
+  <dd>
+    {% if member.strasse %}{{ member.strasse }}, {% endif %}{{ member.plz }} {{ member.ort }}
+    {% if not member.strasse and not member.plz and not member.ort %}—{% endif %}
+  </dd>
+  <dt>E-Mail</dt>
+  <dd>{% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% else %}—{% endif %}</dd>
+  <dt>Telefon</dt>
+  <dd>{{ member.telefon|default:"—" }}</dd>
+  <dt>Eintrittsdatum</dt>
+  <dd>{{ member.eintrittsdatum|date:"d.m.Y" }}</dd>
+  <dt>Austrittsdatum</dt>
+  <dd>{{ member.austrittsdatum|date:"d.m.Y"|default:"—" }}</dd>
+  <dt>Benutzerkonto</dt>
+  <dd>{{ member.user|default:"—" }}</dd>
+</dl>
+
+<h2>Statusverlauf</h2>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Wann</th>
+        <th>Von</th>
+        <th>Nach</th>
+        <th>Geändert von</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for change in status_history %}
+        <tr>
+          <td>{{ change.zeitpunkt|date:"d.m.Y H:i" }}</td>
+          <td>{{ change.get_von_display }}</td>
+          <td>{{ change.get_nach_display }}</td>
+          <td>{{ change.geaendert_von|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4">Noch keine Statusänderungen.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

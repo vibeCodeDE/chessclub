@@ -6,7 +6,7 @@ NAV_ITEMS = [
     ("core:home", "Startseite", {"gast", "mitglied", "kapitaen", "admin"}),
     ("core:login", "Anmelden", {"gast"}),
     ("core:profil", "Profil", {"mitglied", "kapitaen", "admin"}),
-    ("teams:team_list", "Mannschaften", {"kapitaen", "admin"}),
+    ("members:member_list", "Mitglieder", {"admin"}),
     ("admin:index", "Verwaltung", {"admin"}),
 ]
 

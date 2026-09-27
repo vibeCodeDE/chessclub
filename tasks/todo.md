@@ -4,8 +4,8 @@ Details & Akzeptanzkriterien: `tasks/plan.md` · Spez: `docs/prd.md`
 
 ## Phase 1: Fundament
 - [x] T1: Projekt-Scaffold + Docker (Django, Postgres, Compose, Basis-Template mobile-first ab 360 px) — Verify: `docker compose up` + `pytest` + 360/768/1280 px Check ✅ 3 Tests grün, Screenshots geprüft
-- [x] T2: Auth, Rollen (admin/kapitaen/mitglied), rollenbasierte Navigation — Verify: `pytest core/` ✅ 20 Tests grün, Login/Logout/Reset + Menüs per DOM verifiziert
-- [ ] T3: Mitgliederstammdaten + Admin + Liste/Filter — Verify: `pytest members/`
+- [x] T2: Auth, Rollen (admin/kapitaen/mitglied), rollenbasierte Navigation — Verify: `pytest core/` ✅ 20+ Tests grün, Login/Logout/Reset + Menüs per DOM verifiziert, Abweisung per 403/Redirect-Tests (`core/tests/test_access.py`)
+- [x] T3: Mitgliederstammdaten + Admin + Liste/Filter — Verify: `pytest members/` ✅ 33 Tests grün, Admin anlegen/suchen/filtern (kein Delete), Statuswechsel historisiert, Detail + CSV-Export, Layout 360/1280 px geprüft
 - [ ] T4: Selbstbedienung + Änderungswunsch-Workflow (Admin-Freigabe) — Verify: `pytest members/`
 - [ ] T5: Audit-Log + Login-Protokoll — Verify: `pytest core/`
 - [ ] ☑ Checkpoint 1: Rollen-Flow manuell, alle Tests grün, Review
@@ -19,7 +19,7 @@ Details & Akzeptanzkriterien: `tasks/plan.md` · Spez: `docs/prd.md`
 - [ ] ☑ Checkpoint 2: Beitragslauf-Jahr komplett, Review
 
 ## Phase 3: Spielbetrieb
-- [ ] T11: Mannschaften + Ligaspiele — Verify: `pytest teams/`
+- [ ] T11: Mannschaften + Ligaspiele — Verify: `pytest teams/` (NAV-Eintrag `teams:team_list` in `core/context_processors.py` wieder ergänzen)
 - [ ] T12: Aufstellung + Einzelergebnisse (Kapitän) — Verify: `pytest teams/`
 - [ ] T13: Tabellenberechnung — Verify: `pytest teams/`
 - [ ] ☑ Checkpoint 3: Testspiel komplett, Review

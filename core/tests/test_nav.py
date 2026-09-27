@@ -29,11 +29,16 @@ class NavTests(TestCase):
         self.assertNotIn("Verwaltung", content)
         self.assertNotIn("Anmelden", content)
 
-    def test_kapitaen_role_is_exposed(self):
+    def test_kapitaen_sees_profile_but_no_admin(self):
         make_user("kapit1", "kapitaen")
         self.client.login(username="kapit1", password="x")
         response = self.client.get("/")
+        content = response.content.decode()
         self.assertEqual(response.context["user_role"], "kapitaen")
+        self.assertIn("Profil", content)
+        self.assertNotIn("Verwaltung", content)
+        self.assertNotIn("Anmelden", content)
+        self.assertIn("Abmelden", content)
 
     def test_admin_sees_verwaltung(self):
         make_user("admin1", "admin")
