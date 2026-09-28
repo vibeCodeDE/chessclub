@@ -39,8 +39,14 @@ class Vereinsdaten(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Genau eine Zeile: ein zweiter Versuch landet auf pk=1 statt eine
-        # zweite, konkurrierende Konfiguration anzulegen.
+        """Erzwingt ``pk=1`` — Anlegen ist ausschließlich über :meth:`aktuell` erlaubt.
+
+        Nur ``aktuell()`` legt wirklich an. Ein frisch konstruierter Datensatz
+        hat keine ``force_insert``; mit dem erzwungenen ``pk=1`` würde sein
+        ``save()`` stillschweigend ein UPDATE auf den bestehenden Satz machen
+        und dabei den Namen überschreiben. ``objects.create()`` bricht in
+        derselben Lage wenigstens sichtbar mit ``IntegrityError`` ab.
+        """
         self.pk = 1
         super().save(*args, **kwargs)
 

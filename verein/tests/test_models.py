@@ -1,5 +1,6 @@
 """Vereinsdaten: genau ein Datensatz für Brief und spätere E-Mail (T10)."""
 
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from verein.models import Vereinsdaten
@@ -26,14 +27,43 @@ class VereinsdatenTests(TestCase):
     def test_der_name_ist_pflicht(self):
         from django.core.exceptions import ValidationError
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as fehler:
             Vereinsdaten(name="").full_clean()
+
+        # An das konkrete Feld binden: eine Verletzung an irgendeinem anderen
+        # Feld ließe diesen Test aus dem falschen Grund grün werden.
+        self.assertIn("name", fehler.exception.message_dict)
 
     def test_save_erzwingt_pk_eins(self):
         zweiter = Vereinsdaten.objects.create(name="Zweiter Versuch")
 
         self.assertEqual(zweiter.pk, 1)
         self.assertEqual(Vereinsdaten.objects.count(), 1)
+        self.assertEqual(Vereinsdaten.objects.get(pk=1).name, "Zweiter Versuch")
+
+    def test_save_ueberschreibt_den_einzigen_datensatz_still(self):
+        # Der gefährliche Pfad: save() setzt pk=1, aber ein frisch
+        # konstruierter Datensatz hat keine force_insert — statt zu scheitern
+        # überschreibt er den bestehenden Satz. Dieser Test hält fest, dass der
+        # Anlegeweg über save() (statt aktuell()) nicht vorgesehen ist.
+        Vereinsdaten.objects.create(name="Erster Versuch")
+
+        Vereinsdaten(name="Zweiter Versuch").save()
+
+        self.assertEqual(Vereinsdaten.objects.count(), 1)
+        self.assertEqual(Vereinsdaten.objects.get(pk=1).name, "Zweiter Versuch")
+
+    def test_create_auf_belegtem_pk_bricht_laut_ab(self):
+        Vereinsdaten.objects.create(name="Erster Versuch")
+
+        with self.assertRaises(IntegrityError):
+            # atomic(): der IntegrityError macht die TestCase-Transaktion
+            # unbrauchbar, sonst schlägt jede folgende Abfrage fehl.
+            with transaction.atomic():
+                Vereinsdaten.objects.create(name="Zweiter Versuch")
+
+        self.assertEqual(Vereinsdaten.objects.count(), 1)
+        self.assertEqual(Vereinsdaten.objects.get(pk=1).name, "Erster Versuch")
 
     def test_str_ist_der_name(self):
         datensatz = Vereinsdaten.objects.create(name="Schachverein Example")
