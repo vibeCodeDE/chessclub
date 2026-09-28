@@ -135,7 +135,7 @@ body {
   }
 }
 
-.container {
+.site-container {
   max-width: 60rem;
   margin: 0 auto;
   padding: 1rem;
@@ -251,10 +251,3 @@ body {
 }
 
 .inline-form button.secondary { background: #6b7280; }
-
-.site-footer {
-  text-align: center;
-  padding: 1rem;
-  font-size: 0.85rem;
-  color: #666;
-}

@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Schachverein{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
 </head>
 <body>
   <header class="site-header">
@@ -25,7 +26,7 @@
       </nav>
     </details>
   </header>
-  <main class="container">
+  <main class="site-container">
     {% if messages %}
       {% for message in messages %}
         <p class="alert alert-{{ message.tags }}">{{ message }}</p>
@@ -33,7 +34,7 @@
     {% endif %}
     {% block content %}{% endblock %}
   </main>
-  <footer class="site-footer">
+  <footer class="text-center p-4 text-[0.85rem] text-[#666]">
     <p>Schachvereins-Software</p>
   </footer>
   <script>

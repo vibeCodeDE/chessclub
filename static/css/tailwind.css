@@ -1,0 +1,2 @@
+/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+@layer theme{:root,:host{--spacing:.25rem}}@layer base,components;@layer utilities{.static{position:static}.block{display:block}.hidden{display:none}.p-4{padding:calc(var(--spacing) * 4)}.text-center{text-align:center}.text-\[0\.85rem\]{font-size:.85rem}.text-\[\#666\]{color:#666}}
