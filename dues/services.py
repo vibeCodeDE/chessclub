@@ -1,21 +1,27 @@
-"""Fachlogik der Beitragsverwaltung (PRD M2.2).
+"""Fachlogik der Beitragsverwaltung (PRD M2.2, M2.3, M2.4).
 
 Der Beitragslauf ist bewusst als Service und nicht als View-Logik umgesetzt:
 Planung (:func:`plan_lauf`) und Ausführung (:func:`fuehre_lauf`) brauchen
 dieselbe Regelbasis, und die Ausführung muss auch aus Tests und späteren
 Tasks (Export T10, Kassenbericht T11b) ohne HTTP-Kontext nutzbar sein.
+
+Dasselbe gilt für den Zahlungsstand: :func:`bezahlte_summe`, :func:`offen` und
+:func:`posten_mit_status` sind die einzige Quelle für „was ist noch offen“ —
+Postenliste, Zahlungsliste, Mahnwesen und Kassenbericht lesen dieselben Zahlen.
 """
 
 from dataclasses import dataclass, field
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 
 from core.models import AuditLog
 from members.models import Member
 
-from .models import FeeAmount, FeePost
+from .models import FeeAmount, FeePost, Payment, SepaMandate
 
 
 @dataclass
@@ -174,3 +180,107 @@ def fuehre_lauf(jahr, benutzer=None, passiv_einbezogen=False):
                 ),
             )
     return plan
+
+
+class PostenStatus(models.TextChoices):
+    """Zahlungsstand eines Postens — abgeleitet, nie gespeichert."""
+
+    UNBEZAHLT = "unbezahlt", "Unbezahlt"
+    TEILBEZAHLT = "teilbezahlt", "Teilbezahlt"
+    BEZAHLT = "bezahlt", "Bezahlt"
+    GUTSCHRIFT = "gutschrift", "Gutschrift"
+
+
+_BADGE = {
+    PostenStatus.UNBEZAHLT: "badge-unbezahlt",
+    PostenStatus.TEILBEZAHLT: "badge-offen",
+    PostenStatus.BEZAHLT: "badge-bezahlt",
+    PostenStatus.GUTSCHRIFT: "badge-gutschrift",
+}
+
+# Für Coalesce/Annotationen: ein Summenfeld über Zahlungen braucht einen Typ.
+_BETRAG = models.DecimalField(max_digits=12, decimal_places=2)
+
+# Name der Annotation — die Listen lesen damit die gezahlte Summe, ohne
+# je Posten nachzufragen.
+SUMME = "bezahlt_summe"
+
+
+def hat_sepa_mandat(member):
+    """Hat das Mitglied ein Mandat, das einen Einzug trägt (PRD M2.3)?"""
+    return SepaMandate.objects.filter(
+        member=member, status=SepaMandate.Status.AKTIV
+    ).exists()
+
+
+def bezahlte_summe(posten):
+    """Summe aller Zahlungen des Postens inklusive Stornos.
+
+    Nutzt eine vorhandene Annotation, damit Listen ohne N+1 auskommen; sonst
+    wird einmal nachsummiert (Weg aus Tests und Spät-Auswertungen).
+    """
+    vorberechnet = getattr(posten, SUMME, None)
+    if vorberechnet is not None:
+        return vorberechnet
+    return (
+        Payment.objects.filter(post=posten).aggregate(s=Sum("betrag"))["s"]
+        or Decimal("0.00")
+    )
+
+
+def offen(posten):
+    """Offener Betrag des Postens; negativ = Gutschrift.
+
+    Eine Überzahlung wird bewusst **nicht** gekappt: der überschießende Betrag
+    bleibt als offene Gutschrift sichtbar (T9-Acceptance).
+    """
+    return posten.betrag - bezahlte_summe(posten)
+
+
+def posten_status(posten):
+    """Zahlungsstatus aus Postenbetrag und gezahlter Summe."""
+    summe = bezahlte_summe(posten)
+    if summe > posten.betrag:
+        return PostenStatus.GUTSCHRIFT
+    if summe == posten.betrag:
+        return PostenStatus.BEZAHLT
+    if summe == 0:
+        return PostenStatus.UNBEZAHLT
+    return PostenStatus.TEILBEZAHLT
+
+
+def posten_mit_status(jahr):
+    """Posten eines Jahres mit Zahlungsstand — eine Abfrage, keine N+1.
+
+    Liefert Dicts, damit die Templates ohne weitere Logik auskommen.
+    """
+    posten = (
+        FeePost.objects.filter(jahr=jahr)
+        .select_related("member", "kategorie")
+        .annotate(
+            **{
+                SUMME: Coalesce(
+                    Sum("zahlungen__betrag"), Value(Decimal("0.00")), output_field=_BETRAG
+                )
+            }
+        )
+        .order_by("member__nachname", "member__vorname")
+    )
+    zeilen = []
+    for post in posten:
+        status = posten_status(post)
+        zeilen.append(
+            {
+                "post": post,
+                "member": post.member,
+                "kategorie": post.kategorie,
+                "jahr": post.jahr,
+                "betrag": post.betrag,
+                "bezahlt": post.bezahlt_summe,
+                "offen": post.betrag - post.bezahlt_summe,
+                "status": status,
+                "status_label": PostenStatus(status).label,
+                "status_klasse": _BADGE[status],
+            }
+        )
+    return zeilen

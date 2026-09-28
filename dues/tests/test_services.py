@@ -8,8 +8,16 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from dues.models import FeeAmount, FeeCategory, FeePost
-from dues.services import fuehre_lauf, plan_lauf
+from dues.models import FeeAmount, FeeCategory, FeePost, Payment, SepaMandate
+from dues.services import (
+    PostenStatus,
+    fuehre_lauf,
+    hat_sepa_mandat,
+    offen,
+    plan_lauf,
+    posten_mit_status,
+    posten_status,
+)
 from members.models import Member
 
 
@@ -281,3 +289,181 @@ class AuditTests(TestCase):
         self.assertEqual(
             self.audit_log.objects.filter(aktion="Beitragslauf ausgeführt").count(), 1
         )
+
+
+def make_post(jahr=2026, betrag="90.00"):
+    kategorie_ = FeeCategory.objects.get(code="erwachsene")
+    member = make_member(kategorie_)
+    return FeePost.objects.create(
+        member=member, jahr=jahr, kategorie=kategorie_, betrag=Decimal(betrag)
+    )
+
+
+class OffenerBetragTests(TestCase):
+    """Offener Betrag je Posten (PRD M2.3/M2.4) — Summe minus Postenbetrag."""
+
+    def setUp(self):
+        self.post = make_post()
+
+    def test_unbezahlter_posten_hat_den_vollen_betrag_offen(self):
+        self.assertEqual(offen(self.post), Decimal("90.00"))
+        self.assertEqual(posten_status(self.post), PostenStatus.UNBEZAHLT)
+
+    def test_teilzahlung(self):
+        Payment.objects.create(
+            post=self.post, betrag=Decimal("40.00"), art=Payment.Art.BAR
+        )
+
+        self.assertEqual(offen(self.post), Decimal("50.00"))
+        self.assertEqual(posten_status(self.post), PostenStatus.TEILBEZAHLT)
+
+    def test_vollstaendige_zahlung_ist_bezahlt(self):
+        Payment.objects.create(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.BAR
+        )
+
+        self.assertEqual(offen(self.post), Decimal("0.00"))
+        self.assertEqual(posten_status(self.post), PostenStatus.BEZAHLT)
+
+    def test_ueberzahlung_wird_als_gutschrift_angezeigt_und_nicht_gekappt(self):
+        """T9-Acceptance: eine Überzahlung bleibt sichtbar, sie wird nicht gekappt."""
+        Payment.objects.create(
+            post=self.post, betrag=Decimal("100.00"), art=Payment.Art.BAR
+        )
+
+        self.assertEqual(offen(self.post), Decimal("-10.00"))
+        self.assertEqual(posten_status(self.post), PostenStatus.GUTSCHRIFT)
+
+    def test_storno_stellt_den_offenen_betrag_wieder_her(self):
+        original = Payment.objects.create(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.BAR
+        )
+        Payment.objects.create(
+            post=self.post,
+            betrag=Decimal("-90.00"),
+            art=Payment.Art.BAR,
+            storno_von=original,
+        )
+
+        self.assertEqual(offen(self.post), Decimal("90.00"))
+        self.assertEqual(posten_status(self.post), PostenStatus.UNBEZAHLT)
+
+    def test_zwei_teilzahlungen_summieren(self):
+        Payment.objects.create(
+            post=self.post, betrag=Decimal("40.00"), art=Payment.Art.UEBERWEISUNG
+        )
+        Payment.objects.create(
+            post=self.post, betrag=Decimal("50.00"), art=Payment.Art.BAR
+        )
+
+        self.assertEqual(offen(self.post), Decimal("0.00"))
+        self.assertEqual(posten_status(self.post), PostenStatus.BEZAHLT)
+
+
+class PostenMitStatusTests(TestCase):
+    """Die Listen der Oberfläche brauchen Zahlungsstand ohne N+1."""
+
+    def setUp(self):
+        self.erwachsene = kategorie("erwachsene")
+
+    def _posten(self, anzahl, jahr=2026):
+        for i in range(anzahl):
+            member = make_member(self.erwachsene, nachname=f"Familie{i}")
+            FeePost.objects.create(
+                member=member, jahr=jahr, kategorie=self.erwachsene,
+                betrag=Decimal("90.00"),
+            )
+
+    def test_zeilen_enthalten_posten_und_zahlungsstand(self):
+        self._posten(2)
+        post = FeePost.objects.first()
+        Payment.objects.create(post=post, betrag=Decimal("90.00"), art=Payment.Art.BAR)
+
+        zeilen = posten_mit_status(2026)
+
+        self.assertEqual(len(zeilen), 2)
+        bezahlte = [zeile for zeile in zeilen if zeile["post"].pk == post.pk][0]
+        self.assertEqual(bezahlte["bezahlt"], Decimal("90.00"))
+        self.assertEqual(bezahlte["offen"], Decimal("0.00"))
+        self.assertEqual(bezahlte["status"], PostenStatus.BEZAHLT)
+        self.assertEqual(bezahlte["status_label"], "Bezahlt")
+        self.assertEqual(bezahlte["status_klasse"], "badge-bezahlt")
+
+    def test_uneinheitliche_posten_bekommen_ihren_eigenen_status(self):
+        self._posten(3)
+        posten = list(FeePost.objects.order_by("pk"))
+        Payment.objects.create(
+            post=posten[0], betrag=Decimal("90.00"), art=Payment.Art.BAR
+        )
+        Payment.objects.create(
+            post=posten[1], betrag=Decimal("40.00"), art=Payment.Art.BAR
+        )
+        Payment.objects.create(
+            post=posten[2], betrag=Decimal("100.00"), art=Payment.Art.BAR
+        )
+
+        status = {zeile["post"].pk: zeile["status"] for zeile in posten_mit_status(2026)}
+
+        self.assertEqual(
+            status,
+            {
+                posten[0].pk: PostenStatus.BEZAHLT,
+                posten[1].pk: PostenStatus.TEILBEZAHLT,
+                posten[2].pk: PostenStatus.GUTSCHRIFT,
+            },
+        )
+
+    def test_liste_kommt_mit_einer_abfrage_aus(self):
+        self._posten(5)
+        for post in FeePost.objects.all():
+            Payment.objects.create(
+                post=post, betrag=Decimal("90.00"), art=Payment.Art.BAR
+            )
+
+        with self.assertNumQueries(1):
+            zeilen = posten_mit_status(2026)
+            werte = [(zeile["offen"], zeile["status"]) for zeile in zeilen]
+
+        self.assertEqual(werte, [(Decimal("0.00"), PostenStatus.BEZAHLT)] * 5)
+
+    def test_anderes_jahr_bleibt_unberuehrt(self):
+        self._posten(1, jahr=2026)
+        self._posten(1, jahr=2027)
+
+        zeilen = posten_mit_status(2026)
+
+        self.assertEqual({zeile["jahr"] for zeile in zeilen}, {2026})
+
+
+class SepaMandatServiceTests(TestCase):
+    """Nur ein aktives Mandat erlaubt einen SEPA-Einzug (PRD M2.3)."""
+
+    def setUp(self):
+        self.member = make_member(kategorie("erwachsene"))
+
+    def test_ohne_mandat_ist_kein_einzug_moeglich(self):
+        self.assertFalse(hat_sepa_mandat(self.member))
+
+    def test_widerrufenes_und_beendetes_mandat_zaehlen_nicht(self):
+        SepaMandate.objects.create(
+            member=self.member, referenz="M-1",
+            status=SepaMandate.Status.WIDERRUFEN,
+        )
+        SepaMandate.objects.create(
+            member=self.member, referenz="M-2", status=SepaMandate.Status.BEENDET
+        )
+
+        self.assertFalse(hat_sepa_mandat(self.member))
+
+    def test_aktives_mandat_zaehlt(self):
+        SepaMandate.objects.create(
+            member=self.member, referenz="M-1", status=SepaMandate.Status.BEENDET
+        )
+        SepaMandate.objects.create(member=self.member, referenz="M-2")
+
+        self.assertTrue(hat_sepa_mandat(self.member))
+
+    def test_mandat_gilt_nur_fuer_das_eigene_mitglied(self):
+        SepaMandate.objects.create(member=self.member, referenz="M-1")
+
+        self.assertFalse(hat_sepa_mandat(make_member(kategorie("jugend"))))
