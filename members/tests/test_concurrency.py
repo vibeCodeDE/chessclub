@@ -74,4 +74,7 @@ class ConcurrentDecisionTests(TransactionTestCase):
         self.assertEqual(
             self.change_request.status, ChangeRequest.Status.FREIGEGEBEN
         )
-        self.assertEqual(AuditLog.objects.count(), 1)
+        # Ein Eintrag für die Stammdaten-Änderung, einer für die Freigabe.
+        self.assertEqual(
+            AuditLog.objects.filter(member=self.member).count(), 2
+        )

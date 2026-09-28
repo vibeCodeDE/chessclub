@@ -188,6 +188,7 @@ def change_request_approve(request, pk):
             )
             label = change_request.get_feld_display()
             old_value = str(getattr(member, change_request.feld) or "")
+            member._changed_by = request.user
             setattr(member, change_request.feld, value)
             member.save()
 

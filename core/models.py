@@ -6,7 +6,8 @@ class AuditLog(models.Model):
     """Nachvollziehbare Protokollierung sicherheitsrelevanter Aktionen.
 
     T4 schreibt den Eintrag bei der Freigabe eines Änderungswunschs;
-    T5 ergänzt Signale für Stammdaten-Änderungen und Login-Ereignisse.
+    T5 ergänzt Signale für Stammdaten-Änderungen (Wer, Was, Wann, Alt/Neu
+    in ``feld``/``alt_wert``/``neu_wert``) und Login-Ereignisse.
     """
 
     zeitpunkt = models.DateTimeField("Zeitpunkt", auto_now_add=True)
@@ -28,6 +29,9 @@ class AuditLog(models.Model):
         on_delete=models.SET_NULL,
         related_name="audit_logs",
     )
+    feld = models.CharField("Feld", max_length=30, blank=True)
+    alt_wert = models.CharField("Alter Wert", max_length=200, blank=True)
+    neu_wert = models.CharField("Neuer Wert", max_length=200, blank=True)
 
     class Meta:
         ordering = ["-zeitpunkt"]

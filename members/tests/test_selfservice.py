@@ -184,7 +184,8 @@ class ApprovalWorkflowTests(TestCase):
             wunschwert="030 999999",
             eingereicht_von=self.member_user,
         )
-        self.client.login(username="vorstand", password="x")
+        # force_login, damit kein Login-Audit-Eintrag die Count-Assertions trübt.
+        self.client.force_login(self.admin)
 
     def approve(self, pk=None, follow=False):
         return self.client.post(
@@ -214,13 +215,22 @@ class ApprovalWorkflowTests(TestCase):
     def test_approve_writes_audit_entry(self):
         self.approve()
 
-        audit = AuditLog.objects.get()
-        self.assertEqual(audit.aktion, "Änderungswunsch freigegeben")
+        audit = AuditLog.objects.get(aktion="Änderungswunsch freigegeben")
         self.assertEqual(audit.benutzer, self.admin)
         self.assertEqual(audit.member, self.member)
         self.assertIn("030 123456", audit.text)
         self.assertIn("030 999999", audit.text)
         self.assertIn("Meier, Anna", audit.text)
+
+    def test_approve_writes_stammdaten_audit_entry(self):
+        self.approve()
+
+        feld_eintrag = AuditLog.objects.get(aktion="Stammdaten geändert")
+        self.assertEqual(feld_eintrag.benutzer, self.admin)
+        self.assertEqual(feld_eintrag.member, self.member)
+        self.assertEqual(feld_eintrag.feld, "telefon")
+        self.assertEqual(feld_eintrag.alt_wert, "030 123456")
+        self.assertEqual(feld_eintrag.neu_wert, "030 999999")
 
     def test_approve_is_post_only(self):
         response = self.client.get(
@@ -262,7 +272,7 @@ class ApprovalWorkflowTests(TestCase):
             f"/mitglieder/wuensche/{self.change_request.pk}/ablehnung/",
             {"kommentar": ""},
         )
-        audit = AuditLog.objects.get()
+        audit = AuditLog.objects.get(member=self.member)
         self.assertEqual(audit.aktion, "Änderungswunsch abgelehnt")
         self.assertEqual(audit.benutzer, self.admin)
         self.assertEqual(audit.member, self.member)
@@ -288,7 +298,7 @@ class ApprovalWorkflowTests(TestCase):
         self.change_request.refresh_from_db()
         self.assertEqual(self.change_request.status, ChangeRequest.Status.EINGEREICHT)
         self.assertIsNone(self.change_request.entschieden_am)
-        self.assertEqual(AuditLog.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.filter(member=self.member).count(), 0)
 
     def test_failed_audit_log_keeps_request_open(self):
         self.client.raise_request_exception = False
@@ -307,7 +317,7 @@ class ApprovalWorkflowTests(TestCase):
         self.assertEqual(self.change_request.status, ChangeRequest.Status.EINGEREICHT)
         self.assertEqual(self.change_request.kommentar, "")
         self.assertIsNone(self.change_request.entschieden_am)
-        self.assertEqual(AuditLog.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.filter(member=self.member).count(), 0)
 
     def test_nothing_happens_before_approval(self):
         self.client.get("/mitglieder/wuensche/")
@@ -315,7 +325,7 @@ class ApprovalWorkflowTests(TestCase):
         self.change_request.refresh_from_db()
         self.assertEqual(self.member.telefon, "030 123456")
         self.assertEqual(self.change_request.status, ChangeRequest.Status.EINGEREICHT)
-        self.assertEqual(AuditLog.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.filter(member=self.member).count(), 0)
 
     def test_invalid_stored_wunschwert_cannot_be_approved(self):
         self.change_request.wunschwert = "keine-mail"
@@ -328,7 +338,7 @@ class ApprovalWorkflowTests(TestCase):
         self.assertEqual(self.member.email, "anna@example.org")
         self.change_request.refresh_from_db()
         self.assertEqual(self.change_request.status, ChangeRequest.Status.EINGEREICHT)
-        self.assertEqual(AuditLog.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.filter(member=self.member).count(), 0)
         self.assertContains(response, "kann nicht übernommen werden")
 
     def test_approval_of_one_member_does_not_touch_others(self):
