@@ -16,8 +16,16 @@ class MemberStatusChangeInline(admin.TabularInline):
 
 @admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
-    list_display = ("nachname", "vorname", "status", "ort", "eintrittsdatum", "email")
-    list_filter = ("status",)
+    list_display = (
+        "nachname",
+        "vorname",
+        "status",
+        "beitragskategorie",
+        "ort",
+        "eintrittsdatum",
+        "email",
+    )
+    list_filter = ("status", "beitragskategorie")
     search_fields = ("vorname", "nachname", "email", "ort")
     ordering = ("nachname", "vorname")
     inlines = [MemberStatusChangeInline]

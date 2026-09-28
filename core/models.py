@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 
@@ -38,3 +39,16 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.zeitpunkt:%Y-%m-%d %H:%M} · {self.aktion}"
+
+    def anzeige_wert(self, wert=None):
+        """FK-Werte als Objekt statt roher Datenbank-ID (sonst unlesbar im Admin)."""
+        from dues.models import FeeCategory
+
+        if wert is None:
+            wert = self.neu_wert
+        if self.feld != "beitragskategorie" or not wert:
+            return wert
+        try:
+            return FeeCategory.objects.get(pk=int(wert))
+        except (ObjectDoesNotExist, ValueError):
+            return wert

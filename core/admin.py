@@ -7,7 +7,7 @@ from .models import AuditLog
 class AuditLogAdmin(admin.ModelAdmin):
     """Nur Einsehen – Audit-Einträge entstehen ausschließlich automatisch."""
 
-    list_display = ("zeitpunkt", "benutzer", "aktion", "member", "feld")
+    list_display = ("zeitpunkt", "benutzer", "aktion", "member", "feld", "neuer_wert")
     list_filter = ("aktion", "zeitpunkt")
     search_fields = (
         "benutzer__username",
@@ -23,8 +23,17 @@ class AuditLogAdmin(admin.ModelAdmin):
         "member",
         "feld",
         "alt_wert",
-        "neu_wert",
+        "neuer_wert",
     )
+
+    @admin.display(description="Neuer Wert", ordering="neu_wert")
+    def neuer_wert(self, obj):
+        """FK-IDs als Objekt beschriften – eine Datenbank-ID ist kein Lesewert."""
+        return obj.anzeige_wert()
+
+    @admin.display(description="Alter Wert", ordering="alt_wert")
+    def alter_wert(self, obj):
+        return obj.anzeige_wert(obj.alt_wert)
 
     def has_add_permission(self, request):
         return False

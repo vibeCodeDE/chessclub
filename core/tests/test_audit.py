@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
 from core.models import AuditLog
+from dues.models import FeeCategory
 from members.models import Member
 
 
@@ -40,6 +41,7 @@ def formdaten(**aenderungen):
         "eintrittsdatum": "15.01.2020",
         "austrittsdatum": "",
         "status": "aktiv",
+        "beitragskategorie": "",
         "status_history-TOTAL_FORMS": "0",
         "status_history-INITIAL_FORMS": "0",
     }
@@ -82,6 +84,30 @@ class StammdatenAuditTests(TestCase):
         self.assertEqual(
             AuditLog.objects.filter(aktion="Stammdaten geändert").count(), 0
         )
+
+    def test_kategoriewechsel_wird_protokolliert(self):
+        """T7 ergänzt ein Stammdatenfeld – es muss im Audit-Log auftauchen."""
+        kategorie = FeeCategory.objects.get(code="jugend")
+        self.change(beitragskategorie=str(kategorie.pk))
+
+        eintrag = AuditLog.objects.get(aktion="Stammdaten geändert")
+        self.assertEqual(eintrag.feld, "beitragskategorie")
+        self.assertEqual(eintrag.alt_wert, "")
+        self.assertEqual(eintrag.neu_wert, str(kategorie.pk))
+        # Der ID-Wert ist technisch; die Anzeige muss ihn auflösen.
+        self.assertEqual(
+            eintrag.anzeige_wert(), FeeCategory.objects.get(pk=int(eintrag.neu_wert))
+        )
+
+    def test_kategorie_entfernen_wird_protokolliert(self):
+        kategorie = FeeCategory.objects.get(code="jugend")
+        self.change(beitragskategorie=str(kategorie.pk))
+        self.change(beitragskategorie="")
+
+        eintraege = AuditLog.objects.filter(feld="beitragskategorie")
+        self.assertEqual(eintraege.count(), 2)
+        self.assertEqual(eintraege.first().alt_wert, str(kategorie.pk))
+        self.assertEqual(eintraege.first().neu_wert, "")
 
     def test_anlage_wird_nicht_protokolliert(self):
         self.assertEqual(

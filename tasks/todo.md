@@ -22,6 +22,9 @@
 
 - **T6: Dashboard-Gerüst** — Route `/dashboard/` (nur Admin, Nav-Eintrag `core:dashboard`); Wunsch-Kachel zählt offene Wünsche live (0 → kein Crash), Beitrags-/Termin-/Anmeldungs-Kacheln als Platzhalter bis T11/T16/T19. *Beleg:* `pytest core/` → 45 Tests grün (neue `core/tests/test_dashboard.py`), 114 gesamt; Browser-Check 360/1280 px ohne Overflow, Kacheln einspaltig (360) / zweispaltig (1280).
   - Committet in `de9226d`. Davor gab es zusätzlich `256abcc` (Tailwind-CLI-Build statt CDN, `.container` → `.site-container`).
+- **T7: Beitragssätze + Beitragsjahre** — App `dues` mit `FeeCategory` (jahresunabhängig) und `FeeAmount` (Kategorie × Jahr × Betrag, `unique_together`); `Member.beitragskategorie` FK `null=True` = „keine Kategorie" (T8-Vorbedingung). Seed-Migration `0002_seed_beitragssaetze` legt 4 Kategorien × 2026/2027 mit **Platzhalterbeträgen** an (Erw. 90/95, Jugend 45/47, Familie 150/155, Erm. 55/57) — echte Vereinssätze sind weiterhin offen und per Admin überschreibbar. *Beleg:* `pytest` → **140 Tests grün** (24 neu in `dues/tests/test_models.py` + `dues/tests/test_admin.py`, 2 Audit-Tests in `core/tests/test_audit.py`); Negativtests: negativer Betrag (`ValidationError` + DB-Constraint), ausgetretenes Mitglied mit Kategorie, doppeltes (Kategorie, Jahr), Löschen einer vergebenen Kategorie (`ProtectedError`). Browser-Check am laufenden Stack: Kategorie-Änderungsseite zeigt 2026/2027 nebeneinander, 2027-Pflege lässt 2026 unberührt, Mitgliederliste filtert nach Kategorie.
+  - *Nebenwirkung:* `AUDIT_FELDER` in `core/signals.py` ist dynamisch, deshalb protokolliert ein Kategoriewechsel jetzt automatisch mit. Damit die ID im Log lesbar wird, löst `AuditLog.anzeige_wert()` FK-Werte auf (im Admin: „Jugendliche" statt „2").
+  - *Hinweise an Folge-Tasks:* T8 bucht `FeeAmount`-Posten je Jahr; ein Satz fehlt je (Kategorie, Jahr) → klarer Fehler statt 0-€-Posten. Beitragsposten/Zahlungen leben noch nicht — dafür sind T8/T9 zuständig.
 
 ---
 
@@ -29,14 +32,13 @@
 
 Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`:
 
-1. [T7](plan.md) Beitragssätze + Beitragsjahre — braucht die Beitragssätze des Vereins (offene Frage, `plan.md` → Open Questions)
-2. [T8](plan.md) Beitragslauf (idempotent)
-3. [T9](plan.md) SEPA-Mandate + manuelle Zahlungserfassung
-4. [T10](plan.md) Mahnwesen + Beitrags-Export
-5. [T11](plan.md) Dashboard-Erweiterung offene Beiträge
-6. [T11b](plan.md) Kassenbuch-Sicht Beiträge (Jahresübersicht) — *neu, schließt M2.6*
-7. [T12](plan.md) Zugriffsprotokoll Detailansicht — hängt nur an T5, kann vor T7 gemacht werden
-8. **Checkpoint 2** — Beitragslauf-Jahr komplett (Lauf → Zahlung → Mahnung → Export), Dashboard zeigt echte Zahlen, Review mit Mensch
+1. [T8](plan.md) Beitragslauf (idempotent)
+2. [T9](plan.md) SEPA-Mandate + manuelle Zahlungserfassung
+3. [T10](plan.md) Mahnwesen + Beitrags-Export
+4. [T11](plan.md) Dashboard-Erweiterung offene Beiträge
+5. [T11b](plan.md) Kassenbuch-Sicht Beiträge (Jahresübersicht) — *neu, schließt M2.6*
+6. [T12](plan.md) Zugriffsprotokoll Detailansicht — hängt nur an T5, kann vor T8 gemacht werden
+7. **Checkpoint 2** — Beitragslauf-Jahr komplett (Lauf → Zahlung → Mahnung → Export), Dashboard zeigt echte Zahlen, Review mit Mensch
 
 **Danach:** Phase 3 (T13/T14) · Phase 4 (T16/T17) · Phase 4b (T19/T20) · Phase 5 (T23/T24/T25/T25b/T27)
 
@@ -44,7 +46,7 @@ Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`:
 
 ## Noch offen (Blocker, keine Designfragen)
 
-- Beitragssätze und Kategorien des Vereins — vor T7
+- **Beitragssätze und Kategorien des Vereins** — vor T8. Die Struktur steht (Platzhalterbeträge in der Seed-Migration); vor dem ersten echten Beitragslauf müssen die Sätze im Django-Admin unter *Dues → Beitragskategorien* eingetragen werden. Ab dann braucht **jede** Kategorie einen Satz für das Laufjahr, sonst bricht T8 mit einer klaren Meldung ab.
 - SMTP-Zugangsdaten — vor T14 (dev: Django-Console-Backend)
 - Domain/Hostname — vor T24
 - Aufbewahrungsfristen mit Steuerberater bestätigen — vor T23 (Default 36 Monate bis Anonymisierung, 8 Jahre anonymisierte Finanzhistorie nach § 147 AO)

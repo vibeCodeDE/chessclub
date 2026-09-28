@@ -62,8 +62,9 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Wunsch-Kachel zeigt die echte Anzahl offener Wünsche (aus Testdaten); Beitrags-Kachel zeigt „verfügbar nach Beitragslauf"; **Termine- und Anmeldungs-Kacheln sind bewusst Platzhalter** bis T16/T19 (Ligaspiele/Turniere) — Entscheidung 2026-09-28: kein Termin-Modell in T6, damit der Scope klein bleibt.
   *Verify:* `pytest core/` (View + Kachel-Kontext) + manuell · *Files:* `core/views.py`, `core/templates/` · *Größe:* S · *PRD:* M7.1 · *Release:* v1 · *Deps:* T5
 
-- [ ] **T7: Beitragssätze + Beitragsjahre**
+- [x] **T7: Beitragssätze + Beitragsjahre**
   Models `FeeCategory` (Erwachsene/Jugend/Familie/ermäßigt, Betrag, Jahr), Zuordnung zum Mitglied.
+  *Design (2026-09-28):* Kategorie und Jahresbetrag getrennt — `FeeCategory` = jahresunabhängige Identität (`code` unique, `bezeichnung`, `aktiv`), `FeeAmount` = (Kategorie, Jahr, Betrag) mit `unique_together`. Die Trennung *ist* der Mechanismus für den Jahreswechsel: eine 2027-Zeile ändert die 2026-Zeile nicht, kein Kopier-Job. `Member.beitragskategorie` FK `null=True` (null = „keine Kategorie" → T8 überspringt statt 0 € zu buchen). Seed über Datenmigration `0002_seed_beitragssaetze` (4 Kategorien × 2 Jahre, Platzhalterbeträge, `get_or_create` = idempotent, echte Werte später per Admin). Negativtests greifen in `FeeAmount.clean()` (Betrag < 0) und `Member.clean()` (ausgetreten + Kategorie). Bewusst *nicht* in T7: Beitragslauf, Posten-/Zahlungsmodelle, `dues`-Views, Nav-Eintrag.
   *Acceptance:* 4 Kategorien (Erwachsene/Jugend/Familie/ermäßigt) mit je einem Betrag für 2026 und 2027 angelegt; Betrag 2027 ändert den 2026-Wert nicht; Mitglied ohne Kategorie wird beim Beitragslauf (T8) übersprungen, nicht mit 0 € gebucht.
   *Verify:* `pytest dues/` — **Negativtest:** negativer Betrag wird abgelehnt; Mitglied mit Status „ausgetreten" kann keiner Kategorie zugeordnet werden. · *Files:* `dues/models.py`, `dues/admin.py` · *Größe:* S · *PRD:* M2.1 · *Release:* v1 · *Deps:* T5
 
@@ -239,6 +240,6 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 ## Open Questions
 
 - SMTP-Zugangsdaten des Vereins (vor T14 nötig — vorerst Django-Console-Backend im Dev)
-- Exakte Beitragssätze und Kategorien des Vereins (vor T7)
+- ~~Exakte Beitragssätze und Kategorien des Vereins~~ — **Struktur steht seit T7** (Seed mit Platzhalterbeträgen, per Admin überschreibbar). Offen bleibt nur das **Eintragen der echten Sätze vor dem ersten Produktiv-Beitragslauf** (T8).
 - Domain/Hostname für das Deployment (vor T24)
 - Aufbewahrungsfristen mit Steuerberater bestätigen (vor T23): Default 36 Monate bis Anonymisierung, 8 Jahre anonymisierte Finanzhistorie (GoBD/§ 147 AO)

@@ -3,6 +3,8 @@ from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
 
+from dues.models import FeeCategory
+
 
 class Member(models.Model):
     """Stammdaten eines Mitglieds (PRD M1.1/M1.3).
@@ -40,6 +42,15 @@ class Member(models.Model):
         choices=Status.choices,
         default=Status.AKTIV,
     )
+    beitragskategorie = models.ForeignKey(
+        FeeCategory,
+        verbose_name="Beitragskategorie",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="members",
+        help_text="Leer lassen: ohne Kategorie wird das Mitglied beim Beitragslauf übersprungen.",
+    )
 
     class Meta:
         ordering = ["nachname", "vorname"]
@@ -63,6 +74,10 @@ class Member(models.Model):
         if self.status != self.Status.AUSGETRETEN and self.austrittsdatum:
             errors["austrittsdatum"] = (
                 "Ein Austrittsdatum ist nur beim Status „ausgetreten“ erlaubt."
+            )
+        if self.status == self.Status.AUSGETRETEN and self.beitragskategorie_id:
+            errors["beitragskategorie"] = (
+                "Ein ausgetretenes Mitglied kann keiner Beitragskategorie zugeordnet werden."
             )
         if errors:
             raise ValidationError(errors)
