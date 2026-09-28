@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – Schachverein{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+<p>Überblick über offene Vorgänge.</p>
+
+<div class="tile-grid">
+  {% for tile in tiles %}
+    <section class="tile{% if tile.placeholder %} tile-placeholder{% endif %}">
+      <h2>{{ tile.titel }}</h2>
+      {% if tile.placeholder %}
+        <p class="tile-hinweis">{{ tile.hinweis }}</p>
+      {% else %}
+        <p class="tile-wert">{{ tile.wert }}</p>
+        {% if tile.url %}
+          <p><a href="{% url tile.url %}">Details ansehen</a></p>
+        {% endif %}
+      {% endif %}
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

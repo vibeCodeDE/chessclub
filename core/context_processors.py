@@ -5,6 +5,7 @@ from .roles import role_of
 NAV_ITEMS = [
     ("core:home", "Startseite", {"gast", "mitglied", "kapitaen", "admin"}),
     ("core:login", "Anmelden", {"gast"}),
+    ("core:dashboard", "Dashboard", {"admin"}),
     ("members:profil", "Profil", {"mitglied", "kapitaen", "admin"}),
     ("members:member_list", "Mitglieder", {"admin"}),
     ("members:change_request_list", "Änderungswünsche", {"admin"}),
