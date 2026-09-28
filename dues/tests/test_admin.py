@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from core.models import AuditLog
-from dues.models import FeeAmount, FeeCategory, FeePost
+from dues.models import FeeAmount, FeeCategory, FeePost, Payment, SepaMandate
 from members.models import Member
 
 
@@ -242,3 +242,106 @@ class FeePostAdminTests(TestCase):
         self.assertEqual(eintrag.alt_wert, "95.00")
         self.assertEqual(eintrag.neu_wert, "80.00")
         self.assertEqual(eintrag.member, self.member)
+
+
+class SepaMandateAdminTests(TestCase):
+    """Mandate werden im Admin gepflegt (PRD M2.3)."""
+
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser("root", password="x")
+        self.client.login(username="root", password="x")
+        self.kategorie = FeeCategory.objects.get(code="erwachsene")
+        self.member = Member.objects.create(
+            vorname="Anna",
+            nachname="Meier",
+            eintrittsdatum=date(2020, 1, 15),
+            beitragskategorie=self.kategorie,
+        )
+
+    def test_mandat_kann_angelegt_werden(self):
+        response = self.client.get("/admin/dues/sepamandate/add/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "wird bewusst nicht gespeichert")
+
+    def test_mandat_wird_angelegt_und_erscheint_in_der_liste(self):
+        response = self.client.post(
+            "/admin/dues/sepamandate/add/",
+            {
+                "member": self.member.pk,
+                "referenz": "M-2026-001",
+                "datum": "2026-01-05",
+                "status": "aktiv",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(SepaMandate.objects.filter(referenz="M-2026-001").exists())
+        self.assertContains(response, "M-2026-001")
+
+    def test_mandat_ohne_referenz_wird_abgelehnt(self):
+        """Negativtest: ohne Referenz entsteht kein Mandat."""
+        response = self.client.post(
+            "/admin/dues/sepamandate/add/",
+            {
+                "member": self.member.pk,
+                "referenz": "",
+                "datum": "2026-01-05",
+                "status": "aktiv",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SepaMandate.objects.count(), 0)
+
+
+class PaymentAdminTests(TestCase):
+    """Zahlungen sind Finanznachweis: kein Anlegen, kein Löschen im Admin (PRD M2.4)."""
+
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser("root", password="x")
+        self.client.login(username="root", password="x")
+        kategorie = FeeCategory.objects.get(code="erwachsene")
+        member = Member.objects.create(
+            vorname="Anna",
+            nachname="Meier",
+            eintrittsdatum=date(2020, 1, 15),
+            beitragskategorie=kategorie,
+        )
+        self.post = FeePost.objects.create(
+            member=member, jahr=2026, kategorie=kategorie, betrag=Decimal("90.00")
+        )
+        self.payment = Payment.objects.create(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.BAR
+        )
+
+    def test_zahlung_kann_im_admin_nicht_angelegt_werden(self):
+        """Negativtest: gebucht wird ausschließlich über die Buchungsseite."""
+        vorher = Payment.objects.count()
+
+        response = self.client.get("/admin/dues/payment/add/")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Payment.objects.count(), vorher)
+
+    def test_zahlung_kann_im_admin_nicht_geloescht_werden(self):
+        """Negativtest: die Löschaktion des Admin entfernt keine Zahlung."""
+        response = self.client.post(
+            "/admin/dues/payment/",
+            {
+                "action": "delete_selected",
+                "_selected_action": [str(self.payment.pk)],
+                "payment": "yes",
+            },
+        )
+
+        self.assertNotContains(response, "wurde gelöscht")
+        self.assertTrue(Payment.objects.filter(pk=self.payment.pk).exists())
+
+    def test_changelist_zeigt_die_zahlung(self):
+        response = self.client.get("/admin/dues/payment/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Meier")
+        self.assertContains(response, "Barzahlung")

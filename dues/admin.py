@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from core.models import AuditLog
 
-from .models import FeeAmount, FeeCategory, FeePost
+from .models import FeeAmount, FeeCategory, FeePost, Payment, SepaMandate
 
 
 class FeeAmountInline(admin.TabularInline):
@@ -75,3 +75,42 @@ class FeePostAdmin(admin.ModelAdmin):
                 neu_wert=neu,
                 member=obj.member,
             )
+
+
+@admin.register(SepaMandate)
+class SepaMandateAdmin(admin.ModelAdmin):
+    """SEPA-Mandate (PRD M2.3) — hier gepflegt, Statuswechsel mit Audit-Spur."""
+
+    list_display = ("member", "referenz", "status", "datum")
+    list_filter = ("status",)
+    search_fields = ("member__nachname", "member__vorname", "referenz")
+
+    def get_readonly_fields(self, request, obj=None):
+        # Beim Anlegen muss das Mitglied gewählt werden; danach bleibt es
+        # unverändert — ein Mandatswechsel ist ein neues Mandat.
+        return ("iban_hinweis",) if obj is None else ("member", "iban_hinweis")
+
+    @admin.display(description="Hinweis zur IBAN")
+    def iban_hinweis(self, obj):
+        return "Die IBAN wird bewusst nicht gespeichert — der Einzug läuft über die Bank."
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    """Zahlungen sind Finanznachweis (PRD M2.4) — nur einsehbar.
+
+    Anlegen geht ausschließlich über die Buchungsseite unter „Zahlungen“,
+    Löschen gar nicht: eine Fehlbuchung wird per Storno aufgehoben, damit die
+    Finanzhistorie nachvollziehbar bleibt.
+    """
+
+    list_display = ("post", "datum", "art", "betrag", "storno_von")
+    list_filter = ("art", "datum")
+    search_fields = ("post__member__nachname", "post__member__vorname", "referenz")
+    readonly_fields = [feld.name for feld in Payment._meta.fields]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

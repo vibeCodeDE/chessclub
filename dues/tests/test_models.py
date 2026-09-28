@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.test import TestCase
 
-from dues.models import FeeAmount, FeeCategory
+from dues.models import FeeAmount, FeeCategory, FeePost, Payment, SepaMandate
 from members.models import Member
 
 
@@ -18,6 +18,15 @@ def make_member(**kwargs):
     }
     defaults.update(kwargs)
     return Member.objects.create(**defaults)
+
+
+def make_post(jahr=2026, betrag="90.00"):
+    """Beitragsposten für Zahlungstests — wie vom Beitragslauf erzeugt."""
+    kategorie = FeeCategory.objects.get(code="erwachsene")
+    member = make_member(beitragskategorie=kategorie)
+    return FeePost.objects.create(
+        member=member, jahr=jahr, kategorie=kategorie, betrag=Decimal(betrag)
+    )
 
 
 class SeedTests(TestCase):
@@ -138,3 +147,117 @@ class MemberKategorieTests(TestCase):
         with self.assertRaises(ProtectedError):
             self.kategorie.delete()
         self.assertTrue(Member.objects.filter(pk=member.pk).exists())
+
+
+class SepaMandateTests(TestCase):
+    """SEPA-Mandate (PRD M2.3) — nur Referenz, Datum und Status, keine IBAN."""
+
+    def setUp(self):
+        self.member = make_member()
+
+    def test_mandat_ist_standardmaessig_aktiv(self):
+        mandat = SepaMandate.objects.create(member=self.member, referenz="M-2026-001")
+
+        self.assertEqual(mandat.status, SepaMandate.Status.AKTIV)
+        self.assertEqual(mandat.datum, date.today())
+
+    def test_mandat_hat_die_drei_vereinbarten_status(self):
+        self.assertEqual(
+            {wert for wert, _ in SepaMandate.Status.choices},
+            {"aktiv", "widerrufen", "beendet"},
+        )
+
+    def test_referenz_ist_eindeutig(self):
+        """Negativtest: zwei Mandate mit derselben Referenz sind unmöglich."""
+        SepaMandate.objects.create(member=self.member, referenz="M-2026-001")
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            SepaMandate.objects.create(member=self.member, referenz="M-2026-001")
+
+    def test_mandat_haengt_am_mitglied(self):
+        mandat = SepaMandate.objects.create(member=self.member, referenz="M-1")
+        self.assertEqual(list(self.member.sepa_mandate.all()), [mandat])
+
+
+class PaymentValidierungTests(TestCase):
+    """Zahlungen (PRD M2.4) — von Hand gebucht, SEPA nur mit aktivem Mandat."""
+
+    def setUp(self):
+        self.post = make_post()
+
+    def test_sepa_zahlung_ohne_mandat_wird_abgelehnt(self):
+        """Negativtest laut Plan T9: SEPA braucht ein Mandat."""
+        payment = Payment(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.SEPA
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            payment.full_clean()
+
+        self.assertIn("art", ctx.exception.message_dict)
+
+    def test_sepa_mit_widerrufenem_mandat_wird_abgelehnt(self):
+        """Negativtest: ein widerrufenes Mandat trägt keinen Einzug."""
+        SepaMandate.objects.create(
+            member=self.post.member,
+            referenz="M-1",
+            status=SepaMandate.Status.WIDERRUFEN,
+        )
+        payment = Payment(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.SEPA
+        )
+
+        with self.assertRaises(ValidationError):
+            payment.full_clean()
+
+    def test_sepa_mit_aktivem_mandat_ist_gueltig(self):
+        SepaMandate.objects.create(member=self.post.member, referenz="M-1")
+        payment = Payment(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.SEPA
+        )
+
+        payment.full_clean()
+
+    def test_ueberweisung_ohne_mandat_ist_gueltig(self):
+        payment = Payment(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.UEBERWEISUNG
+        )
+
+        payment.full_clean()
+
+    def test_barzahlung_ist_ohne_mandat_gueltig(self):
+        payment = Payment(post=self.post, betrag=Decimal("10.00"), art=Payment.Art.BAR)
+
+        payment.full_clean()
+
+    def test_betrag_null_wird_abgelehnt(self):
+        """Negativtest: eine 0-€-Buchung ist keine Buchung."""
+        payment = Payment(post=self.post, betrag=Decimal("0.00"), art=Payment.Art.BAR)
+
+        with self.assertRaises(ValidationError) as ctx:
+            payment.full_clean()
+
+        self.assertIn("betrag", ctx.exception.message_dict)
+
+    def test_storno_verweist_auf_die_originalzahlung(self):
+        SepaMandate.objects.create(member=self.post.member, referenz="M-1")
+        original = Payment.objects.create(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.SEPA
+        )
+
+        storno = Payment.objects.create(
+            post=self.post,
+            betrag=Decimal("-90.00"),
+            art=Payment.Art.SEPA,
+            storno_von=original,
+        )
+
+        self.assertEqual(list(original.stornos.all()), [storno])
+
+    def test_zahlung_ist_nicht_geloeschbar_wenn_posten_existiert(self):
+        """Negativtest: die Finanzhistorie bleibt (PROTECT auf beiden Seiten)."""
+        Payment.objects.create(
+            post=self.post, betrag=Decimal("90.00"), art=Payment.Art.BAR
+        )
+
+        with self.assertRaises(ProtectedError):
+            self.post.delete()
