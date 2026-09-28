@@ -219,3 +219,63 @@ class Payment(models.Model):
                         "zuerst anlegen."
                     }
                 )
+
+
+class Mahnung(models.Model):
+    """Eine Mahnung für einen Beitragsposten (PRD M2.5).
+
+    Die Mahnung hängt am **Posten**, nicht am Mitglied: ein Mitglied kann
+    Posten aus mehreren Jahren haben, und gemahnt wird je Posten. Die Stufe ist
+    Teil der Historie (1. und 2. Mahnung), nicht ein Zähler am Posten — so
+    bleiben Datum, Frist und der ausstellende Vorstand nachvollziehbar.
+
+    Es gibt keinen Storno-Pfad: eine Mahnung wird nicht zurückgezogen. Zahlt
+    das Mitglied, fällt der Posten aus der Offene-Übersicht; die Historie
+    bleibt lesbar.
+    """
+
+    class Stufe(models.IntegerChoices):
+        MAHNUNG_1 = 1, "1. Mahnung"
+        MAHNUNG_2 = 2, "2. Mahnung"
+
+    post = models.ForeignKey(
+        FeePost,
+        verbose_name="Beitragsposten",
+        # Mahnungen sind Finanznachweis — kein Hard-Delete an der Historie.
+        on_delete=models.PROTECT,
+        related_name="mahnungen",
+    )
+    stufe = models.PositiveSmallIntegerField("Stufe", choices=Stufe.choices)
+    datum = models.DateField("Mahndatum", default=timezone.localdate)
+    frist = models.DateField(
+        "Zahlungsfrist",
+        null=True,
+        blank=True,
+        help_text="Optionales Fristdatum für den Brief; leer heißt „keine Frist“.",
+    )
+    notiz = models.TextField(
+        "Notiz", blank=True, help_text="Interner Vermerk — erscheint nicht im Brief."
+    )
+    erstellt = models.DateTimeField("Erstellt", auto_now_add=True)
+    erstellt_von = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Erstellt von",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="erstellte_mahnungen",
+    )
+
+    class Meta:
+        ordering = ["-datum", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["post", "stufe"],
+                name="unique_mahnung_pro_post_stufe",
+            )
+        ]
+        verbose_name = "Mahnung"
+        verbose_name_plural = "Mahnungen"
+
+    def __str__(self):
+        return f"{self.stufe}. Mahnung · {self.post}"

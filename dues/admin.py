@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from core.models import AuditLog
 
-from .models import FeeAmount, FeeCategory, FeePost, Payment, SepaMandate
+from .models import FeeAmount, FeeCategory, FeePost, Mahnung, Payment, SepaMandate
 
 
 class FeeAmountInline(admin.TabularInline):
@@ -108,6 +108,27 @@ class PaymentAdmin(admin.ModelAdmin):
     list_filter = ("art", "datum")
     search_fields = ("post__member__nachname", "post__member__vorname", "referenz")
     readonly_fields = [feld.name for feld in Payment._meta.fields]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Mahnung)
+class MahnungAdmin(admin.ModelAdmin):
+    """Mahnungen entstehen nur über die Mahnungsübersicht (PRD M2.5).
+
+    Im Admin sind sie nur einsehbar: Stufe, Datum und Frist sind fachliche
+    Entscheidungen des Vorstands und gehören über die Mahnliste gesetzt, damit
+    die Prüfungen aus `dues.mahnung` greifen.
+    """
+
+    list_display = ("post", "stufe", "datum", "frist", "erstellt_von")
+    list_filter = ("stufe", "datum")
+    search_fields = ("post__member__nachname", "post__member__vorname")
+    readonly_fields = [feld.name for feld in Mahnung._meta.fields]
 
     def has_add_permission(self, request, obj=None):
         return False
