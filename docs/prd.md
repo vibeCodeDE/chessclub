@@ -1,7 +1,7 @@
 # PRD: Schachvereins-Software
 
-**Status:** Freigegeben v1.1 — Antworten auf Offene Fragen eingearbeitet
-**Datum:** 2026-09-26
+**Status:** Freigegeben v1.2 — Review-Feedback eingearbeitet: Priorisierung v1/v1.1, DSGVO-Anforderungen geschärft, Berechtigungsmatrix, Backup-Verschlüsselung
+**Datum:** 2026-09-28
 
 ---
 
@@ -58,9 +58,9 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M2.1 Beitragssätze konfigurierbar (z. B. Erwachsene, Jugendliche, Familien, ermäßigt)
 - M2.2 Jährliche Beitragsläufe: automatische Rechnungsstellung für alle aktiven Mitglieder
 - M2.3 SEPA-Mandate: Mandat je Mitglied verwalten (Referenz, Datum, Status); Einzug erfolgt **bankseitig manuell** durch den Verein — die Software erfasst nur Mandat + Zahlungsstatus, **kein** automatisierter Einzug über Banking-API
-- M2.3b Zahlungserfassung alternativ: Überweisung und Barzahlung manuell buchen
-- M2.4 Mahnwesen: automatische offene-Beitrags-Übersicht, Mahnbrief als PDF
-- M2.5 Kassenbuch-Sicht: Zahlungen je Mitglied, Jahresübersicht für den Kassenbericht
+- M2.4 Zahlungserfassung: Überweisung, SEPA-Einzug und Barzahlung manuell buchen (Zahlungsart je Buchung)
+- M2.5 Mahnwesen: automatische offene-Beitrags-Übersicht, Mahnbrief als PDF
+- M2.6 Kassenbuch-Sicht (Beiträge): Zahlungen je Mitglied, Jahresübersicht für den Kassenbericht — reine Lese-Sicht auf die Beitragsdaten, siehe Abgrenzung in §3.6
 
 ### 3.3 Turniere & Ergebnisse (M/S)
 
@@ -92,12 +92,36 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - S6.2 Beleg-/Bezeichnungsfelder pro Buchung, Jahresabschlussansicht (CSV-Export für Steuerberater)
 - K6.3 Anbindung an DATEV-Export
 - **Abgrenzung:** keine vollständige Buchhaltungssoftware — Finanzamt-Export reicht als Schnittstelle
+- **Abgrenzung zu M2.6:** M2.6 ist eine reine Lese-Sicht auf **Beitragszahlungen** (v1). S6.1/S6.2 ist das eigenständige **Kassenbuch für alle Einnahmen/Ausgaben** des Vereins (v1.1). Die beiden Bücher werden nicht zusammengeführt; S6.1/S6.2 referenziert M2.6-Zahlungen höchstens als Lese-Quelle.
 
 ### 3.7 Gemeinsame Anforderungen
 
 - M7.1 Dashboard: offene Beiträge, anstehende Termine, letzte Anmeldungen
 - M7.2 Rollenbasierte Navigation (Menüs je Rolle)
 - M7.3 Audit-Log: wer hat Personendaten wann geändert (DSGVO-Nachweis)
+
+### 3.8 Berechtigungsmatrix (M)
+
+Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Aufstellung) und **alle** Export-/Übersichtstasks (T10, T11b, T15, T19, T22, T23); jede Zeile erhält einen Negativtest.
+
+| Funktion | Admin (Vorstand) | Kapitän | Mitglied | Gast |
+|---|---|---|---|---|
+| Mitgliederliste (alle) | ja | nein | nein | nein |
+| Mitgliederdetail (alle) | ja | eigene Mannschaft (ab T17) | nur eigene Person (via `/profil/`, M1.4 — **kein** Zugriff auf die Admin-Detailseite) | nein |
+| Stammdaten bearbeiten | ja | nein | nur via Änderungswunsch | nein |
+| Änderungswunsch freigeben | ja | nein | nein | nein |
+| Mannschaften/Ligaspiele verwalten | ja | nein | nein | nein |
+| Aufstellung + Einzelergebnisse | ja | eigene Mannschaft | nein | nein |
+| Turnier verwalten | ja | nein | nein | nein |
+| Turnieranmeldung | ja | ja | ja | ja (bis Anmeldeschluss, mit Name + E-Mail) |
+| Gastdaten aus Turnieranmeldung einsehen / löschen | ja | nein | nein | nein (Gast hat keinen Login; Korrektur/Löschung über die Turnierverwaltung) |
+| Beiträge / Zahlungen / Mahnungen | ja | nein | nur eigener Beitragsstand | nein |
+| Kassenbuch | ja | nein | nein | nein |
+| News verwalten | ja | nein | nein | nein |
+| News lesen (Startseite + Archiv) | ja | ja | ja | ja |
+| E-Mail an Gruppe | ja | nein | nein | nein |
+| Auskunfts-Export (DSGVO) | ja | nein | nur eigene Person | nein |
+| Audit-/Zugriffslog einsehen | ja | nein | nein | nein |
 
 ---
 
@@ -107,20 +131,23 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 
 - N1.1 Datenhaltung nur in EU/DE; keine Drittanbieter-Tracker, kein externes CDN
 - N1.2 Auskunftsanfragen: personenbezogene Daten eines Mitglieds als PDF exportierbar
-- N1.3 Löschpfrecht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Steuer-/Aufbewahrungsfristen beachten)
+- N1.3 Löschpflicht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Default 36 Monate); dabei Kontaktdaten + Stammdaten löschen/anonymisieren, Finanzhistorie (Beiträge, Zahlungen) anonymisiert erhalten (nur noch Mitglied-ID). Aufbewahrung der anonymisierten Finanzhistorie: **8 Jahre** nach § 147 AO; die GoBD verweist für die Orderstrukturierung darauf, ist aber nicht selbst die Fristquelle. Fristen vor Go-Live mit Steuerberater bestätigen
 - N1.4 Verzeichnis von Verarbeitungstätigkeiten: Maschinenlesbare Exportfunktion der Datenkategorien
-- N1.5 Protokollierung von Logins und Zugriffen auf Personendaten (mindestens 12 Monate)
+- N1.5 Protokollierung von Logins, Änderungen **und** Zugriffen auf Personendaten (mindestens 12 Monate). „Zugriff" = Aufruf einer Mitglieder-Detailansicht und Ausführung des Auskunfts-Exports; Listenansichten werden nicht einzeln protokolliert
 - N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S)
+- N1.7 Gastdaten aus öffentlichen Turnieranmeldungen (Name + E-Mail) gelten als Personendaten Dritter: sichtbar nur in der Turnierverwaltung, **nicht** in Mitgliederlisten/-suchen, mit Zweckbindung (nur Teilnehmerliste dieses Turniers) und dokumentierter Löschfrist nach Turnierende. Einwilligung: Hinweis auf der Anmeldeseite (Art. 6 Abs. 1 lit. b DSGVO — Durchführung des Turniers)
 
 ### 4.2 Sonstige NFR
 
-- N2.1 **Verfügbarkeit:** 99 % im Vereinsalltag; nächtliches automatisches Backup, Wiederherstellungstest dokumentiert
+- N2.1 **Verfügbarkeit:** 99 % im Vereinsalltag; nächtliches automatisches Backup (pg_dump, komprimiert + **verschlüsselt** z. B. GPG/age — Schlüssel getrennt vom DB-Host gelagert, nicht im Repo), Wiederherstellungstest inkl. Entschlüsselung dokumentiert
 - N2.2 **Performance:** Seitenladen < 1 s im LAN/DSL; Suchergebnisse < 500 ms
 - N2.3 **Bedienbarkeit:** Tablet-tauglich (Aufstellung am Spieltag), Barrierefreiheit mind. WCAG 2.1 AA bei Kernflächen
-- N2.6 **Mobil:** Alle Kernflächen funktionieren ab 360 px Breite (Responsive, Mobile-First-Layout); Navigation als Burger-Menü; Tabellen scrollbar statt zerbrochen
-- N2.7 **Installierbarkeit (PWA):** App lässt sich auf Homescreen/Startmenü installieren (Web-App-Manifest + Service Worker), öffnet sich in eigenem Fenster ohne Browser-Chrome, Icons für iOS/Android; Basis-Offline-Anzeige der Startseite/letzten News
 - N2.4 **Wartbarkeit:** Updatepfad per `docker compose pull`; Datenmigrationen versioniert
 - N2.5 **Beobachtbarkeit:** strukturierte Logs, Fehlerbenachrichtigung an Admin-E-Mail
+- N2.6 **Mobil:** Alle Kernflächen funktionieren ab 360 px Breite (Responsive, Mobile-First-Layout); Navigation als Burger-Menü; Tabellen scrollbar statt zerbrochen
+- N2.7 **Installierbarkeit (PWA):** App lässt sich auf Homescreen/Startmenü installieren (Web-App-Manifest + Service Worker), öffnet sich in eigenem Fenster ohne Browser-Chrome, Icons für iOS/Android; Basis-Offline-Anzeige der Startseite/letzten News
+
+**Nachweis-NFRs:** N2.2–N2.5 sind erst mit v1 erfüllt, wenn sie gemessen bzw. geprüft sind — siehe Plan-Task T25b (Messung + WCAG-Audit) und T24 (Updatepfad, EU-Hoststandort).
 
 ---
 
@@ -143,8 +170,10 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 | M3 | Mannschaften, Aufstellung, Ligaspiele | Beispielspiel Erfassen + Tabelle |
 | M4 | Turniere inkl. Anmeldung & Schweizer Paarung | Testturnier über 3 Runden gespielt |
 | M5 | Kommunikation (News + E-Mail), Kassenbuch | Testversand an Gruppe, Kassenexport |
-| M6 | DSGVO-Härte: Export/Löschfristen/Audit, Backups, 2FA | DSGVO-Checkliste abgehakt |
+| M6 | DSGVO-Härte: Export/Löschfristen/Audit, NFR-Nachweis (Performance/WCAG/Updatepfad), Backups | DSGVO-Checkliste abgehakt, N2.2–N2.4 gemessen |
 | M7 | Mobil: Responsive-Feinschliff + PWA-Installation (iOS/Android) | App auf Homescreen installiert, 360-px-Check bestanden |
+
+**Release-Schnitt (v1 vs. v1.1):** **v1** umfasst alle M-Anforderungen (§3.1–§3.5 ohne S-Teile, §3.7), die gesamte DSGVO §4.1 (N1.1–N1.5, N1.7) und alle NFR §4.2 (N2.1–N2.7). N1.6 (2FA) ist im PRD als S geführt und gehört zu v1.1. **v1.1** ergänzt alle S-Anforderungen und wird erst nach v1-Abnahme gebaut: S3.4 Paarung, S3.5 Turnierexport, S4.5 Tabellen, S5.3 Newsletter, §3.6 Kassenbuch, N1.6 2FA. K-Anforderungen (K3.6, K5.4, K6.3) sind out of scope.
 
 ---
 
@@ -157,17 +186,21 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - Auskunftsanfrage eines Mitglieds: ein Klick → vollständiges PDF
 - Wiederherstellung aus Backup erfolgreich getestet innerhalb von 4 h
 - Kassenbericht für den Vorstand ohne Nachbearbeitung erstellbar
+- Kernflächen (Login, Dashboard, Mitgliederliste, Aufstellung, Turnieranmeldung) ohne schwerwiegende WCAG-2.1-AA-Verstöße bedienbar; Kernseiten < 1 s auf dem Vereinsserver gemessen
+- Update auf eine neue Version per dokumentiertem `docker compose pull`-Ablauf möglich, ohne Datenverlust
 
 ---
 
-## 8. Offene Fragen — erledigt
+## 8. Getroffene Entscheidungen (frühere offene Fragen)
+
+Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** (Zugangsdaten, Vereinswerte, Fristen) stehen weiterhin in `tasks/plan.md` → *Open Questions* — das sind keine offenen Designfragen, sondern Eingaben, die vor bestimmten Tasks fehlen.
 
 | # | Frage | Entscheidung |
 |---|---|---|
 | 1 | Tech-Stack | **Django** bestätigt; Nutzer ist neu mit Django → App soll möglichst über Djangos Admin + einfache Views abgebildet werden, Wartungsdoku im Repo |
-| 2 | SEPA-Einzug | **Kein echter automatisierter Einzug** — Software verwaltet Mandate und Zahlungsstatus, Einzug manuell bankseitig |
+| 2 | SEPA-Einzug | **Kein echter automatisierter Einzug** — Software verwaltet Mandate (M2.3) und Zahlungsstatus; der Einzug erfolgt **bankseitig manuell per SEPA-Lastschrift** durch den Verein. Gebucht wird je Zahlung die Zahlungsart (M2.4) |
 | 3 | Selbstbedienung | **Änderungswunsch-Workflow**, kein direktes Editieren |
 | 4 | Bestehende Website | **Keine** — App liefert auch die öffentliche Startseite |
-| 5 | Hosting | **Selbst gehostet** durch den Verein (Docker Compose) |
+| 5 | Hosting | **Selbst gehostet** durch den Verein (Docker Compose), Standort EU/DE (N1.1) |
 | 6 | Altbestand | **Keiner** — keine CSV-Importfunktion nötig |
-| 7 | Beitragseinzug | Beiträge werden **per SEPA-Lastschrift** eingezogen (bankseitig, manuell) |
+| 7 | Turnieranmeldung durch Gäste | **Zulässig** bis Anmeldeschluss; Gastdaten sind Personendaten Dritter und folgen N1.7 |

@@ -1,44 +1,50 @@
-# Todo: Schachvereins-Software
+# Fortschrittsprotokoll: Schachvereins-Software
 
-Details & Akzeptanzkriterien: `tasks/plan.md` · Spez: `docs/prd.md`
+**Statusquelle ist `tasks/plan.md`** — dort stehen die Checkboxen. Diese Datei protokolliert nur *abgeschlossene* Tasks mit Verifikationsbelegen und nennt die nächsten Schritte. Vollständige Akzeptanzkriterien: `tasks/plan.md` · Spezifikation: `docs/prd.md`
 
-## Phase 1: Fundament
-- [x] T1: Projekt-Scaffold + Docker (Django, Postgres, Compose, Basis-Template mobile-first ab 360 px) — Verify: `docker compose up` + `pytest` + 360/768/1280 px Check ✅ 3 Tests grün, Screenshots geprüft
-- [x] T2: Auth, Rollen (admin/kapitaen/mitglied), rollenbasierte Navigation — Verify: `pytest core/` ✅ 20+ Tests grün, Login/Logout/Reset + Menüs per DOM verifiziert, Abweisung per 403/Redirect-Tests (`core/tests/test_access.py`)
-- [x] T3: Mitgliederstammdaten + Admin + Liste/Filter — Verify: `pytest members/` ✅ 33 Tests grün, Admin anlegen/suchen/filtern (kein Delete), Statuswechsel historisiert, Detail + CSV-Export, Layout 360/1280 px geprüft
-- [x] T4: Selbstbedienung + Änderungswunsch-Workflow (Admin-Freigabe) — Verify: `pytest members/` ✅ 27 neue Tests (`members/tests/test_selfservice.py`), 85 grün gesamt; Workflow im Browser durchklickt (Einreichung → Freigabe/Ablehnung → Audit-Eintrag), Layout 360/1280 px ohne Overflow; **Hinweis für T5:** `core/models.py` mit `AuditLog` existiert schon (Freigabe/Ablehnung schreibt Einträge) – T5 ergänzt Signale (Stammdaten + Login) + Admin-Ansicht darauf; Nav-Eintrag `members:change_request_list`; Profil liegt in `members` (`/profil/`), nicht mehr in `core`
-- [x] T5: Audit-Log + Login-Protokoll — Verify: `pytest` ✅ 105 Tests grün (neue `core/tests/test_audit.py`); Signale loggen Stammdaten-Änderungen (Wer/Was/Wann + Alt/Neu in `feld`/`alt_wert`/`neu_wert`) und Login/Logout/Login-Abweisung (mit IP); read-only AuditLog-Admin; „Wer" via `_changed_by` (Admin + Freigabe-View)
-- [x] Checkpoint 1: Rollen-Flow manuell, alle Tests grün, Review — Verify: ✅ 2026-09-28 — 105 Tests grün (`pytest` im Docker-Stack); Rollen-Flow im Browser durchklickt: Menüs je Rolle (admin/mitglied/kapitaen), 403-Negativtest, Mitglied anlegen + Statushistorie, Wunsch → Freigabe → Audit-Eintrag mit Alt/Neu, Ablehnung mit Kommentar, Login-/Logout-Protokoll mit IP
+**Release-Schnitt:** v1 = alle M-Tasks · v1.1 = alle S-Tasks erst nach v1-Abnahme
 
-## Phase 2: Beiträge
-- [ ] T6: Beitragssätze + Beitragsjahre — Verify: `pytest dues/`
-- [ ] T7: Beitragslauf (idempotent) — Verify: `pytest dues/`
-- [ ] T8: SEPA-Mandate + manuelle Zahlungserfassung (kein Bank-API) — Verify: `pytest dues/`
-- [ ] T9: Mahnwesen (Mahnbrief-HTML/PDF) + CSV-Export — Verify: `pytest dues/`
-- [ ] T10: Dashboard (Beiträge, Termine, Wünsche) — Verify: `pytest core/` + manuell
-- [ ] ☑ Checkpoint 2: Beitragslauf-Jahr komplett, Review
+---
 
-## Phase 3: Spielbetrieb
-- [ ] T11: Mannschaften + Ligaspiele — Verify: `pytest teams/` (NAV-Eintrag `teams:team_list` in `core/context_processors.py` wieder ergänzen)
-- [ ] T12: Aufstellung + Einzelergebnisse (Kapitän) — Verify: `pytest teams/`
-- [ ] T13: Tabellenberechnung — Verify: `pytest teams/`
-- [ ] ☑ Checkpoint 3: Testspiel komplett, Review
+## Erledigt
 
-## Phase 4: Turniere
-- [ ] T14: Turnier-Modell + öffentliche Anmeldung — Verify: `pytest tournaments/`
-- [ ] T15: Schweizer Paarung (Buchholz) + Rundenwertung — Verify: `pytest tournaments/`
-- [ ] T16: Ergebnisdruck + ChessResults-tauglicher CSV-Export — Verify: `pytest tournaments/` + Download
-- [ ] ☑ Checkpoint 4: Testturnier 3 Runden, Review
+### Phase 1: Fundament
 
-## Phase 5: Kommunikation & Kassenbuch
-- [ ] T17: News/Ankündigungen + öffentliche Startseite — Verify: `pytest comms/`
-- [ ] T18: E-Mail-Versand an Gruppen (Opt-in, Protokoll) — Verify: `pytest comms/`
-- [ ] T19: Kassenbuch + Jahres-CSV — Verify: `pytest cashbook/`
-- [ ] ☑ Checkpoint 5: News + Test-Mail + Export, Review
+- **T1: Projekt-Scaffold + Docker** — Django-Projekt, `core`-App, Postgres, Compose, Basis-Template mobile-first ab 360 px. *Beleg:* `docker compose up` + `pytest` + Screenshot-Check 360/768/1280 px, 3 Tests grün.
+- **T2: Auth, Rollen, Navigation** — Gruppen `admin/kapitaen/mitglied`, rollenbasierte Menüs, Passwort-Reset. *Beleg:* `pytest core/` → 20+ Tests grün; Login/Logout/Reset + Menüs per DOM verifiziert, Abweisung über 403/Redirect-Tests (`core/tests/test_access.py`).
+- **T3: Mitgliederstammdaten + Admin + Liste/Filter** — Modell `Member` mit Statushistorie, Admin-Liste/Suche, Detailseite, CSV-Export, kein Hard-Delete. *Beleg:* `pytest members/` → 33 Tests grün; Anlegen/Suchen/Filtern durchgespielt, Statuswechsel historisiert, Layout 360/1280 px geprüft.
+- **T4: Selbstbedienung + Änderungswunsch-Workflow** — Mitglied reicht Wunsch ein, Admin gibt frei/lehnt ab; Freigabe schreibt den Wert plus Audit-Eintrag. *Beleg:* 27 neue Tests (`members/tests/test_selfservice.py`), 85 grün gesamt; Workflow im Browser durchklickt (Einreichung → Freigabe/Ablehnung → Audit-Eintrag), 360/1280 px ohne Overflow.
+  - *Hinweise an Folge-Tasks:* `core/models.py` mit `AuditLog` existierte bereits (Freigabe/Ablehnung schrieben Einträge) — T5 ergänzte Signale für Stammdaten + Logins sowie die read-only Admin-Ansicht. Profil liegt in `members` unter `/profil/`, nicht in `core`.
+- **T5: Audit-Log + Login-Protokoll** — Signale für Stammdaten-Änderungen (Wer/Was/Wann + Alt/Neu in `feld`/`alt_wert`/`neu_wert`) sowie Login/Logout/Abweisung mit IP; `_changed_by` setzt Admin und Freigabe-View. *Beleg:* `pytest` → 105 Tests grün (`core/tests/test_audit.py`).
+- **Checkpoint 1** — 2026-09-28, 105 Tests grün im Docker-Stack; Rollen-Flow im Browser durchklickt: Menüs je Rolle, 403-Negativtest, Mitglied anlegen + Statushistorie, Wunsch → Freigabe → Audit-Eintrag mit Alt/Neu, Ablehnung mit Kommentar, Login-/Logout-Protokoll mit IP.
 
-## Phase 6: DSGVO & Betrieb
-- [ ] T20: DSGVO-Auskunfts-Export + Anonymisierung nach Frist — Verify: `pytest core/` + dry-run-Command
-- [ ] T21: Prod-Deployment, Backup + dokumentierter Restore-Test — Verify: manueller Restore
-- [ ] T22: 2FA für Admins, Security-Header, `docs/wartung.md` — Verify: `pytest core/`
-- [ ] T23: PWA — Manifest, Service Worker, iOS/Android-Icons, installierbar + Offline-Startseite — Verify: `pytest core/` + DevTools „Add to home screen"
-- [ ] ☑ Final: PRD-Erfolgskriterien + DSGVO-Checkliste, Abnahme Vorstand
+### Phase 2: Beiträge + Dashboard
+
+- **T6: Dashboard-Gerüst** — Route `/dashboard/` (nur Admin, Nav-Eintrag `core:dashboard`); Wunsch-Kachel zählt offene Wünsche live (0 → kein Crash), Beitrags-/Termin-/Anmeldungs-Kacheln als Platzhalter bis T11/T16/T19. *Beleg:* `pytest core/` → 45 Tests grün (neue `core/tests/test_dashboard.py`), 114 gesamt; Browser-Check 360/1280 px ohne Overflow, Kacheln einspaltig (360) / zweispaltig (1280).
+  - ⚠️ **Offen: nicht committet.** `core/templates/core/dashboard.html` und `core/tests/test_dashboard.py` waren beim letzten Review untracked. Vor T7 committen, sonst stimmt der Doku-Status nicht mit dem Repo überein.
+
+---
+
+## Nächste Schritte
+
+Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`:
+
+1. [T7](plan.md) Beitragssätze + Beitragsjahre — braucht die Beitragssätze des Vereins (offene Frage, `plan.md` → Open Questions)
+2. [T8](plan.md) Beitragslauf (idempotent)
+3. [T9](plan.md) SEPA-Mandate + manuelle Zahlungserfassung
+4. [T10](plan.md) Mahnwesen + Beitrags-Export
+5. [T11](plan.md) Dashboard-Erweiterung offene Beiträge
+6. [T11b](plan.md) Kassenbuch-Sicht Beiträge (Jahresübersicht) — *neu, schließt M2.6*
+7. [T12](plan.md) Zugriffsprotokoll Detailansicht — hängt nur an T5, kann vor T7 gemacht werden
+8. **Checkpoint 2** — Beitragslauf-Jahr komplett (Lauf → Zahlung → Mahnung → Export), Dashboard zeigt echte Zahlen, Review mit Mensch
+
+**Danach:** Phase 3 (T13/T14) · Phase 4 (T16/T17) · Phase 4b (T19/T20) · Phase 5 (T23/T24/T25/T25b/T27)
+
+---
+
+## Noch offen (Blocker, keine Designfragen)
+
+- Beitragssätze und Kategorien des Vereins — vor T7
+- SMTP-Zugangsdaten — vor T14 (dev: Django-Console-Backend)
+- Domain/Hostname — vor T24
+- Aufbewahrungsfristen mit Steuerberater bestätigen — vor T23 (Default 36 Monate bis Anonymisierung, 8 Jahre anonymisierte Finanzhistorie nach § 147 AO)
