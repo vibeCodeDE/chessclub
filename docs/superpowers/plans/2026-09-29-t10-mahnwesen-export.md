@@ -829,7 +829,7 @@ git commit -m "T10: Stufenregel des Mahnwesens (1./2. Mahnung, offener Posten)"
 
 **Interfaces:**
 - Consumes: `dues.services.posten_mit_status`, `dues.services.SUMME`, `dues.mahnung.naechste_stufe`, `dues.mahnung.mahnstufe_text`
-- Produces: `dues.mahnung.offene_posten(jahr: int) -> list[dict]` mit den Schlüsseln `post`, `member`, `kategorie`, `jahr`, `betrag`, `bezahlt`, `offen`, `status`, `status_label`, `status_klasse`, `mahnungen` (QuerySet der Mahnungen), `stufe` (int|None), `stufe_text` (str) — sowie `dues.mahnung.posten_fuer_brief(jahr: int, member: Member) -> tuple[list[dict], Decimal]` (Posten + Summe). Beide werden von Task 6 (Views/Templates) und Task 5 (Export) benutzt.
+- Produces: `dues.mahnung.naechste_stufe_fuer(mahnungen) -> int | None` (reine Variante von `naechste_stufe` über eine bereits geladene Liste, damit `offene_posten` keine Abfrage je Zeile braucht), `dues.mahnung.offene_posten(jahr: int) -> list[dict]` mit den Schlüsseln `post`, `member`, `kategorie`, `jahr`, `betrag`, `bezahlt`, `offen`, `status`, `status_label`, `status_klasse`, `mahnungen` (**Python-Liste** der Mahnungen, nach `datum`, `pk` sortiert), `stufe` (int|None), `stufe_text` (str) — sowie `dues.mahnung.posten_fuer_brief(jahr: int, member: Member) -> tuple[list[dict], Decimal]` (Posten + Summe). Beide werden von Task 6 (Views/Templates), Task 5 (Export) und Task 7 (Brief) benutzt.
 
 - [ ] **Step 1: Failing tests anhängen** — ans Ende von `dues/tests/test_mahnung_services.py` (zusätzlich oben `from dues.mahnung import offene_posten, posten_fuer_brief`):
 
