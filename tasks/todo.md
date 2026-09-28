@@ -29,6 +29,9 @@
   - *Entscheidungen mit dem Menschen (2026-09-28):* (1) `passiv` ist im PRD nicht als beitragspflichtig definiert → der Lauf-Dialog hat einen Schalter, Default ist „nicht buchen"; (2) ein zweiter Lauf ergänzt nur fehlende Posten, statt pauschal abzubrechen — damit bekommt ein im Jahresverlauf beigetretenes Mitglied seinen Posten.
   - *Nebenwirkungen:* Posten-Beträge sind Momentaufnahmen — eine spätere Satz-Änderung im Admin ändert gebuchte Posten nicht mehr. `AuditLog` führt je Lauf eine Sammelzeile („Beitragslauf ausgeführt"), ein leerer Wiederholungslauf erzeugt keine Log-Zeile.
   - *Hinweise an Folge-Tasks:* T9 bucht Zahlungen je Posten und berechnet den offenen Betrag; die Korrektur eines falschen Posten-Betrags läuft heute über das Admin (mit Audit-Spur) — ein Storno-Buchungspfad ist bewusst nicht Teil von v1. T11/T11b können `plan_lauf`/`FeePost` direkt für Kachel und Jahresübersicht nutzen.
+- **T9: SEPA-Mandate + Zahlungserfassung** — `SepaMandate` (Referenz/Datum/Status `aktiv`/`widerrufen`/`beendet`, **keine IBAN** — der Einzug läuft bankseitig manuell) und `Payment` (FK `PROTECT` auf `FeePost`, Zahlungsart `sepa`/`ueberweisung`/`bar`, Datum, Referenz, Notiz, `erfasst_von`). Regelbasis in `dues/services.py` (`bezahlte_summe`, `offen`, `posten_status`, `posten_mit_status` mit Annotation statt N+1, `PostenStatus` unbezahlt/teilbezahlt/bezahlt/**Gutschrift**); `Payment.clean()` verlangt für `art=sepa` ein aktives Mandat. Fehlbuchungen werden **per Storno-Gegenbuchung** (negativer Betrag, `storno_von`) aufgehoben, nie gelöscht; Überzahlung bleibt als negativer offener Betrag sichtbar. UI: `/beitraege/` mit Spalten Bezahlt/Offen/Status + Button, `/beitraege/zahlungen/` (Liste + Buchungsformular + Mandat-Abschnitt), Storno/Mandat-Status nur per POST, Nav-Eintrag „Zahlungen" nur für Admin; `Payment` im Admin nur einsehbar. *Beleg:* `pytest` → **271 Tests grün** (71 neu: Modelle, Service-Regeln inkl. `assertNumQueries`, Views/Zugriff/Formular-Zustand, Mandate, Admin, 2 Nav-Tests, End-to-End-Integrationstest, Bank-API-Garantie); Negativtests: SEPA ohne/widerrufenes Mandat, Betrag 0, unbekannter Posten, GET auf alle Buchungsrouten (405), 403 für „kapitaen"/„mitglied" ohne Seiteneffekt, doppelte Mandatsreferenz, Storno-eines-Stornos, Payment weder anleg- noch löschbar im Admin. Browser-Check am laufenden Stack: Überzahlung 100 € auf 90-€-Posten → Badge „Gutschrift" und `-10,00 €`; SEPA-Buchung ohne Mandat abgelehnt mit Mandat gebucht; Mandat angelegt; Storno → Posten wieder „Unbezahlt"; Formular behält Eingaben bei Fehler; 360/1280 px ohne horizontalen Overflow.
+  - *Nebenwirkungen:* `dues/tests/test_integration.py` deckt den ganzen Jahresverlauf ab (Lauf → Buchung → Überzahlung → Storno) inkl. Audit-Reihenfolge. `dues/tests/test_keine_bank_api.py` verbietet Netzwerk-Imports in der `dues`-App und Bank-Endpunkte in den Settings — die T9-Acceptance „kein Bank-API-Call" ist damit maschinell abgesichert. Die Postenliste liefert jetzt Dicts aus `posten_mit_status` statt eines Querysets.
+  - *Hinweise an Folge-Tasks:* T10 (Mahnen) und T11b (Kassenbericht) lesen `posten_mit_status(jahr)` und die Zahlungen statt eigene Summen zu bauen; für Mahnungen ist `PostenStatus.TEILBEZAHLT` + offener Betrag die Grundlage. T11 (Dashboard) kann offene Summe und Anzahl direkt aus denselben Zeilen nehmen. Nicht in v1: Mitglieder-Sicht auf den eigenen Beitragsstand (§3.8, spätere Aufgabe), Storno für **Beitragsposten** (weiterhin nur Admin-Korrektur mit Audit).
 
 ---
 
@@ -36,12 +39,11 @@
 
 Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`:
 
-1. [T9](plan.md) SEPA-Mandate + manuelle Zahlungserfassung
-2. [T10](plan.md) Mahnwesen + Beitrags-Export
-3. [T11](plan.md) Dashboard-Erweiterung offene Beiträge
-4. [T11b](plan.md) Kassenbuch-Sicht Beiträge (Jahresübersicht) — *neu, schließt M2.6*
-5. [T12](plan.md) Zugriffsprotokoll Detailansicht — hängt nur an T5, kann vor T9 gemacht werden
-6. **Checkpoint 2** — Beitragslauf-Jahr komplett (Lauf → Zahlung → Mahnung → Export), Dashboard zeigt echte Zahlen, Review mit Mensch
+1. [T10](plan.md) Mahnwesen + Beitrags-Export
+2. [T11](plan.md) Dashboard-Erweiterung offene Beiträge
+3. [T11b](plan.md) Kassenbuch-Sicht Beiträge (Jahresübersicht) — *neu, schließt M2.6*
+4. [T12](plan.md) Zugriffsprotokoll Detailansicht — hängt nur an T5, kann vor T10 gemacht werden
+5. **Checkpoint 2** — Beitragslauf-Jahr komplett (Lauf → Zahlung → Mahnung → Export), Dashboard zeigt echte Zahlen, Review mit Mensch
 
 **Danach:** Phase 3 (T13/T14) · Phase 4 (T16/T17) · Phase 4b (T19/T20) · Phase 5 (T23/T24/T25/T25b/T27)
 
