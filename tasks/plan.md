@@ -18,27 +18,27 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 ### Phase 1: Fundament
 
-- [ ] **T1: Projekt-Scaffold + Docker**
+- [x] **T1: Projekt-Scaffold + Docker**
   Django-Projekt, `core`-App, Settings (DEBUG, Postgres), Docker Compose (app + db), Basis-Template **mobile-first (Responsive ab 360 px, Burger-Menü, scrollbare Tabellen)**, Tailwind/Styles, Health-Check-Route.
   *Acceptance:* `docker compose up` → Login-Seite erreichbar; Layout auf 360 px ohne horizontalen Overflow; `pytest` läuft leer grün.
   *Verify:* `docker compose up -d` + `pytest` + Browser-Check 360/768/1280 px · *Files:* `manage.py`, `docker-compose.yml`, `Dockerfile`, `config/`, `core/` · *Scope:* M
 
-- [ ] **T2: Auth, Rollen, Navigation**
+- [x] **T2: Auth, Rollen, Navigation**
   Login/Logout, Gruppen `admin/kapitaen/mitglied`, rollenbasierte Menüs, Passwort-Reset für Admin-Versand.
   *Acceptance:* 3 Testnutzer (eine pro Rolle) sehen unterschiedliche Menüs; Nicht-Mitglied wird abgewiesen.
   *Verify:* `pytest core/` · *Files:* `core/views.py`, `core/templates/` · *Deps:* T1 · *Scope:* S
 
-- [ ] **T3: Mitgliederstammdaten + Admin**
+- [x] **T3: Mitgliederstammdaten + Admin**
   Model `Member` (Profilfelder, Status aktiv/passiv/ausgetreten, Ein-/Austrittsdatum), Djangos Admin mit Liste/Suche, Mitgliederliste mit Filter, Detailseite.
   *Acceptance:* Admin legt Mitglied an, listet/filtert es; Statuswechsel historisiert (kein Hard-Delete).
   *Verify:* `pytest members/` · *Files:* `members/models.py`, `members/admin.py`, `members/views.py` · *Deps:* T2 · *Scope:* M
 
-- [ ] **T4: Selbstbedienung + Änderungswunsch**
+- [x] **T4: Selbstbedienung + Änderungswunsch**
   Mitglied sieht eigene Daten, reicht Änderungswunsch ein (Feld + Wunschwert); Admin-Übersicht mit Freigabe/Ablehnung; Freigabe schreibt Wert + Audit-Eintrag.
   *Acceptance:* Wunsch fliebt von Einreichung bis zur Freigabe; ohne Freigabe ändert sich nichts am Stammdatum.
   *Verify:* `pytest members/` (Workflow-Test) · *Files:* `members/models.py`, `members/views.py`, `members/templates/` · *Deps:* T3 · *Scope:* M
 
-- [ ] **T5: Audit-Log + Login-Protokoll**
+- [x] **T5: Audit-Log + Login-Protokoll**
   Signale loggen Änderungen an personenbezogenen Feldern (Wer, Was, Wann, Alt/Neu) + Login-Ereignisse; Admin-Ansicht.
   *Acceptance:* Jede Mitgliederänderung und jeder Login ist mit Zeit + Benutzer sichtbar.
   *Verify:* `pytest core/` · *Files:* `core/models.py`, `core/signals.py` · *Deps:* T4 · *Scope:* M

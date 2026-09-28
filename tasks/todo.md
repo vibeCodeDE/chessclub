@@ -8,7 +8,7 @@ Details & Akzeptanzkriterien: `tasks/plan.md` · Spez: `docs/prd.md`
 - [x] T3: Mitgliederstammdaten + Admin + Liste/Filter — Verify: `pytest members/` ✅ 33 Tests grün, Admin anlegen/suchen/filtern (kein Delete), Statuswechsel historisiert, Detail + CSV-Export, Layout 360/1280 px geprüft
 - [x] T4: Selbstbedienung + Änderungswunsch-Workflow (Admin-Freigabe) — Verify: `pytest members/` ✅ 27 neue Tests (`members/tests/test_selfservice.py`), 85 grün gesamt; Workflow im Browser durchklickt (Einreichung → Freigabe/Ablehnung → Audit-Eintrag), Layout 360/1280 px ohne Overflow; **Hinweis für T5:** `core/models.py` mit `AuditLog` existiert schon (Freigabe/Ablehnung schreibt Einträge) – T5 ergänzt Signale (Stammdaten + Login) + Admin-Ansicht darauf; Nav-Eintrag `members:change_request_list`; Profil liegt in `members` (`/profil/`), nicht mehr in `core`
 - [x] T5: Audit-Log + Login-Protokoll — Verify: `pytest` ✅ 105 Tests grün (neue `core/tests/test_audit.py`); Signale loggen Stammdaten-Änderungen (Wer/Was/Wann + Alt/Neu in `feld`/`alt_wert`/`neu_wert`) und Login/Logout/Login-Abweisung (mit IP); read-only AuditLog-Admin; „Wer" via `_changed_by` (Admin + Freigabe-View)
-- [ ] ☑ Checkpoint 1: Rollen-Flow manuell, alle Tests grün, Review
+- [x] Checkpoint 1: Rollen-Flow manuell, alle Tests grün, Review — Verify: ✅ 2026-09-28 — 105 Tests grün (`pytest` im Docker-Stack); Rollen-Flow im Browser durchklickt: Menüs je Rolle (admin/mitglied/kapitaen), 403-Negativtest, Mitglied anlegen + Statushistorie, Wunsch → Freigabe → Audit-Eintrag mit Alt/Neu, Ablehnung mit Kommentar, Login-/Logout-Protokoll mit IP
 
 ## Phase 2: Beiträge
 - [ ] T6: Beitragssätze + Beitragsjahre — Verify: `pytest dues/`
