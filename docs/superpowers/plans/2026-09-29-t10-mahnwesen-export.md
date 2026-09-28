@@ -948,7 +948,9 @@ class PostenFuerBriefTests(TestCase):
         # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
         self.kategorie = FeeCategory.objects.get_or_create(
             code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
-        )[0]        self.post = make_post(
+        )[0]
+
+        self.post = make_post(
             member=make_member(kategorie=self.kategorie), kategorie=self.kategorie
         )
 
@@ -1154,7 +1156,8 @@ def make_post(member, jahr=2026, betrag="90.00", kategorie=None):
     # ihn im Testlauf, statt am unique-Slug zu scheitern.
     kategorie = kategorie or FeeCategory.objects.get_or_create(
         code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
-    )[0]    return FeePost.objects.create(
+    )[0]
+    return FeePost.objects.create(
         member=member, jahr=jahr, kategorie=kategorie, betrag=Decimal(betrag)
     )
 
@@ -2076,7 +2079,9 @@ class MahnbriefTests(TestCase):
         # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
         self.kategorie = FeeCategory.objects.get_or_create(
             code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
-        )[0]        self.post = make_post(kategorie=self.kategorie)
+        )[0]
+
+        self.post = make_post(kategorie=self.kategorie)
         self.verein = Vereinsdaten.objects.create(
             name="Schachverein Example",
             strasse="Turnierweg 3",
