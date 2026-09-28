@@ -275,7 +275,11 @@ from members.models import Member
 
 
 def make_post(jahr=2026, betrag="90.00"):
-    kategorie = FeeCategory.objects.create(code="erwachsene", bezeichnung="Erwachsene")
+    # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create holt
+    # ihn im Testlauf, statt am unique-Slug zu scheitern.
+    kategorie = FeeCategory.objects.get_or_create(
+        code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+    )[0]
     member = Member.objects.create(
         vorname="Anna", nachname="Meier", eintrittsdatum=date(2020, 1, 15),
         beitragskategorie=kategorie,
@@ -346,7 +350,7 @@ class MahnungModelTests(TestCase):
         mahnung = Mahnung.objects.create(post=self.post, stufe=Mahnung.Stufe.MAHNUNG_2)
 
         self.assertIn("2. Mahnung", str(mahnung))
-        self.assertIn("Anna Meier", str(mahnung))
+        self.assertIn("Meier, Anna", str(mahnung))
 ```
 
 - [ ] **Step 2: Test laufen lassen, Fehlschlag bestätigen**
@@ -503,9 +507,11 @@ def make_member(nachname="Meier", vorname="Anna", kategorie=None):
 
 
 def make_post(member=None, jahr=2026, betrag="90.00", kategorie=None):
-    kategorie = kategorie or FeeCategory.objects.create(
-        code="erwachsene", bezeichnung="Erwachsene"
-    )
+    # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create holt
+    # ihn im Testlauf, statt am unique-Slug zu scheitern.
+    kategorie = kategorie or FeeCategory.objects.get_or_create(
+        code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+    )[0]
     member = member or make_member(kategorie=kategorie)
     return FeePost.objects.create(
         member=member, jahr=jahr, kategorie=kategorie, betrag=Decimal(betrag)
@@ -830,9 +836,11 @@ git commit -m "T10: Stufenregel des Mahnwesens (1./2. Mahnung, offener Posten)"
 ```python
 class OffenePostenTests(TestCase):
     def setUp(self):
-        self.kategorie = FeeCategory.objects.create(
-            code="erwachsene", bezeichnung="Erwachsene"
-        )
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
 
     def _posten(self, anzahl, jahr=2026, betrag="90.00"):
         posten = []
@@ -936,10 +944,11 @@ class OffenePostenTests(TestCase):
 
 class PostenFuerBriefTests(TestCase):
     def setUp(self):
-        self.kategorie = FeeCategory.objects.create(
-            code="erwachsene", bezeichnung="Erwachsene"
-        )
-        self.post = make_post(
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]        self.post = make_post(
             member=make_member(kategorie=self.kategorie), kategorie=self.kategorie
         )
 
@@ -1141,10 +1150,11 @@ def make_member(nachname="Meier", vorname="Anna", **kwargs):
 
 
 def make_post(member, jahr=2026, betrag="90.00", kategorie=None):
-    kategorie = kategorie or FeeCategory.objects.create(
-        code="erwachsene", bezeichnung="Erwachsene"
-    )
-    return FeePost.objects.create(
+    # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create holt
+    # ihn im Testlauf, statt am unique-Slug zu scheitern.
+    kategorie = kategorie or FeeCategory.objects.get_or_create(
+        code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+    )[0]    return FeePost.objects.create(
         member=member, jahr=jahr, kategorie=kategorie, betrag=Decimal(betrag)
     )
 
@@ -1170,10 +1180,11 @@ class CsvSpaltenTests(TestCase):
 
 class CsvInhaltTests(TestCase):
     def setUp(self):
-        self.kategorie = FeeCategory.objects.create(
-            code="erwachsene", bezeichnung="Erwachsene"
-        )
-
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
     def test_zeile_eines_unbezahlten_postens(self):
         member = make_member()
         make_post(member, kategorie=self.kategorie)
@@ -1314,10 +1325,11 @@ class CsvDatensparsamkeitTests(TestCase):
     """Inhaltstest aus plan.md: der Export enthält keine Kontaktdaten."""
 
     def setUp(self):
-        self.kategorie = FeeCategory.objects.create(
-            code="erwachsene", bezeichnung="Erwachsene"
-        )
-
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
     def test_keine_adressen_und_keine_kontaktdaten(self):
         member = make_member()
         post = make_post(member, kategorie=self.kategorie)
@@ -1512,9 +1524,11 @@ def make_member(nachname="Meier", vorname="Anna", kategorie=None):
 
 
 def make_post(member=None, jahr=2026, betrag="90.00", kategorie=None):
-    kategorie = kategorie or FeeCategory.objects.create(
-        code="erwachsene", bezeichnung="Erwachsene"
-    )
+    # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create holt
+    # ihn im Testlauf, statt am unique-Slug zu scheitern.
+    kategorie = kategorie or FeeCategory.objects.get_or_create(
+        code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+    )[0]
     member = member or make_member(kategorie=kategorie)
     return FeePost.objects.create(
         member=member, jahr=jahr, kategorie=kategorie, betrag=Decimal(betrag)
@@ -1577,10 +1591,11 @@ class MahnlisteInhaltTests(TestCase):
     def setUp(self):
         self.admin = make_user("vorstand", "admin")
         self.client.force_login(self.admin)
-        self.kategorie = FeeCategory.objects.create(
-            code="erwachsene", bezeichnung="Erwachsene"
-        )
-
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
     def test_offener_posten_erscheint_mit_summe(self):
         make_post(kategorie=self.kategorie)
 
@@ -1717,10 +1732,11 @@ class ExportViewTests(TestCase):
     def setUp(self):
         self.admin = make_user("vorstand", "admin")
         self.client.force_login(self.admin)
-        self.kategorie = FeeCategory.objects.create(
-            code="erwachsene", bezeichnung="Erwachsene"
-        )
-
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
     def test_export_ist_eine_csv_datei(self):
         make_post(kategorie=self.kategorie)
 
@@ -2056,10 +2072,11 @@ class MahnbriefTests(TestCase):
     def setUp(self):
         self.admin = make_user("vorstand", "admin")
         self.client.force_login(self.admin)
-        self.kategorie = FeeCategory.objects.create(
-            code="erwachsene", bezeichnung="Erwachsene"
-        )
-        self.post = make_post(kategorie=self.kategorie)
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]        self.post = make_post(kategorie=self.kategorie)
         self.verein = Vereinsdaten.objects.create(
             name="Schachverein Example",
             strasse="Turnierweg 3",
@@ -2077,7 +2094,7 @@ class MahnbriefTests(TestCase):
         response = self.client.get(self.url())
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Anna Meier")
+        self.assertContains(response, "Meier, Anna")
         self.assertContains(response, "90,00")
         self.assertEqual(response.context["summe_offen"], Decimal("90.00"))
 
