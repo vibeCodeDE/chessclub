@@ -131,18 +131,28 @@ def offene_posten(jahr):
     Basis ist :func:`dues.services.posten_mit_status` (Posten, Kategorie, Mit-
     glied und Zahlungsstand in einer Abfrage). Danach wird nur ausgefiltert:
     ``offen <= 0`` fällt heraus — dazu gehören bezahlte Posten und Gutschriften,
-    denn auf beides schreibt man keinen Mahnbrief. Die Mahnungen aller Posten
-    des Jahres kommen in **einer** Abfrage und werden über ``post_id`` indexiert,
-    damit die Stufe je Zeile keine Zusatzabfrage kostet.
+    denn auf beides schreibt man keinen Mahnbrief. ``offen`` stammt aus der
+    Annotation dieser Abfrage; :func:`dues.services.offen` wird hier bewusst
+    **nicht** je Zeile aufgerufen, weil es ohne Annotation je Aufruf selbst
+    nachsummieren würde.
+
+    Die Mahnungen kommen in **einer** Abfrage über ``post_id__in`` — erst nach
+    dem Filtern, auf die IDs der übrig gebliebenen Posten. Ein Jahr mit tausend
+    bezahlten Posten lädt so nicht deren Mahnverläufe mit und wirft sie wieder
+    weg. Über ``post_id`` indiziert kostet die Stufe je Zeile keine
+    Zusatzabfrage.
     """
+    zeilen = [
+        zeile for zeile in posten_mit_status(jahr) if zeile["offen"] > Decimal("0.00")
+    ]
+
     mahnungen_pro_post = {}
-    for mahnung in Mahnung.objects.filter(post__jahr=jahr).order_by("datum", "pk"):
+    for mahnung in Mahnung.objects.filter(
+        post_id__in=[zeile["post"].pk for zeile in zeilen]
+    ).order_by("datum", "pk"):
         mahnungen_pro_post.setdefault(mahnung.post_id, []).append(mahnung)
 
-    zeilen = []
-    for zeile in posten_mit_status(jahr):
-        if zeile["offen"] <= Decimal("0.00"):
-            continue
+    for zeile in zeilen:
         mahnungen = mahnungen_pro_post.get(zeile["post"].pk, [])
         stufe = naechste_stufe_fuer(mahnungen)
         zeile.update(
@@ -150,7 +160,6 @@ def offene_posten(jahr):
             stufe=stufe,
             stufe_text=mahnstufe_text(stufe),
         )
-        zeilen.append(zeile)
     return zeilen
 
 

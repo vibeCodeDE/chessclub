@@ -287,10 +287,31 @@ class OffenePostenTests(TestCase):
             )
         return posten
 
+    def _posten_mit_namen(self, namen, jahr=2026, betrag="90.00"):
+        """Legt je ``(nachname, vorname)`` einen Posten an — in genau der Reihenfolge."""
+        return [
+            make_post(
+                member=make_member(
+                    nachname=nachname, vorname=vorname, kategorie=self.kategorie
+                ),
+                jahr=jahr,
+                betrag=betrag,
+                kategorie=self.kategorie,
+            )
+            for nachname, vorname in namen
+        ]
+
     def test_leeres_jahr_ergibt_leere_liste(self):
         self.assertEqual(offene_posten(2030), [])
 
-    def test_offene_posten_kommen_vor_bezahlten(self):
+    def test_bezahlter_posten_erscheint_auch_bei_offenen_nicht(self):
+        """Der Vertrag an dieser Stelle ist **Filtern**, nicht Sortieren.
+
+        Die Übersicht zeigt nur, was noch offen ist; ein bezahlter Posten
+        verschwindet, auch wenn daneben ein offener steht. Der Test hieß früher
+        „offene Posten kommen vor bezahlten" und behauptete damit eine
+        Reihenfolge, die es nicht gibt — er prüft keine.
+        """
         offen_post, bezahlt_post = self._posten(2)
         zahle(bezahlt_post)
 
@@ -349,11 +370,45 @@ class OffenePostenTests(TestCase):
         self.assertEqual(zeile["stufe_text"], "ausgeschöpft")
 
     def test_sortiert_nach_nachname_und_vorname(self):
-        self._posten(3)
+        """Die Übersicht sortiert wie die Postenliste: Nachname, dann Vorname (Spec 5.3).
 
-        nachnamen = [zeile["member"].nachname for zeile in offene_posten(2026)]
+        Die Mitglieder werden bewusst **anti**sortiert angelegt und die
+        Erwartung ist eine feste Liste statt eines ``sorted(...)``-Vergleichs.
+        Nur so schlägt der Test fehl, wenn die Sortierung entfällt oder nur zur
+        Hälfte dasteht: die frühere Fassung legte ``Mustermann00/01/02`` bereits
+        sortiert an und verglich gegen ``sorted(...)`` — sie war grün, egal was
+        ``offene_posten`` tat.
 
-        self.assertEqual(nachnamen, sorted(nachnamen))
+        Die beiden gleichnamigen Paare (Meyer und Bauer) sind gegeneinander
+        umgekehrt angelegt. Welches davon bei Gleichstand im Nachnamen zuerst
+        kommt, entscheidet die Datenbank — aber **eine** der beiden Reihenfolgen
+        muss vom Vornamen entschieden werden. Damit ist der Vorname-Teil des
+        Vertrags abgesichert, ohne die Ausführungsreihenfolge einer
+        Gleichstandsregel zu unterstellen.
+        """
+        anlegen = [
+            ("Ziegler", "Anna"),
+            ("Alpha", "Zoe"),
+            ("Meyer", "Zoe"),
+            ("Meyer", "Anna"),
+            ("Bauer", "Anna"),
+            ("Bauer", "Zoe"),
+        ]
+        self._posten_mit_namen(anlegen)
+
+        zeilen = offene_posten(2026)
+
+        self.assertEqual(
+            [(z["member"].nachname, z["member"].vorname) for z in zeilen],
+            [
+                ("Alpha", "Zoe"),
+                ("Bauer", "Anna"),
+                ("Bauer", "Zoe"),
+                ("Meyer", "Anna"),
+                ("Meyer", "Zoe"),
+                ("Ziegler", "Anna"),
+            ],
+        )
 
     def test_anderes_jahr_wird_ignoriert(self):
         self._posten(2, jahr=2026)
