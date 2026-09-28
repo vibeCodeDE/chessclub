@@ -52,8 +52,11 @@ def mahnungen_setzen(post, stufe, datum, frist=None, benutzer=None, notiz=""):
        noch doppeln,
     3. ein Datum muss angegeben sein.
 
-    Rückdatierte Daten sind erlaubt (der Vorstand mahnt im Voraus), ebenso eine
-    Frist ohne Datum und ein leeres ``datum`` wird nie angenommen.
+    Rückdatierte Daten sind erlaubt (der Vorstand mahnt im Voraus). ``frist``
+    ist optional — ohne Frist gilt schlicht „keine Zahlungsfrist" —, ``datum``
+    ist dagegen Pflicht und wird nie leer angenommen. Die Frist wird bewusst
+    nicht gegen das Mahndatum geprüft: sie ist ein Textfeld für den Brief, kein
+    abgeleitetes Datum.
     """
     if datum is None:
         raise ValidationError("Bitte ein gültiges Mahndatum angeben.")
@@ -82,6 +85,10 @@ def mahnungen_setzen(post, stufe, datum, frist=None, benutzer=None, notiz=""):
 
     with transaction.atomic():
         try:
+            # Der innere Block ist ein Savepoint. Nur dadurch lässt sich die
+            # IntegrityError der Constraint überhaupt abfangen, ohne dass die
+            # äußere Transaktion als unbrauchbar markiert wird — ein „fangen
+            # und weitermachen" wäre sonst ein TransactionManagementError.
             with transaction.atomic():
                 mahnung = Mahnung.objects.create(
                     post=post,
@@ -96,14 +103,18 @@ def mahnungen_setzen(post, stufe, datum, frist=None, benutzer=None, notiz=""):
             # Vorstand soll trotzdem eine Meldung statt eines 500 sehen.
             raise _doppelte_stufe_meldung(post, stufe)
 
-    AuditLog.objects.create(
-        benutzer=benutzer,
-        aktion="Mahnung gesetzt",
-        text=(
-            f"{post.jahr} · {post.member}: {mahnstufe_text(stufe)} vom "
-            f"{datum.isoformat()}"
-            + (f", Frist {frist.isoformat()}" if frist else "")
-        ),
-        member=post.member,
-    )
+        # Der Audit-Eintrag gehört in dieselbe Transaktion wie die Mahnung: eine
+        # gemahnte Buchung ohne Protokollzeile wäre hinterher nicht von einer
+        # nie gemahnten zu unterscheiden. Steht er außerhalb, bliebe die Mahnung
+        # bei einem Audit-Ausfall ohne jede Spur stehen.
+        AuditLog.objects.create(
+            benutzer=benutzer,
+            aktion="Mahnung gesetzt",
+            text=(
+                f"{post.jahr} · {post.member}: {mahnstufe_text(stufe)} vom "
+                f"{datum.isoformat()}"
+                + (f", Frist {frist.isoformat()}" if frist else "")
+            ),
+            member=post.member,
+        )
     return mahnung

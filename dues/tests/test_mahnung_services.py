@@ -2,6 +2,7 @@
 
 from datetime import date
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -190,10 +191,70 @@ class MahnungenSetzenTests(TestCase):
         self.assertIn("2026-03-01", eintrag.text)
 
     def test_doppelbuchung_aus_dem_doppelklick_ergibt_keinen_500(self):
-        """Zwei gleichzeitige Klicks: die Constraint wird als ValidationError gefangen."""
+        """Zwei gleichzeitige Klicks: die Constraint wird als ValidationError gefangen.
+
+        ``naechste_stufe`` wird auf „Stufe 1 ist frei" festgenagelt, obwohl die
+        Datenbank die 1. Mahnung schon kennt. Genau das ist der Zwischenmoment
+        zwischen Prüfung und Insert, in dem ein zweiter Klick durchrutscht: hier
+        wirft die Constraint ``unique_mahnung_pro_post_stufe`` einen **echten**
+        ``IntegrityError``, nicht einen simulierten — sonst würde der Test den
+        Vorab-Check von :meth:`test_doppelte_stufe_wird_abgelehnt` nur wiederholen
+        und den Nebenläufigkeitszweig unbewiesen lassen.
+        """
         Mahnung.objects.create(post=self.post, stufe=Mahnung.Stufe.MAHNUNG_1)
 
-        with self.assertRaises(ValidationError) as fehler:
-            mahnungen_setzen(self.post, 1, date(2026, 4, 1))
+        with mock.patch(
+            "dues.mahnung.naechste_stufe", return_value=Mahnung.Stufe.MAHNUNG_1
+        ):
+            with self.assertRaises(ValidationError) as fehler:
+                mahnungen_setzen(self.post, 1, date(2026, 4, 1))
 
         self.assertIn("existiert bereits", str(fehler.exception))
+        # Ein abgefangener IntegrityError darf keine halbe Buchung hinterlassen.
+        self.assertEqual(AuditLog.objects.filter(aktion="Mahnung gesetzt").count(), 0)
+        # Und der Savepoint muss die Transaktion benutzbar gelassen haben —
+        # schlug das fehl, wäre der nächste Schreibvorgang ein
+        # TransactionManagementError statt einer Mahnung.
+        Mahnung.objects.create(post=self.post, stufe=Mahnung.Stufe.MAHNUNG_2)
+        self.assertEqual(Mahnung.objects.count(), 2)
+
+    def test_audit_fehler_bricht_die_gesamte_buchung_ab(self):
+        """Eine Mahnung ohne Protokollzeile wäre hinterher nicht mehr auffindbar.
+
+        Der Audit-Ausfall wird als ``RuntimeError`` simuliert und **nicht** als
+        Datenbankfehler: nur so bleibt die Verbindung nach dem Fehler benutzbar
+        und der Test kann überhaupt erst zählen, ob eine Mahnung zurückblieb.
+        Der ``IntegrityError``-Pfad ist in
+        :meth:`test_doppelbuchung_aus_dem_doppelklick_ergibt_keinen_500`
+        abgedeckt.
+        """
+        with mock.patch(
+            "core.models.AuditLog.objects.create",
+            side_effect=RuntimeError("Audit-Ausfall"),
+        ):
+            with self.assertRaises(RuntimeError):
+                mahnungen_setzen(self.post, 1, date(2026, 3, 1))
+
+        self.assertEqual(Mahnung.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.count(), 0)
+
+    def test_abgelehnte_stufe_erzeugt_keinen_zusatzlichen_audit_eintrag(self):
+        """Eine abgelehnte Operation darf das Protokoll nicht verfälschen."""
+        mahnungen_setzen(self.post, 1, date(2026, 3, 1))
+
+        with self.assertRaises(ValidationError):
+            mahnungen_setzen(self.post, 1, date(2026, 4, 1))
+
+        self.assertEqual(AuditLog.objects.filter(aktion="Mahnung gesetzt").count(), 1)
+
+    def test_frist_vor_dem_mahndatum_wird_akzeptiert(self):
+        """Die Frist wird bewusst nicht gegen das Mahndatum geprüft.
+
+        Sie ist ein Textfeld für den Brief, kein abgeleitetes Datum — der Vorstand
+        entscheidet, welches Zahlungsziel im Schreiben steht.
+        """
+        mahnung = mahnungen_setzen(
+            self.post, 1, date(2026, 3, 1), frist=date(2026, 1, 1)
+        )
+
+        self.assertEqual(mahnung.frist, date(2026, 1, 1))
