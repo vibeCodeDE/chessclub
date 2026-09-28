@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "core",
     "members",
     "dues",
+    "verein",
 ]
 
 MIDDLEWARE = [
