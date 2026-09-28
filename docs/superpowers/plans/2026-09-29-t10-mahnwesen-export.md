@@ -998,6 +998,7 @@ class PostenFuerBriefTests(TestCase):
 
         self.assertEqual([p["post"] for p in posten], [post_2026])
         self.assertEqual(summe, Decimal("90.00"))
+```
 
 - [ ] **Step 2: Tests laufen lassen, Fehlschlag bestätigen**
 
