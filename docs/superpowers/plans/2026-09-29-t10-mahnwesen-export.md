@@ -860,6 +860,7 @@ class OffenePostenTests(TestCase):
 
     def test_offene_posten_kommen_vor_bezahlten(self):
         offen_post, bezahlt_post = self._posten(2)
+        zahle(bezahlt_post)
 
         zeilen = offene_posten(2026)
 
@@ -982,13 +983,12 @@ class PostenFuerBriefTests(TestCase):
     def test_summe_ist_die_summe_aller_offenen_posten_des_mitglieds(self):
         """Zwei Jahre, zwei Beträge: in den Brief zählt nur das angefragte Jahr.
 
-        `FeePost` hat `unique(member, jahr)` — ein zweiter Posten **für dasselbe
+        `FeePost` hat `unique(member, jahr)` - ein zweiter Posten **für dasselbe
         Jahr** ist deshalb gar nicht möglich, und genau das nutzt der Test als
-        Beleg dafür, dass `posten_fuer_brief` sauber nach Jahr filtert.
+        Beleg dafür, dass `posten_fuer_brief` sauber nach Jahr filtert. Der
+        2026er Posten ist der aus dem `setUp`; hier entsteht nur der 2027er.
         """
-        post_2026 = make_post(
-            member=self.post.member, jahr=2026, betrag="90.00", kategorie=self.kategorie
-        )
+        post_2026 = self.post
         post_2027 = make_post(
             member=self.post.member, jahr=2027, betrag="50.00", kategorie=self.kategorie
         )
