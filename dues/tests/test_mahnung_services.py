@@ -9,7 +9,13 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from core.models import AuditLog
-from dues.mahnung import mahnungen_setzen, mahnstufe_text, naechste_stufe
+from dues.mahnung import (
+    mahnungen_setzen,
+    mahnstufe_text,
+    naechste_stufe,
+    offene_posten,
+    posten_fuer_brief,
+)
 from dues.models import FeeCategory, FeePost, Mahnung, Payment
 from members.models import Member
 
@@ -258,3 +264,169 @@ class MahnungenSetzenTests(TestCase):
         )
 
         self.assertEqual(mahnung.frist, date(2026, 1, 1))
+
+
+class OffenePostenTests(TestCase):
+    def setUp(self):
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
+
+    def _posten(self, anzahl, jahr=2026, betrag="90.00"):
+        posten = []
+        for nummer in range(anzahl):
+            member = make_member(
+                nachname=f"Mustermann{nummer:02d}",
+                vorname="Anna",
+                kategorie=self.kategorie,
+            )
+            posten.append(
+                make_post(member=member, jahr=jahr, betrag=betrag, kategorie=self.kategorie)
+            )
+        return posten
+
+    def test_leeres_jahr_ergibt_leere_liste(self):
+        self.assertEqual(offene_posten(2030), [])
+
+    def test_offene_posten_kommen_vor_bezahlten(self):
+        offen_post, bezahlt_post = self._posten(2)
+        zahle(bezahlt_post)
+
+        zeilen = offene_posten(2026)
+
+        self.assertEqual([zeile["post"] for zeile in zeilen], [offen_post])
+
+    def test_bezahlter_posten_faehlt_heraus(self):
+        (post,) = self._posten(1)
+        zahle(post)
+
+        self.assertEqual(offene_posten(2026), [])
+
+    def test_teilzahlung_bleibt_offen(self):
+        (post,) = self._posten(1, betrag="90.00")
+        zahle(post, "40.00")
+
+        (zeile,) = offene_posten(2026)
+
+        self.assertEqual(zeile["offen"], Decimal("50.00"))
+        self.assertEqual(zeile["status"], "teilbezahlt")
+
+    def test_gutschrift_faehlt_heraus(self):
+        (post,) = self._posten(1, betrag="90.00")
+        zahle(post, "100.00")
+
+        self.assertEqual(offene_posten(2026), [])
+
+    def test_zeile_traegt_die_felder_der_postenliste(self):
+        (post,) = self._posten(1)
+        mahnungen_setzen(post, 1, date(2026, 3, 1))
+
+        (zeile,) = offene_posten(2026)
+
+        self.assertEqual(zeile["post"], post)
+        self.assertEqual(zeile["member"], post.member)
+        self.assertEqual(zeile["kategorie"], post.kategorie)
+        self.assertEqual(zeile["betrag"], Decimal("90.00"))
+        self.assertEqual(zeile["bezahlt"], Decimal("0.00"))
+        self.assertEqual(zeile["offen"], Decimal("90.00"))
+        self.assertEqual(zeile["status"], "unbezahlt")
+        self.assertEqual(zeile["status_label"], "Unbezahlt")
+        self.assertEqual(zeile["status_klasse"], "badge-unbezahlt")
+        self.assertEqual(len(zeile["mahnungen"]), 1)
+        self.assertEqual(zeile["stufe"], 2)
+        self.assertEqual(zeile["stufe_text"], "2. Mahnung")
+
+    def test_stufe_ist_none_bei_ausgeschoepften_stufen(self):
+        (post,) = self._posten(1)
+        mahnungen_setzen(post, 1, date(2026, 3, 1))
+        mahnungen_setzen(post, 2, date(2026, 4, 1))
+
+        (zeile,) = offene_posten(2026)
+
+        self.assertIsNone(zeile["stufe"])
+        self.assertEqual(zeile["stufe_text"], "ausgeschöpft")
+
+    def test_sortiert_nach_nachname_und_vorname(self):
+        self._posten(3)
+
+        nachnamen = [zeile["member"].nachname for zeile in offene_posten(2026)]
+
+        self.assertEqual(nachnamen, sorted(nachnamen))
+
+    def test_anderes_jahr_wird_ignoriert(self):
+        self._posten(2, jahr=2026)
+        self._posten(1, jahr=2027)
+
+        self.assertEqual(len(offene_posten(2026)), 2)
+        self.assertEqual(len(offene_posten(2027)), 1)
+
+    def test_ohne_zusatzabfragen(self):
+        """Eine Abfrage für die Liste, eine für die Mahnungen — keine N+1."""
+        self._posten(5)
+        for zeile in offene_posten(2026):
+            mahnungen_setzen(zeile["post"], 1, date(2026, 3, 1))
+
+        with self.assertNumQueries(2):
+            zeilen = offene_posten(2026)
+            werte = [(z["offen"], z["stufe"], len(z["mahnungen"])) for z in zeilen]
+
+        self.assertEqual(len(werte), 5)
+
+
+class PostenFuerBriefTests(TestCase):
+    def setUp(self):
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
+
+        self.post = make_post(
+            member=make_member(kategorie=self.kategorie), kategorie=self.kategorie
+        )
+
+    def test_liefert_die_offenen_posten_des_mitglieds(self):
+        (posten, summe) = posten_fuer_brief(2026, self.post.member)
+
+        self.assertEqual([p["post"] for p in posten], [self.post])
+        self.assertEqual(summe, Decimal("90.00"))
+
+    def test_ignoriert_bezahlte_posten(self):
+        zahle(self.post)
+
+        (posten, summe) = posten_fuer_brief(2026, self.post.member)
+
+        self.assertEqual(posten, [])
+        self.assertEqual(summe, Decimal("0.00"))
+
+    def test_ignoriert_andere_mitglieder(self):
+        anderer = make_post(
+            member=make_member(nachname="Koch", kategorie=self.kategorie),
+            kategorie=self.kategorie,
+        )
+
+        (posten, _) = posten_fuer_brief(2026, self.post.member)
+
+        self.assertEqual([p["post"] for p in posten], [self.post])
+        self.assertNotIn(anderer, [p["post"] for p in posten])
+
+    def test_summe_ist_die_summe_aller_offenen_posten_des_mitglieds(self):
+        """Zwei Jahre, zwei Beträge: in den Brief zählt nur das angefragte Jahr.
+
+        `FeePost` hat `unique(member, jahr)` — ein zweiter Posten **für dasselbe
+        Jahr** ist deshalb gar nicht möglich, und genau das nutzt der Test als
+        Beleg dafür, dass `posten_fuer_brief` sauber nach Jahr filtert. Der
+        2026er Posten ist der aus dem `setUp`; hier entsteht nur der 2027er.
+        """
+        post_2026 = self.post
+        post_2027 = make_post(
+            member=self.post.member, jahr=2027, betrag="50.00", kategorie=self.kategorie
+        )
+        self.assertNotEqual(post_2026, post_2027)
+
+        (posten, summe) = posten_fuer_brief(2026, self.post.member)
+
+        self.assertEqual([p["post"] for p in posten], [post_2026])
+        self.assertEqual(summe, Decimal("90.00"))

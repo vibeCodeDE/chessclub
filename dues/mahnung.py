@@ -13,7 +13,7 @@ from django.db import IntegrityError, transaction
 from core.models import AuditLog
 
 from .models import Mahnung
-from .services import offen
+from .services import offen, posten_mit_status
 
 
 def mahnstufe_text(stufe):
@@ -23,16 +23,21 @@ def mahnstufe_text(stufe):
     return f"{stufe}. Mahnung"
 
 
+def naechste_stufe_fuer(mahnungen):
+    """:func:`naechste_stufe` für eine bereits geladene Liste von Mahnungen."""
+    gesetzt = {mahnung.stufe for mahnung in mahnungen}
+    for stufe in (Mahnung.Stufe.MAHNUNG_1, Mahnung.Stufe.MAHNUNG_2):
+        if stufe not in gesetzt:
+            return stufe
+    return None
+
+
 def naechste_stufe(post):
     """Die Stufe, die als Nächstes gesetzt werden darf; ``None`` ist „keine mehr“.
 
     Stufen werden nicht übersprungen: ohne Mahnung beginnt es bei 1.
     """
-    gesetzt = set(post.mahnungen.values_list("stufe", flat=True))
-    for stufe in (Mahnung.Stufe.MAHNUNG_1, Mahnung.Stufe.MAHNUNG_2):
-        if stufe not in gesetzt:
-            return stufe
-    return None
+    return naechste_stufe_fuer(post.mahnungen.all())
 
 
 def _doppelte_stufe_meldung(post, stufe):
@@ -118,3 +123,44 @@ def mahnungen_setzen(post, stufe, datum, frist=None, benutzer=None, notiz=""):
             member=post.member,
         )
     return mahnung
+
+
+def offene_posten(jahr):
+    """Beitragsposten des Jahres, die noch offen sind — eine Abfrage, keine N+1.
+
+    Basis ist :func:`dues.services.posten_mit_status` (Posten, Kategorie, Mit-
+    glied und Zahlungsstand in einer Abfrage). Danach wird nur ausgefiltert:
+    ``offen <= 0`` fällt heraus — dazu gehören bezahlte Posten und Gutschriften,
+    denn auf beides schreibt man keinen Mahnbrief. Die Mahnungen aller Posten
+    des Jahres kommen in **einer** Abfrage und werden über ``post_id`` indexiert,
+    damit die Stufe je Zeile keine Zusatzabfrage kostet.
+    """
+    mahnungen_pro_post = {}
+    for mahnung in Mahnung.objects.filter(post__jahr=jahr).order_by("datum", "pk"):
+        mahnungen_pro_post.setdefault(mahnung.post_id, []).append(mahnung)
+
+    zeilen = []
+    for zeile in posten_mit_status(jahr):
+        if zeile["offen"] <= Decimal("0.00"):
+            continue
+        mahnungen = mahnungen_pro_post.get(zeile["post"].pk, [])
+        stufe = naechste_stufe_fuer(mahnungen)
+        zeile.update(
+            mahnungen=mahnungen,
+            stufe=stufe,
+            stufe_text=mahnstufe_text(stufe),
+        )
+        zeilen.append(zeile)
+    return zeilen
+
+
+def posten_fuer_brief(jahr, member):
+    """Offene Posten eines Mitglieds plus Summe — Grundlage des Mahnbriefs.
+
+    Schneidet bewusst aus :func:`offene_posten`, damit Brief und Übersicht nie
+    auseinanderlaufen können. Ist die Liste leer (inzwischen bezahlt), gibt es
+    keinen Brief — die View gibt dann 404.
+    """
+    posten = [z for z in offene_posten(jahr) if z["post"].member_id == member.pk]
+    summe = sum((z["offen"] for z in posten), Decimal("0.00"))
+    return posten, summe
