@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Zahlungen – Schachverein{% endblock %}
+
+{% block content %}
+<h1>Zahlungen {{ jahr }}</h1>
+
+<form class="filter-bar" method="get">
+  <label for="jahr">Jahr</label>
+  <select id="jahr" name="jahr">
+    {% for jahr_auswahl in jahre %}
+      <option value="{{ jahr_auswahl }}" {% if jahr_auswahl == jahr %}selected{% endif %}>{{ jahr_auswahl }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Anzeige wechseln</button>
+</form>
+
+<h2>Zahlung buchen</h2>
+
+<form class="inline-form" method="post" action="{% url 'dues:zahlung_buchen' %}">
+  {% csrf_token %}
+  <input type="hidden" name="jahr" value="{{ jahr }}">
+
+  <p>
+    <label for="post">Beitragsposten</label>
+    <select id="post" name="post" required>
+      <option value="">— bitte wählen —</option>
+      {% for zeile in posten %}
+        <option value="{{ zeile.post.pk }}" {% if formular.post|stringformat:"s" == zeile.post.pk|stringformat:"s" %}selected{% endif %}>
+          {{ zeile.member }} ({{ zeile.jahr }}, {{ zeile.kategorie }}) — offen: {{ zeile.offen }}&nbsp;€
+        </option>
+      {% endfor %}
+    </select>
+  </p>
+
+  <p>
+    <label for="betrag">Betrag (€)</label>
+    <input id="betrag" name="betrag" inputmode="decimal" value="{{ formular.betrag|default_if_none:'' }}">
+    <span class="tile-hinweis">
+      Eine Überzahlung ist erlaubt — der Überschuss wird als Gutschrift
+      ausgewiesen, nicht gekappt.
+    </span>
+  </p>
+
+  <p>
+    <label for="art">Zahlungsart</label>
+    <select id="art" name="art">
+      {% for wert, label in art_choices %}
+        <option value="{{ wert }}" {% if formular.art == wert %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </p>
+
+  <p>
+    <label for="datum">Zahlungsdatum</label>
+    <input id="datum" name="datum" type="date" value="{{ formular.datum|default_if_none:'' }}">
+  </p>
+
+  <p>
+    <label for="referenz">Referenz (Kontoauszug, Kassenbon)</label>
+    <input id="referenz" name="referenz" value="{{ formular.referenz|default_if_none:'' }}">
+  </p>
+
+  <p>
+    <label for="notiz">Notiz</label>
+    <input id="notiz" name="notiz" value="{{ formular.notiz|default_if_none:'' }}">
+  </p>
+
+  <button type="submit">Zahlung buchen</button>
+</form>
+
+<h2>Gebuchte Zahlungen {{ jahr }}</h2>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Mitglied</th>
+        <th>Jahr</th>
+        <th>Art</th>
+        <th>Betrag</th>
+        <th>Referenz</th>
+        <th>Erfasst von</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for zahlung in zahlungen %}
+        <tr>
+          <td>{{ zahlung.datum|date:"d.m.Y" }}</td>
+          <td>
+            <a href="{% url 'members:member_detail' zahlung.post.member.pk %}">{{ zahlung.post.member }}</a>
+          </td>
+          <td>{{ zahlung.post.jahr }}</td>
+          <td>{{ zahlung.get_art_display }}</td>
+          <td>{{ zahlung.betrag }}&nbsp;€</td>
+          <td>{{ zahlung.referenz }}{% if zahlung.storno_von %} <em>(Storno zu #{{ zahlung.storno_von.pk }})</em>{% endif %}</td>
+          <td>{{ zahlung.erfasst_von|default:"—" }}</td>
+          <td>
+            {% if not zahlung.storno_von %}
+              <form class="inline-form" method="post" action="{% url 'dues:zahlung_stornieren' zahlung.pk %}">
+                {% csrf_token %}
+                <button class="secondary" type="submit">Stornieren</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="8">Für {{ jahr }} ist keine Zahlung gebucht.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="tile-hinweis">
+  Eine Fehlbuchung wird nicht gelöscht, sondern per Gegenbuchung
+  aufgehoben — so bleibt die Finanzhistorie nachvollziehbar.
+</p>
+
+<h2>SEPA-Mandate</h2>
+
+<p class="tile-hinweis">
+  Die Software führt keinen Einzug durch: der Verein erstellt die
+  SEPA-Lastschrift in der Bank. Hier stehen nur Mandatsreferenz, Datum und
+  Status — eine IBAN wird bewusst <em>nicht</em> gespeichert.
+</p>
+
+<form class="inline-form" method="post" action="{% url 'dues:mandat_anlegen' %}">
+  {% csrf_token %}
+  <p>
+    <label for="mandat_member">Mitglied</label>
+    <select id="mandat_member" name="member" required>
+      <option value="">— bitte wählen —</option>
+      {% for member in mitglieder %}
+        <option value="{{ member.pk }}">{{ member }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <p>
+    <label for="mandat_referenz">Mandatsreferenz</label>
+    <input id="mandat_referenz" name="referenz" maxlength="50" required>
+  </p>
+  <p>
+    <label for="mandat_datum">Mandatsdatum</label>
+    <input id="mandat_datum" name="datum" type="date">
+  </p>
+  <p>
+    <label for="mandat_notiz">Notiz</label>
+    <input id="mandat_notiz" name="notiz">
+  </p>
+  <button type="submit">Mandat anlegen</button>
+</form>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Mitglied</th>
+        <th>Referenz</th>
+        <th>Datum</th>
+        <th>Status</th>
+        <th>Status ändern</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mandat in mandate %}
+        <tr>
+          <td>{{ mandat.member }}</td>
+          <td>{{ mandat.referenz }}</td>
+          <td>{{ mandat.datum|date:"d.m.Y" }}</td>
+          <td><span class="badge {{ mandat.status }}">{{ mandat.get_status_display }}</span></td>
+          <td>
+            <form class="inline-form" method="post" action="{% url 'dues:mandat_status' mandat.pk %}">
+              {% csrf_token %}
+              <select name="status" aria-label="Neuer Mandatsstatus">
+                {% for wert, label in mandat_status_choices %}
+                  <option value="{{ wert }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <button class="secondary" type="submit">Setzen</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5">Es ist noch kein SEPA-Mandat erfasst.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

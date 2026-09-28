@@ -76,6 +76,10 @@
         <th>Mitglied</th>
         <th>Kategorie</th>
         <th>Betrag</th>
+        <th>Bezahlt</th>
+        <th>Offen</th>
+        <th>Status</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -84,13 +88,25 @@
           <td><a href="{% url 'members:member_detail' post.member.pk %}">{{ post.member }}</a></td>
           <td>{{ post.kategorie }}</td>
           <td>{{ post.betrag }}&nbsp;€</td>
+          <td>{{ post.bezahlt }}&nbsp;€</td>
+          <td>{{ post.offen }}&nbsp;€</td>
+          <td><span class="badge {{ post.status_klasse }}">{{ post.status_label }}</span></td>
+          <td>
+            <a class="button-link" href="{% url 'dues:zahlungsliste' %}?jahr={{ jahr }}&amp;posten={{ post.post.pk }}">Zahlung buchen</a>
+          </td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="3">Für {{ jahr }} sind keine Beitragsposten gebucht.</td>
+          <td colspan="7">Für {{ jahr }} sind keine Beitragsposten gebucht.</td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<p class="tile-hinweis">
+  Ein negativer offener Betrag ist eine Gutschrift: das Mitglied hat zu viel
+  gezahlt. Der Überschuss wird angezeigt und nicht gekappt.
+  <a href="{% url 'dues:zahlungsliste' %}?jahr={{ jahr }}">Alle Zahlungen {{ jahr }}</a>
+</p>
 {% endblock %}

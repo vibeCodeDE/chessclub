@@ -61,3 +61,16 @@ class NavTests(TestCase):
         self.client.login(username="mitglied1", password="x")
         response = self.client.get("/")
         self.assertNotContains(response, 'href="/beitraege/"')
+
+    def test_admin_sees_zahlungen(self):
+        make_user("admin1", "admin")
+        self.client.login(username="admin1", password="x")
+        response = self.client.get("/")
+        self.assertContains(response, 'href="/beitraege/zahlungen/"')
+
+    def test_member_sees_no_zahlungen(self):
+        """Negativtest: Zahlungsbuchung bleibt Vorstandssache (PRD §3.8)."""
+        make_user("mitglied1", "mitglied")
+        self.client.login(username="mitglied1", password="x")
+        response = self.client.get("/")
+        self.assertNotContains(response, 'href="/beitraege/zahlungen/"')

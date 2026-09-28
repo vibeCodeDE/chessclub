@@ -212,6 +212,14 @@ body {
 .badge-freigegeben { background: #d1fae5; color: #065f46; }
 .badge-abgelehnt { background: #fee2e2; color: #991b1b; }
 
+.badge-unbezahlt { background: #e5e7eb; color: #374151; }
+.badge-offen { background: #fef3c7; color: #92400e; }
+.badge-bezahlt { background: #d1fae5; color: #065f46; }
+.badge-gutschrift { background: #e0e7ff; color: #3730a3; }
+
+.badge-widerrufen { background: #fef3c7; color: #92400e; }
+.badge-beendet { background: #e5e7eb; color: #374151; }
+
 .alert {
   border-radius: 6px;
   padding: 0.6rem 0.8rem;
