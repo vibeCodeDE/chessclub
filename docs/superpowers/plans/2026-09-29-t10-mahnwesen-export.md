@@ -1323,7 +1323,8 @@ class CsvInhaltTests(TestCase):
         )
 
         self.assertEqual(export_summe, modell_summe)
-        self.assertEqual(export_summe, Decimal("135.00"))
+        # 90 + 50 + 45 abzueglich 3 x 20 gezahlt = 125,00
+        self.assertEqual(export_summe, Decimal("125.00"))
 
 
 class CsvDatensparsamkeitTests(TestCase):
@@ -1350,7 +1351,18 @@ class CsvDatensparsamkeitTests(TestCase):
     def test_keine_adressen_anderer_mitglieder(self):
         """Adressen Dritter landen nicht im Export — auch nicht über die Mahnhistorie."""
         exportiert = make_member(nachname="Exportiert")
-        fremd = make_member(nachname="Fremd", vorname="Fritz")
+        # Das Drittmitglied braucht **eigene** Kontaktdaten: ohne sie könnte ein
+        # Fund nicht zugeordnet werden, und der Test wäre vakuos.
+        fremd = make_member(
+            nachname="Fremd",
+            vorname="Fritz",
+            strasse="Fremdweg 9",
+            plz="54321",
+            ort="Fremdstadt",
+            email="fritz@example.org",
+            telefon="0987 654",
+            geburtsdatum=date(1970, 2, 3),
+        )
         make_post(exportiert, kategorie=self.kategorie)
         post_fremd = make_post(fremd, kategorie=self.kategorie)
         mahnungen_setzen(post_fremd, 1, date(2026, 3, 1))
@@ -1358,9 +1370,15 @@ class CsvDatensparsamkeitTests(TestCase):
         zeilen = beitragszeilen(2026)
         volltext = "\n".join(";".join(zeile) for zeile in zeilen)
 
-        self.assertNotIn("Fritz", volltext)
-        self.assertNotIn("Fremd", volltext)
-        # … der eigene Posten des exportierten Mitglieds aber schon.
+        # Die Namensspalten stehen im Export — die Kontaktdaten niemals, auch
+        # dann nicht, wenn an dem Posten des dritten Mitglieds eine Mahnung hängt.
+        for verboten in (
+            "Fremdweg 9", "54321", "Fremdstadt", "fritz@example.org",
+            "0987 654", "1970-02-03",
+        ):
+            self.assertNotIn(verboten, volltext)
+        # … der Name des dritten Mitglieds aber schon: er gehört zu den Daten.
+        self.assertIn("Fremd", volltext)
         self.assertIn("Exportiert", volltext)
 
     def test_jede_zeile_hat_so_viele_spalten_wie_der_kopf(self):
