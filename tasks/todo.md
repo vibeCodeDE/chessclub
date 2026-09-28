@@ -21,7 +21,7 @@
 ### Phase 2: Beiträge + Dashboard
 
 - **T6: Dashboard-Gerüst** — Route `/dashboard/` (nur Admin, Nav-Eintrag `core:dashboard`); Wunsch-Kachel zählt offene Wünsche live (0 → kein Crash), Beitrags-/Termin-/Anmeldungs-Kacheln als Platzhalter bis T11/T16/T19. *Beleg:* `pytest core/` → 45 Tests grün (neue `core/tests/test_dashboard.py`), 114 gesamt; Browser-Check 360/1280 px ohne Overflow, Kacheln einspaltig (360) / zweispaltig (1280).
-  - ⚠️ **Offen: nicht committet.** `core/templates/core/dashboard.html` und `core/tests/test_dashboard.py` waren beim letzten Review untracked. Vor T7 committen, sonst stimmt der Doku-Status nicht mit dem Repo überein.
+  - Committet in `de9226d`. Davor gab es zusätzlich `256abcc` (Tailwind-CLI-Build statt CDN, `.container` → `.site-container`).
 
 ---
 
