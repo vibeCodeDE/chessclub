@@ -1188,6 +1188,7 @@ class CsvInhaltTests(TestCase):
         self.kategorie = FeeCategory.objects.get_or_create(
             code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
         )[0]
+
     def test_zeile_eines_unbezahlten_postens(self):
         member = make_member()
         make_post(member, kategorie=self.kategorie)
@@ -1333,6 +1334,7 @@ class CsvDatensparsamkeitTests(TestCase):
         self.kategorie = FeeCategory.objects.get_or_create(
             code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
         )[0]
+
     def test_keine_adressen_und_keine_kontaktdaten(self):
         member = make_member()
         post = make_post(member, kategorie=self.kategorie)
@@ -1599,6 +1601,7 @@ class MahnlisteInhaltTests(TestCase):
         self.kategorie = FeeCategory.objects.get_or_create(
             code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
         )[0]
+
     def test_offener_posten_erscheint_mit_summe(self):
         make_post(kategorie=self.kategorie)
 
@@ -1740,6 +1743,7 @@ class ExportViewTests(TestCase):
         self.kategorie = FeeCategory.objects.get_or_create(
             code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
         )[0]
+
     def test_export_ist_eine_csv_datei(self):
         make_post(kategorie=self.kategorie)
 
