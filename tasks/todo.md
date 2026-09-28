@@ -25,6 +25,10 @@
 - **T7: Beitragssätze + Beitragsjahre** — App `dues` mit `FeeCategory` (jahresunabhängig) und `FeeAmount` (Kategorie × Jahr × Betrag, `unique_together`); `Member.beitragskategorie` FK `null=True` = „keine Kategorie" (T8-Vorbedingung). Seed-Migration `0002_seed_beitragssaetze` legt 4 Kategorien × 2026/2027 mit **Platzhalterbeträgen** an (Erw. 90/95, Jugend 45/47, Familie 150/155, Erm. 55/57) — echte Vereinssätze sind weiterhin offen und per Admin überschreibbar. *Beleg:* `pytest` → **140 Tests grün** (24 neu in `dues/tests/test_models.py` + `dues/tests/test_admin.py`, 2 Audit-Tests in `core/tests/test_audit.py`); Negativtests: negativer Betrag (`ValidationError` + DB-Constraint), ausgetretenes Mitglied mit Kategorie, doppeltes (Kategorie, Jahr), Löschen einer vergebenen Kategorie (`ProtectedError`). Browser-Check am laufenden Stack: Kategorie-Änderungsseite zeigt 2026/2027 nebeneinander, 2027-Pflege lässt 2026 unberührt, Mitgliederliste filtert nach Kategorie.
   - *Nebenwirkung:* `AUDIT_FELDER` in `core/signals.py` ist dynamisch, deshalb protokolliert ein Kategoriewechsel jetzt automatisch mit. Damit die ID im Log lesbar wird, löst `AuditLog.anzeige_wert()` FK-Werte auf (im Admin: „Jugendliche" statt „2").
   - *Hinweise an Folge-Tasks:* T8 bucht `FeeAmount`-Posten je Jahr; ein Satz fehlt je (Kategorie, Jahr) → klarer Fehler statt 0-€-Posten. Beitragsposten/Zahlungen leben noch nicht — dafür sind T8/T9 zuständig.
+- **T8: Beitragslauf** — `FeePost` (Beitragsposten) mit `unique_together` über **Mitglied × Jahr**; diese Constraint ist die Idempotenz. Regelbasis in `dues/services.py` (`plan_lauf` = Vorschau ohne Schreibzugriff, `fuehre_lauf` = atomare Ausführung, Abbruch mit klarer Meldung bei fehlendem Satz je Kategorie). UI `/beitraege/` (Postenliste + Vorschau + Lauf per POST, Nav nur Admin), `FeePost` im Admin nur einsehbar — Anlegen nur über den Lauf, Löschen nie, Korrektur eines Betrags mit Alt/Neu-Audit. *Beleg:* `pytest` → **192 Tests grün** (52 neu: 22 in `dues/tests/test_services.py`, 24 in `dues/tests/test_views.py`, 4 in `dues/tests/test_admin.py`, 2 Nav-Tests in `core/tests/test_nav.py`); Negativtests: 403 für „mitglied"/„kapitaen" (auch ohne dass dabei Posten entstehen), Lauf nur per POST (GET → 405), fehlender Satz → Abbruch ohne Teilbuchung, ohne Kategorie → übersprungen statt 0 €, ausgetreten nie gebucht. Browser-Check am laufenden Stack: Lauf 2027 → 6 Posten, zweiter Lauf → „nichts Neues erzeugt", Schalter „passiv einbeziehen" → genau 1 zusätzlicher Posten, Kategorie ohne Satz → roter Blockier-Hinweis ohne Ausführen-Knopf; 360/1280 px ohne Overflow.
+  - *Entscheidungen mit dem Menschen (2026-09-28):* (1) `passiv` ist im PRD nicht als beitragspflichtig definiert → der Lauf-Dialog hat einen Schalter, Default ist „nicht buchen"; (2) ein zweiter Lauf ergänzt nur fehlende Posten, statt pauschal abzubrechen — damit bekommt ein im Jahresverlauf beigetretenes Mitglied seinen Posten.
+  - *Nebenwirkungen:* Posten-Beträge sind Momentaufnahmen — eine spätere Satz-Änderung im Admin ändert gebuchte Posten nicht mehr. `AuditLog` führt je Lauf eine Sammelzeile („Beitragslauf ausgeführt"), ein leerer Wiederholungslauf erzeugt keine Log-Zeile.
+  - *Hinweise an Folge-Tasks:* T9 bucht Zahlungen je Posten und berechnet den offenen Betrag; die Korrektur eines falschen Posten-Betrags läuft heute über das Admin (mit Audit-Spur) — ein Storno-Buchungspfad ist bewusst nicht Teil von v1. T11/T11b können `plan_lauf`/`FeePost` direkt für Kachel und Jahresübersicht nutzen.
 
 ---
 
@@ -32,13 +36,12 @@
 
 Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`:
 
-1. [T8](plan.md) Beitragslauf (idempotent)
-2. [T9](plan.md) SEPA-Mandate + manuelle Zahlungserfassung
-3. [T10](plan.md) Mahnwesen + Beitrags-Export
-4. [T11](plan.md) Dashboard-Erweiterung offene Beiträge
-5. [T11b](plan.md) Kassenbuch-Sicht Beiträge (Jahresübersicht) — *neu, schließt M2.6*
-6. [T12](plan.md) Zugriffsprotokoll Detailansicht — hängt nur an T5, kann vor T8 gemacht werden
-7. **Checkpoint 2** — Beitragslauf-Jahr komplett (Lauf → Zahlung → Mahnung → Export), Dashboard zeigt echte Zahlen, Review mit Mensch
+1. [T9](plan.md) SEPA-Mandate + manuelle Zahlungserfassung
+2. [T10](plan.md) Mahnwesen + Beitrags-Export
+3. [T11](plan.md) Dashboard-Erweiterung offene Beiträge
+4. [T11b](plan.md) Kassenbuch-Sicht Beiträge (Jahresübersicht) — *neu, schließt M2.6*
+5. [T12](plan.md) Zugriffsprotokoll Detailansicht — hängt nur an T5, kann vor T9 gemacht werden
+6. **Checkpoint 2** — Beitragslauf-Jahr komplett (Lauf → Zahlung → Mahnung → Export), Dashboard zeigt echte Zahlen, Review mit Mensch
 
 **Danach:** Phase 3 (T13/T14) · Phase 4 (T16/T17) · Phase 4b (T19/T20) · Phase 5 (T23/T24/T25/T25b/T27)
 
@@ -46,7 +49,7 @@ Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`:
 
 ## Noch offen (Blocker, keine Designfragen)
 
-- **Beitragssätze und Kategorien des Vereins** — vor T8. Die Struktur steht (Platzhalterbeträge in der Seed-Migration); vor dem ersten echten Beitragslauf müssen die Sätze im Django-Admin unter *Dues → Beitragskategorien* eingetragen werden. Ab dann braucht **jede** Kategorie einen Satz für das Laufjahr, sonst bricht T8 mit einer klaren Meldung ab.
+- **Beitragssätze und Kategorien des Vereins** — vor dem ersten echten Beitragslauf. Die Struktur steht (Platzhalterbeträge in der Seed-Migration); die Sätze müssen im Django-Admin unter *Dues → Beitragskategorien* eingetragen werden. Seit T8 ist das kein Blocker mehr, sondern eine Laufzeitregel: fehlt für eine Kategorie der Satz des Laufjahrs, blockiert `/beitraege/` den Lauf mit einer klaren Meldung und legt **nichts** an (auch nicht teilweise).
 - SMTP-Zugangsdaten — vor T14 (dev: Django-Console-Backend)
 - Domain/Hostname — vor T24
 - Aufbewahrungsfristen mit Steuerberater bestätigen — vor T23 (Default 36 Monate bis Anonymisierung, 8 Jahre anonymisierte Finanzhistorie nach § 147 AO)

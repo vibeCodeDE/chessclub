@@ -4,7 +4,8 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from dues.models import FeeAmount, FeeCategory
+from core.models import AuditLog
+from dues.models import FeeAmount, FeeCategory, FeePost
 from members.models import Member
 
 
@@ -170,3 +171,74 @@ class MemberKategorieAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Meier")
         self.assertNotContains(response, "Schmidt")
+
+
+class FeePostAdminTests(TestCase):
+    """Beitragsposten sind Finanznachweis: kein Anlegen, kein Löschen, Änderung mit Spur."""
+
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser("root", password="x")
+        self.client.login(username="root", password="x")
+        self.kategorie = FeeCategory.objects.get(code="erwachsene")
+        self.member = Member.objects.create(
+            vorname="Anna",
+            nachname="Meier",
+            eintrittsdatum=date(2020, 1, 15),
+            beitragskategorie=self.kategorie,
+        )
+        self.post = FeePost.objects.create(
+            member=self.member,
+            jahr=2027,
+            kategorie=self.kategorie,
+            betrag=Decimal("95.00"),
+        )
+
+    def test_changelist_zeigt_die_posten(self):
+        response = self.client.get("/admin/dues/feepost/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Meier")
+        self.assertContains(response, "2027")
+
+    def test_posten_kann_im_admin_nicht_angelegt_werden(self):
+        """Negativtest: Posten entstehen nur über den Beitragslauf (PRD M2.2)."""
+        vorher = FeePost.objects.count()
+
+        response = self.client.get("/admin/dues/feepost/add/")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(FeePost.objects.count(), vorher)
+
+    def test_posten_kann_im_admin_nicht_geloescht_werden(self):
+        """Negativtest: die Löschaktion des Admin entfernt keinen Posten."""
+        response = self.client.post(
+            "/admin/dues/feepost/",
+            {
+                "action": "delete_selected",
+                "_selected_action": [str(self.post.pk)],
+                "post": "yes",
+            },
+        )
+
+        self.assertNotContains(response, "wurde gelöscht")
+        self.assertTrue(FeePost.objects.filter(pk=self.post.pk).exists())
+
+    def test_betragskorrektur_bleibt_nachvollziehbar(self):
+        """Korrektur eines falschen Betrags ist erlaubt — aber mit Audit-Eintrag."""
+        response = self.client.post(
+            f"/admin/dues/feepost/{self.post.pk}/change/",
+            {
+                "member": self.member.pk,
+                "jahr": 2027,
+                "kategorie": self.kategorie.pk,
+                "betrag": "80.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.betrag, Decimal("80.00"))
+        eintrag = AuditLog.objects.get(aktion="Beitragsposten geändert")
+        self.assertEqual(eintrag.alt_wert, "95.00")
+        self.assertEqual(eintrag.neu_wert, "80.00")
+        self.assertEqual(eintrag.member, self.member)

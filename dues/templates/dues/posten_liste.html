@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Beiträge – Schachverein{% endblock %}
+
+{% block content %}
+<h1>Beiträge</h1>
+
+<form class="filter-bar" method="get">
+  <label for="jahr">Jahr</label>
+  <select id="jahr" name="jahr">
+    {% for jahr_auswahl in jahre %}
+      <option value="{{ jahr_auswahl }}" {% if jahr_auswahl == jahr %}selected{% endif %}>{{ jahr_auswahl }}</option>
+    {% endfor %}
+  </select>
+  <label class="inline-label">
+    <input type="checkbox" name="passiv" value="1" {% if passiv_einbezogen %}checked{% endif %}>
+    Passiv-Mitglieder einbeziehen
+  </label>
+  <button type="submit">Vorschau aktualisieren</button>
+</form>
+
+<h2>Beitragslauf {{ jahr }}</h2>
+
+{% if plan.fehlende_saetze %}
+  <div class="alert alert-error">
+    <strong>Der Lauf ist blockiert.</strong> Für {{ jahr }} fehlt der Beitragssatz für:
+    {% for kategorie in plan.fehlende_saetze %}<em>{{ kategorie.bezeichnung }}</em>{% if not forloop.last %}, {% endif %}{% endfor %}.
+    Bitte den Satz im Django-Admin unter „Beitragskategorien" nachtragen — sonst
+    entstünden Posten mit 0&nbsp;€.
+  </div>
+{% else %}
+  <div class="tile-grid">
+    <div class="tile">
+      <h2>Neu zu buchen</h2>
+      <p class="tile-wert">{{ plan.anzahl_neu }}</p>
+      <p class="tile-hinweis">Beitragsposten über {{ plan.summe_neu }}&nbsp;€</p>
+    </div>
+    <div class="tile">
+      <h2>Bereits gebucht</h2>
+      <p class="tile-wert">{{ plan.anzahl_vorhanden }}</p>
+      <p class="tile-hinweis">Jahressumme {{ plan.summe_gesamt }}&nbsp;€</p>
+    </div>
+  </div>
+
+  <form class="inline-form lauf-form" method="post" action="{% url 'dues:beitragslauf' %}">
+    {% csrf_token %}
+    <input type="hidden" name="jahr" value="{{ jahr }}">
+    <input type="hidden" name="passiv" value="{% if passiv_einbezogen %}1{% endif %}">
+    <button type="submit">Beitragslauf {{ jahr }} ausführen</button>
+    <span class="tile-hinweis">
+      Der Lauf ist wiederholbar: bereits gebuchte Posten bleiben unverändert,
+      fehlende werden ergänzt.
+    </span>
+  </form>
+
+  {% if plan.uebersprungen %}
+    <p class="tile-hinweis">
+      {{ plan.uebersprungen|length }} Mitglied(er) ohne Kategorie werden übersprungen:
+      {% for member in plan.uebersprungen %}{{ member }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+    </p>
+  {% endif %}
+  {% if plan.passiv_ausgenommen %}
+    <p class="tile-hinweis">
+      {{ plan.passiv_ausgenommen|length }} passive Mitglied(er) sind nicht einbezogen
+      (Schalter oben).
+    </p>
+  {% endif %}
+{% endif %}
+
+<h2>Beitragsposten {{ jahr }}</h2>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Mitglied</th>
+        <th>Kategorie</th>
+        <th>Betrag</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for post in posts %}
+        <tr>
+          <td><a href="{% url 'members:member_detail' post.member.pk %}">{{ post.member }}</a></td>
+          <td>{{ post.kategorie }}</td>
+          <td>{{ post.betrag }}&nbsp;€</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="3">Für {{ jahr }} sind keine Beitragsposten gebucht.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

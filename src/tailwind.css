@@ -3,6 +3,7 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 
 @source "../core/templates";
+@source "../dues/templates";
 @source "../members/templates";
 @source "../templates";
 

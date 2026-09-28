@@ -63,3 +63,47 @@ class FeeAmount(models.Model):
         # explizite Check macht die Regel auch im Service-/Testpfad sichtbar.
         if self.betrag is not None and self.betrag < 0:
             raise ValidationError({"betrag": "Der Betrag darf nicht negativ sein."})
+
+
+class FeePost(models.Model):
+    """Beitragsposten eines Mitglieds für ein Beitragsjahr (PRD M2.2).
+
+    Der Posten entsteht ausschließlich über den Beitragslauf
+    (:func:`dues.services.fuehre_lauf`) und ist ein Finanznachweis: Kategorie
+    und Betrag werden als Momentaufnahme kopiert, damit eine spätere Änderung
+    am :class:`FeeAmount` die gebuchte Historie nicht überschreibt.
+    """
+
+    member = models.ForeignKey(
+        "members.Member",
+        verbose_name="Mitglied",
+        # Kein Hard-Delete: die Finanzhistorie bleibt nach § 147 AO erhalten.
+        on_delete=models.PROTECT,
+        related_name="beitragsposten",
+    )
+    jahr = models.PositiveIntegerField("Jahr")
+    kategorie = models.ForeignKey(
+        FeeCategory,
+        verbose_name="Kategorie",
+        on_delete=models.PROTECT,
+        related_name="posten",
+    )
+    betrag = models.DecimalField(
+        "Betrag", max_digits=6, decimal_places=2, validators=[MinValueValidator(0)]
+    )
+    erstellt = models.DateTimeField("Erstellt", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-jahr", "member__nachname", "member__vorname"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["member", "jahr"],
+                name="unique_fee_post_per_member_jahr",
+            )
+        ]
+        verbose_name = "Beitragsposten"
+        verbose_name_plural = "Beitragsposten"
+
+    def __str__(self):
+        betrag = f"{self.betrag:.2f}".replace(".", ",")
+        return f"{self.jahr} · {self.member} · {betrag} €"

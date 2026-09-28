@@ -9,6 +9,7 @@ NAV_ITEMS = [
     ("members:profil", "Profil", {"mitglied", "kapitaen", "admin"}),
     ("members:member_list", "Mitglieder", {"admin"}),
     ("members:change_request_list", "Änderungswünsche", {"admin"}),
+    ("dues:posten_liste", "Beiträge", {"admin"}),
     ("admin:index", "Verwaltung", {"admin"}),
 ]
 
