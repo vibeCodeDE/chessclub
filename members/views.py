@@ -3,6 +3,7 @@ import csv
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -172,12 +173,31 @@ def _finish_decision(request, change_request, status, aktion, text):
 @role_required(ADMIN_GROUP)
 @require_POST
 def change_request_approve(request, pk):
-    change_request = get_object_or_404(
-        ChangeRequest, pk=pk, status=ChangeRequest.Status.EINGEREICHT
-    )
-    member = change_request.member
+    # Atomar: Zeilensperre, Wertübertrag, Entscheidung und Audit-Log
+    # entstehen nur zusammen oder gar nicht.
     try:
-        value = clean_member_value(change_request.feld, change_request.wunschwert)
+        with transaction.atomic():
+            change_request = get_object_or_404(
+                ChangeRequest.objects.select_for_update(),
+                pk=pk,
+                status=ChangeRequest.Status.EINGEREICHT,
+            )
+            member = change_request.member
+            value = clean_member_value(
+                change_request.feld, change_request.wunschwert
+            )
+            label = change_request.get_feld_display()
+            old_value = str(getattr(member, change_request.feld) or "")
+            setattr(member, change_request.feld, value)
+            member.save()
+
+            _finish_decision(
+                request,
+                change_request,
+                ChangeRequest.Status.FREIGEGEBEN,
+                "Änderungswunsch freigegeben",
+                f"{member}: {label}: „{old_value}“ → „{value}“",
+            )
     except ValidationError as exc:
         messages.error(
             request,
@@ -185,20 +205,9 @@ def change_request_approve(request, pk):
         )
         return redirect("members:change_request_list")
 
-    label = change_request.get_feld_display()
-    old_value = str(getattr(member, change_request.feld) or "")
-    setattr(member, change_request.feld, value)
-    member.save()
-
-    _finish_decision(
-        request,
-        change_request,
-        ChangeRequest.Status.FREIGEGEBEN,
-        "Änderungswunsch freigegeben",
-        f"{member}: {label}: „{old_value}“ → „{value}“",
-    )
     messages.success(
-        request, f"Änderungswunsch von {member} freigegeben und übernommen."
+        request,
+        f"Änderungswunsch von {change_request.member} freigegeben und übernommen.",
     )
     return redirect("members:change_request_list")
 
@@ -206,19 +215,22 @@ def change_request_approve(request, pk):
 @role_required(ADMIN_GROUP)
 @require_POST
 def change_request_reject(request, pk):
-    change_request = get_object_or_404(
-        ChangeRequest, pk=pk, status=ChangeRequest.Status.EINGEREICHT
-    )
-    change_request.kommentar = request.POST.get("kommentar", "").strip()[:500]
+    with transaction.atomic():
+        change_request = get_object_or_404(
+            ChangeRequest.objects.select_for_update(),
+            pk=pk,
+            status=ChangeRequest.Status.EINGEREICHT,
+        )
+        change_request.kommentar = request.POST.get("kommentar", "").strip()[:500]
 
-    _finish_decision(
-        request,
-        change_request,
-        ChangeRequest.Status.ABGELEHNT,
-        "Änderungswunsch abgelehnt",
-        f"{change_request.member}: {change_request.get_feld_display()} → "
-        f"„{change_request.wunschwert}“ (keine Übernahme)",
-    )
+        _finish_decision(
+            request,
+            change_request,
+            ChangeRequest.Status.ABGELEHNT,
+            "Änderungswunsch abgelehnt",
+            f"{change_request.member}: {change_request.get_feld_display()} → "
+            f"„{change_request.wunschwert}“ (keine Übernahme)",
+        )
     messages.info(
         request, f"Änderungswunsch von {change_request.member} abgelehnt."
     )

@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
@@ -271,6 +272,42 @@ class ApprovalWorkflowTests(TestCase):
             f"/mitglieder/wuensche/{self.change_request.pk}/ablehnung/"
         )
         self.assertEqual(response.status_code, 405)
+
+    def test_failed_audit_log_rolls_back_master_data(self):
+        self.client.raise_request_exception = False
+
+        with patch(
+            "core.models.AuditLog.objects.create",
+            side_effect=RuntimeError("DB-Ausfall"),
+        ):
+            response = self.approve()
+
+        self.assertEqual(response.status_code, 500)
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.telefon, "030 123456")
+        self.change_request.refresh_from_db()
+        self.assertEqual(self.change_request.status, ChangeRequest.Status.EINGEREICHT)
+        self.assertIsNone(self.change_request.entschieden_am)
+        self.assertEqual(AuditLog.objects.count(), 0)
+
+    def test_failed_audit_log_keeps_request_open(self):
+        self.client.raise_request_exception = False
+
+        with patch(
+            "core.models.AuditLog.objects.create",
+            side_effect=RuntimeError("DB-Ausfall"),
+        ):
+            response = self.client.post(
+                f"/mitglieder/wuensche/{self.change_request.pk}/ablehnung/",
+                {"kommentar": "Bitte telefonisch melden."},
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.change_request.refresh_from_db()
+        self.assertEqual(self.change_request.status, ChangeRequest.Status.EINGEREICHT)
+        self.assertEqual(self.change_request.kommentar, "")
+        self.assertIsNone(self.change_request.entschieden_am)
+        self.assertEqual(AuditLog.objects.count(), 0)
 
     def test_nothing_happens_before_approval(self):
         self.client.get("/mitglieder/wuensche/")
