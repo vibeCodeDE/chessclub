@@ -5,12 +5,14 @@ den Views; die Regelbasis des Laufs und des Zahlungsstands selbst in
 :mod:`dues.services`.
 """
 
+import csv
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,6 +22,8 @@ from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
 from members.models import Member
 
+from .export import beitragszeilen
+from .mahnung import mahnungen_setzen, mahnstufe_text, offene_posten
 from .models import FeeAmount, FeePost, Payment, SepaMandate
 from .services import (
     PostenStatus,
@@ -91,6 +95,13 @@ def _datum(roh):
         return date.fromisoformat(str(roh).strip())
     except ValueError:
         return None
+
+
+def _datum_leer(roh):
+    """Optionales Datum aus dem Formular: leer bleibt leer (die Frist ist freiwillig)."""
+    if not str(roh or "").strip():
+        return None
+    return _datum(roh)
 
 
 @role_required(ADMIN_GROUP)
@@ -358,3 +369,83 @@ def mandat_status(request, pk):
     )
     messages.success(request, f"Mandat {mandat.referenz}: Status {status}.")
     return redirect(_zahlungen_und_jahr(_aktives_jahr()))
+
+
+def _mahnungen_und_jahr(jahr):
+    return f"{reverse('dues:mahnliste')}?jahr={jahr}"
+
+
+@role_required(ADMIN_GROUP)
+def mahnliste(request):
+    """Offene Beiträge eines Jahres — Grundlage für Mahnung und Brief (PRD M2.5)."""
+    jahr = _parse_jahr(request.GET.get("jahr"))
+    if jahr is None:
+        if request.GET.get("jahr") is not None:
+            return redirect("dues:mahnliste")
+        jahr = _aktives_jahr()
+
+    zeilen = offene_posten(jahr)
+    return render(
+        request,
+        "dues/mahnliste.html",
+        {
+            "jahr": jahr,
+            "jahre": _jahre(),
+            "zeilen": zeilen,
+            "summe_offen": sum((z["offen"] for z in zeilen), Decimal("0.00")),
+        },
+    )
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def mahnung_setzen(request, pk):
+    """Setzt die nächste Mahnung für einen Beitragsposten (PRD M2.5).
+
+    Die Prüfungen liegen in `dues.mahnung.mahnungen_setzen`; hier wird nur
+    übersetzt und eine verständliche Meldung gezeigt.
+    """
+    post = get_object_or_404(
+        FeePost.objects.select_related("member", "kategorie"), pk=pk
+    )
+    stufe = request.POST.get("stufe", "")
+    stufe = int(stufe) if stufe in ("1", "2") else None
+    datum = _datum(request.POST.get("datum"))
+    frist = _datum_leer(request.POST.get("frist"))
+
+    try:
+        mahnung = mahnungen_setzen(
+            post,
+            stufe,
+            datum,
+            frist=frist,
+            benutzer=request.user,
+            notiz=request.POST.get("notiz", ""),
+        )
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return redirect(_mahnungen_und_jahr(post.jahr))
+
+    messages.success(
+        request,
+        f"{mahnstufe_text(mahnung.stufe)} für {post.member} gesetzt "
+        f"(Datum {mahnung.datum.strftime('%d.%m.%Y')}).",
+    )
+    return redirect(_mahnungen_und_jahr(post.jahr))
+
+
+@role_required(ADMIN_GROUP)
+def beitraege_export(request):
+    """CSV der Jahresbeiträge (PRD M2.5).
+
+    Kein Audit-Eintrag: der Export ist eine Leseaktion. Protokolliert wird er
+    laut PRD mit dem Auskunfts-Export in T23, dort mit Person und Zweck.
+    """
+    jahr = _parse_jahr(request.GET.get("jahr")) or _aktives_jahr()
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="beitraege_{jahr}.csv"'
+    response.write("\ufeff")  # BOM für Excel
+    writer = csv.writer(response, delimiter=";")
+    for zeile in beitragszeilen(jahr):
+        writer.writerow(zeile)
+    return response

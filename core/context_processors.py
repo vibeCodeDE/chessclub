@@ -11,6 +11,7 @@ NAV_ITEMS = [
     ("members:change_request_list", "Änderungswünsche", {"admin"}),
     ("dues:posten_liste", "Beiträge", {"admin"}),
     ("dues:zahlungsliste", "Zahlungen", {"admin"}),
+    ("dues:mahnliste", "Mahnungen", {"admin"}),
     ("admin:index", "Verwaltung", {"admin"}),
 ]
 

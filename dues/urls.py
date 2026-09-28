@@ -20,4 +20,11 @@ urlpatterns = [
         views.mandat_status,
         name="mandat_status",
     ),
+    path("beitraege/mahnungen/", views.mahnliste, name="mahnliste"),
+    path(
+        "beitraege/mahnungen/<int:pk>/setzen/",
+        views.mahnung_setzen,
+        name="mahnung_setzen",
+    ),
+    path("beitraege/export.csv", views.beitraege_export, name="beitraege_export"),
 ]

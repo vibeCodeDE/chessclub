@@ -74,3 +74,16 @@ class NavTests(TestCase):
         self.client.login(username="mitglied1", password="x")
         response = self.client.get("/")
         self.assertNotContains(response, 'href="/beitraege/zahlungen/"')
+
+    def test_admin_sees_mahnungen(self):
+        make_user("admin1", "admin")
+        self.client.login(username="admin1", password="x")
+        response = self.client.get("/")
+        self.assertContains(response, 'href="/beitraege/mahnungen/"')
+
+    def test_member_sees_no_mahnungen(self):
+        """Negativtest: das Mahnwesen bleibt Vorstandssache (PRD §3.8)."""
+        make_user("mitglied1", "mitglied")
+        self.client.login(username="mitglied1", password="x")
+        response = self.client.get("/")
+        self.assertNotContains(response, 'href="/beitraege/mahnungen/"')
