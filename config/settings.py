@@ -148,6 +148,10 @@ CLUB_NAME = os.environ.get("CLUB_NAME", "Schachclub Königsspringer Musterstadt 
 CLUB_SHORT = os.environ.get("CLUB_SHORT", "SC Königsspringer")
 CLUB_CONTACT = os.environ.get("CLUB_CONTACT", "vorstand@koenigsspringer-musterstadt.de")
 
+# Produkt-Landingpage (/produkt/): Name und Kontakt für den Verkauf als Dienstleistung.
+PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Schachclub-Manager")
+PRODUCT_CONTACT = os.environ.get("PRODUCT_CONTACT", "hallo@schachclub-manager.example")
+
 # Absender für System- und Gruppen-Mails (PRD M5.2) sowie Fehlerbenachrichtigung.
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", CLUB_CONTACT)
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
