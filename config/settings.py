@@ -126,6 +126,12 @@ TWOFA_PFLICHT = os.environ.get("TWOFA_PFLICHT", "1") == "1"
 # DSGVO: Aufbewahrungsfrist nach Austritt, danach werden Kontaktdaten anonymisiert.
 DSGVO_ANONYMISIERUNGS_FRIST_TAGE = int(os.environ.get("DSGVO_FRIST_TAGE", "730"))
 
+# ADR-010: Die IBAN wird verschluesselt gespeichert. Der Schluessel kommt aus
+# der Umgebung und wird weder in die Datenbank noch ins Repo geschrieben.
+# Ohne Schluessel laeuft die App, aber jede IBAN-Zugriffsart bricht mit
+# ImproperlyConfigured ab – config/production.py verlangt den Schluessel.
+IBAN_FERNET_KEY = os.environ.get("IBAN_FERNET_KEY", "")
+
 # Härtung im Produktivbetrieb (hinter TLS-Reverse-Proxy, PRD N1.6).
 if not DEBUG:
     SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "0") == "1"

@@ -10,6 +10,8 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 
+from .fields import VerschluesseltesIbanField
+
 IBAN_MUSTER = re.compile(r"^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$")
 
 
@@ -70,7 +72,20 @@ class SepaMandate(models.Model):
         related_name="sepa_mandat",
     )
     referenz = models.CharField("Mandatsreferenz", max_length=50, unique=True)
-    iban = models.CharField("IBAN", max_length=34)
+    iban = VerschluesseltesIbanField(
+        "IBAN",
+        help_text=(
+            "Wird verschlüsselt gespeichert (ADR-010) und in Listen nur "
+            "maskiert angezeigt. Ein Einzug findet ausschließlich bankseitig statt."
+        ),
+    )
+    iban_kurz = models.CharField(
+        "IBAN (maskiert)",
+        max_length=40,
+        blank=True,
+        editable=False,
+        help_text="Nicht umkehrbare Kurzform für Listen, aus der IBAN abgeleitet.",
+    )
     kontoinhaber = models.CharField("Kontoinhaber:in", max_length=150, blank=True)
     erteilt_am = models.DateField("Erteilt am")
     status = models.CharField("Status", max_length=20, choices=Status.choices, default=Status.AKTIV)
@@ -89,10 +104,6 @@ class SepaMandate(models.Model):
     def iban_formatiert(self):
         return format_iban(self.iban)
 
-    @property
-    def iban_kurz(self):
-        return mask_iban(self.iban)
-
     def clean(self):
         super().clean()
         iban = normalize_iban(self.iban)
@@ -103,6 +114,9 @@ class SepaMandate(models.Model):
 
     def save(self, *args, **kwargs):
         self.iban = normalize_iban(self.iban)
+        # Die Maske im Klartext mitführen: Listen und Auswertungen müssen dafür
+        # nichts entschlüsseln (und nichts zusätzlich laden).
+        self.iban_kurz = mask_iban(self.iban)
         super().save(*args, **kwargs)
 
 

@@ -122,7 +122,10 @@ def _mandat(member):
         return None
     return {
         "referenz": mandat.referenz,
-        "iban": mandat.iban,
+        # Die Auskunft geht an das betroffene Mitglied selbst – hier ist die
+        # IBAN im Klartext die gewollte Ausnahme (ADR-010). Der Export wird
+        # protokolliert.
+        "iban": mandat.iban_formatiert,
         "kontoinhaber": mandat.kontoinhaber or f"{member.vorname} {member.nachname}",
         "erteilt_am": mandat.erteilt_am,
         "status": mandat.get_status_display(),

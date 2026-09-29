@@ -4,3 +4,7 @@ from .settings import *  # noqa: F401,F403
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+# Fester Schluessel nur fuer die Testdatenbank. Die Tests, die das pruefen,
+# ueberschreiben ihn mit `override_settings`.
+IBAN_FERNET_KEY = "up3_XszoFQiTs6TmInARNOIqBlEeh7V_7e46vfQ_g-E="

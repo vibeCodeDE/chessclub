@@ -5,8 +5,9 @@ für einen manuellen Start genügt::
 
     DJANGO_SETTINGS_MODULE=config.production gunicorn config.wsgi:application
 
-Pflicht-Env-Variablen: ``DJANGO_SECRET_KEY`` und ``EMAIL_BACKEND``
-(Passwort-Reset-Mails müssen echte Zustellung haben, kein Console-Backend).
+Pflicht-Env-Variablen: ``DJANGO_SECRET_KEY``, ``EMAIL_BACKEND`` (Passwort-Reset-Mails
+müssen echte Zustellung haben, kein Console-Backend) und ``IBAN_FERNET_KEY``
+(Verschlüsselung der IBAN, ADR-010).
 """
 import os
 
@@ -40,3 +41,12 @@ EMAIL_BACKEND = _email_backend
 DEBUG = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# ADR-010: Ohne IBAN-Schlüssel startet der Produktivbetrieb nicht. Sonst ginge
+# ein Mandat mit Klartext-IBAN verloren, sobald jemand den Schlüssel nachsetzt.
+if not os.environ.get("IBAN_FERNET_KEY", "").strip():
+    raise ImproperlyConfigured(
+        "IBAN_FERNET_KEY muss in der Produktion gesetzt sein (Verschlüsselung "
+        "der IBAN, ADR-010). Erzeugen mit: python -c \"from cryptography.fernet "
+        "import Fernet; print(Fernet.generate_key().decode())\""
+    )

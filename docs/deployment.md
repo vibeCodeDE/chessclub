@@ -25,6 +25,15 @@ docker compose -f docker-compose.prod.yml exec app python manage.py seed_demo   
 | `CLUB_NAME`, `CLUB_SHORT`, `CLUB_CONTACT` | Absender/Impressum | siehe `config/settings.py` |
 | `TWOFA_PFLICHT` | 2FA für den Vorstand | `1` (verbindlich) |
 | `DSGVO_FRIST_TAGE` | Anonymisierung nach Austritt | `730` (2 Jahre) |
+| `IBAN_FERNET_KEY` | Schlüssel für die IBAN-Verschlüsselung (ADR-010) | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+
+> **Der IBAN-Schlüssel ist Pflicht.** Ohne `IBAN_FERNET_KEY` startet der
+> Produktivbetrieb nicht (der Container bricht mit einer Fehlermeldung ab).
+> Den Schlüssel **einmal** erzeugen, in `.env.prod` eintragen und getrennt vom
+> DB-Host sichern (z. B. Passwortmanager des Vorstands). Wird er verloren,
+> sind die gespeicherten IBAN nicht mehr lesbar; wird er versehentlich
+> geändert, meldet die App das mit einem klaren Hinweis, statt still leere
+> Mandate zu zeigen. Niemals ins Repository einchecken.
 
 ## 2. TLS-reverse-Proxy
 

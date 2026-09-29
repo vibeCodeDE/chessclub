@@ -21,6 +21,10 @@ services:
       POSTGRES_HOST: db
       DJANGO_DEBUG: "1"
       DJANGO_SECRET_KEY: dev-only-secret-key
+      # Nur Entwicklung: fester Schluessel, damit Mandatsdaten in der Dev-Datenbank
+      # gelesen werden koennen. Im Betrieb gehoert der Schluessel nach .env.prod
+      # (siehe .env.prod.example) – dieser Wert niemals produktiv verwenden.
+      IBAN_FERNET_KEY: "up3_XszoFQiTs6TmInARNOIqBlEeh7V_7e46vfQ_g-E="
     volumes:
       - .:/app
     depends_on:

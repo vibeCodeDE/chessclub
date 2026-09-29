@@ -14,7 +14,7 @@ Schachvereins-Software (Django 5, PostgreSQL, Docker Compose). Einstieg und Befe
 - Tests zuerst; jede Task braucht mindestens einen **Negativtest** (403, Randfall, Dry-Run). Rollen-Tests je Zeile der Matrix.
 - Regelbasis als reine Funktionen in `services.py` bzw. Fachmodulen (ohne HTTP-Kontext, keine N+1-Abfragen, `assertNumQueries` im Test); Views bleiben dünn (Function-Based Views).
 - Finanzdaten werden nie gelöscht: Korrektur per Gegenbuchung/Audit-Spur (ADR-005, ADR-006).
-- Kein Bank-API-Zugriff, keine IBAN im System (ADR-002); keine Netzwerk-Imports in `dues`.
+- Kein Bank-API-Zugriff, keine Netzwerk-Imports in `dues` (ADR-002). Die IBAN wird verschlüsselt gespeichert, Schlüssel nur aus der Umgebung, nie im Klartext in Logs, Listen oder Dumps (ADR-010).
 - Personenbezogene Änderungen/Zugriffe gehen in den `AuditLog`.
 - Keine Drittanbieter-Assets (CDN, Fonts, Tracker) – DSGVO N1.1.
 
