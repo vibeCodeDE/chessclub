@@ -116,7 +116,7 @@ def export(request):
     for buchung in CashEntry.objects.filter(datum__year=jahr).order_by("datum"):
         writer.writerow(
             [
-                buchung.datum.isoformat(),
+                buchung.datum.strftime("%d.%m.%Y"),
                 buchung.get_art_display(),
                 buchung.get_kategorie_display(),
                 f"{buchung.betrag:.2f}".replace(".", ","),

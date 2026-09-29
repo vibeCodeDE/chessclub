@@ -170,7 +170,7 @@ def clean_member_value(feld, value):
 class ChangeRequest(models.Model):
     """Änderungswunsch eines Mitglieds (PRD M1.4).
 
-    Ohne Freigabe durch die Vorstand bleibt das Stammdatum unangetastet;
+    Ohne Freigabe durch den Vorstand bleibt das Stammdatum unangetastet;
     erst die Freigabe überträgt den Wert und schreibt einen Audit-Eintrag.
     """
 
@@ -221,7 +221,7 @@ class ChangeRequest(models.Model):
 
     @property
     def aktueller_wert(self):
-        """Der derzeit im Stammdatenbestand stehende Wert (Anzeige im Review)."""
+        """Der derzeit in den Stammdaten stehende Wert (Anzeige bei der Prüfung)."""
         return str(getattr(self.member, self.feld, "") or "")
 
     def clean(self):

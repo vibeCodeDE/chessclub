@@ -52,15 +52,15 @@ def stammdaten_anderungen_protokollieren(sender, instance, created, **kwargs):
 
 def _ip(request):
     if request is None:
-        return "–"
-    return request.META.get("REMOTE_ADDR", "–")
+        return "—"
+    return request.META.get("REMOTE_ADDR", "—")
 
 
 @receiver(user_logged_in)
 def login_protokollieren(request, user, **kwargs):
     AuditLog.objects.create(
         benutzer=user,
-        aktion="Login",
+        aktion="Anmeldung",
         text=f"IP: {_ip(request)}",
     )
 
@@ -71,7 +71,7 @@ def logout_protokollieren(request, user, **kwargs):
         return
     AuditLog.objects.create(
         benutzer=user,
-        aktion="Logout",
+        aktion="Abmeldung",
         text=f"IP: {_ip(request)}",
     )
 
@@ -80,6 +80,6 @@ def logout_protokollieren(request, user, **kwargs):
 def login_abgelehnt_protokollieren(request, credentials, **kwargs):
     AuditLog.objects.create(
         benutzer=None,
-        aktion="Login abgelehnt",
-        text=f"Benutzer: {credentials.get('username', '–')} · IP: {_ip(request)}",
+        aktion="Anmeldung abgelehnt",
+        text=f"Benutzer: {credentials.get('username', '—')} · IP: {_ip(request)}",
     )

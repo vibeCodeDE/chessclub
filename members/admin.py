@@ -33,7 +33,7 @@ class MemberAdmin(admin.ModelAdmin):
 
 @admin.register(ChangeRequest)
 class ChangeRequestAdmin(admin.ModelAdmin):
-    """Einsicht only – Freigabe/Ablehnung läuft ausschließlich über die UI (T4)."""
+    """Nur einsehen – Freigabe/Ablehnung läuft ausschließlich über die UI (T4)."""
 
     list_display = ("member", "feld", "wunschwert", "status", "eingereicht_am", "entschieden_von")
     list_filter = ("status", "feld")
