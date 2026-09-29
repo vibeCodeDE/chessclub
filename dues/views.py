@@ -12,7 +12,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -21,9 +21,16 @@ from django.views.decorators.http import require_POST
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
 from members.models import Member
+from verein.models import Vereinsdaten
 
 from .export import beitragszeilen
-from .mahnung import mahnungen_setzen, mahnstufe_text, offene_posten
+from .mahnung import (
+    mahnungen_setzen,
+    mahnstufe_text,
+    naechste_stufe,
+    offene_posten,
+    posten_fuer_brief,
+)
 from .models import FeeAmount, FeePost, Payment, SepaMandate
 from .services import (
     PostenStatus,
@@ -462,25 +469,39 @@ def beitraege_export(request):
 
 @role_required(ADMIN_GROUP)
 def mahnbrief(request, pk):
-    """Platzhalter für den Mahnbrief — **Task 7 vervollständigt diese View**.
+    """Druckbarer Mahnbrief für einen Beitragsposten (PRD M2.5).
 
-    Bewusst minimal: sie holt den Beitragsposten und rendert
-    ``dues/mahnbrief.html``. Was Task 7 vorfindet und ersetzt:
+    Der Brief entsteht aus dem **offenen** Posten, nicht aus einer gespeicherten
+    Mahnung: so ist er nach dem Ausdrucken aktuell, ohne dass er neu erzeugt
+    werden muss. 404, wenn es nichts Offenes mehr gibt — ein leerer Brief geht
+    nicht in die Post.
 
-    * der Link auf der Mahnliste (``{% url 'dues:mahnbrief' pk=… %}``) zeigt auf
-      genau diese Route und existiert bereits,
-    * die Route ``beitraege/mahnungen/<int:pk>/`` steht mit dem in Task 7
-      geplanten Pfad — Task 7 ersetzt View und Template, nicht die URL,
-    * fehlend sind die Vereinsdaten, die Postentabelle über
-      :func:`dues.mahnung.posten_fuer_brief` und die 404-Logik für inzwischen
-      bezahlte Posten.
-
-    Bis dahin zeigt die Seite den Posten ohne Brieftext. Sie existiert, damit
-    ``{% url %}`` nicht ins Leere greift — mit ``DJANGO_DEBUG=1`` würde ein
-    nicht auflösbares ``{% url %}`` die ganze Mahnliste abschießen.
+    Die interne Notiz einer Mahnung wird bewusst nicht in den Kontext gegeben;
+    sie steht ausschließlich für die Akte des Vorstands.
     """
     post = get_object_or_404(
         FeePost.objects.select_related("member", "kategorie"), pk=pk
     )
-    return render(request, "dues/mahnbrief.html", {"post": post})
+    posten, summe_offen = posten_fuer_brief(post.jahr, post.member)
+    if not posten:
+        raise Http404("Für diesen Beitragsposten ist nichts mehr offen.")
+
+    # Die Frist der gesetzten Mahnung gilt für den Brief; ohne Mahnung bleibt
+    # sie offen, damit der Vorstand sie per Papier festlegen kann.
+    letzte = post.mahnungen.order_by("-datum", "-pk").first()
+    stufe = naechste_stufe(post)
+    return render(
+        request,
+        "dues/mahnbrief.html",
+        {
+            "post": post,
+            "posten": posten,
+            "summe_offen": summe_offen,
+            "verein": Vereinsdaten.aktuell(),
+            "stufe": stufe,
+            "stufe_text": mahnstufe_text(stufe),
+            "naechste_frist": letzte.frist if letzte else None,
+            "heute": timezone.localdate(),
+        },
+    )
 

@@ -9,8 +9,10 @@ from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
 
+from core.models import AuditLog
 from dues.models import FeeCategory, FeePost, Mahnung, Payment
 from members.models import Member
+from verein.models import Vereinsdaten
 
 MAHNLISTE = "/beitraege/mahnungen/"
 EXPORT = "/beitraege/export.csv"
@@ -400,4 +402,188 @@ class ExportViewTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertNotIn("text/csv", response.get("Content-Type", ""))
+
+
+class MahnbriefTests(TestCase):
+    """Der druckbare Mahnbrief (PRD M2.5) — eigenständiges Dokument.
+
+    Der Link von der Mahnliste auf genau diese Seite ist in
+    ``MahnlisteInhaltTests.test_mahnliste_verweist_auf_den_mahnbrief`` festgeschrieben;
+    hier geht es um den Inhalt des Briefs selbst.
+    """
+
+    def setUp(self):
+        self.admin = make_user("vorstand", "admin")
+        self.client.force_login(self.admin)
+        # "erwachsene" wird von der Seed-Migration 0002 angelegt; get_or_create
+        # holt ihn im Testlauf, statt am unique-Slug zu scheitern.
+        self.kategorie = FeeCategory.objects.get_or_create(
+            code="erwachsene", defaults={"bezeichnung": "Erwachsene"}
+        )[0]
+
+        self.post = make_post(kategorie=self.kategorie)
+        # Vereinsdaten.aktuell() legt genau einen Datensatz an (pk=1); create()
+        # hier belegt ihn mit echten Werten, damit der Absenderblock geprüft
+        # werden kann.
+        self.verein = Vereinsdaten.objects.create(
+            name="Schachverein Example",
+            strasse="Turnierweg 3",
+            plz="12345",
+            ort="Musterstadt",
+            kassierer="R. Kaiser",
+            zahlungshinweis="Bitte per Überweisung ausgleichen.",
+            zahlungsziel="Verwendungszweck: Nachname, Vorname, Jahr",
+        )
+
+    def url(self, post=None):
+        return reverse("dues:mahnbrief", args=[(post or self.post).pk])
+
+    def test_brief_zeigt_mitglied_und_summe(self):
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Meier, Anna")
+        self.assertContains(response, "90,00")
+        self.assertEqual(response.context["summe_offen"], Decimal("90.00"))
+
+    def test_brief_zeigt_die_offenen_posten(self):
+        response = self.client.get(self.url())
+
+        self.assertContains(response, "Erwachsene")
+        self.assertEqual(len(response.context["posten"]), 1)
+
+    def test_brief_zeigt_die_vereinsdaten(self):
+        response = self.client.get(self.url())
+
+        # Die Nadeln stehen je Feld im Absender-, Hinweis- oder Grußblock. Sie
+        # sind nicht vakuos: keine andere Stelle des Dokuments erzeugt sie.
+        self.assertContains(response, "Schachverein Example")
+        self.assertContains(response, "Turnierweg 3")
+        self.assertContains(response, "R. Kaiser")
+        self.assertContains(response, "Verwendungszweck")
+
+    def test_brief_ist_eigenstaendiges_dokument_mit_druckknopf(self):
+        response = self.client.get(self.url())
+
+        inhalt = response.content.decode()
+        # „site-header" steht in core/templates/base.html: fehlt er hier, lebt
+        # der Brief nicht im Rahmen der Oberfläche.
+        self.assertNotIn("site-header", inhalt)
+        self.assertNotIn("{% extends", inhalt)
+        self.assertContains(response, "window.print()")
+        self.assertContains(response, "@media print")
+
+    def test_brief_nennt_die_naechste_stufe(self):
+        Mahnung.objects.create(post=self.post, stufe=1, datum=date(2026, 3, 1))
+
+        response = self.client.get(self.url())
+
+        # Ohne die gesetzte Mahnung stünde hier „1. Mahnung"; die Nadel
+        # unterscheidet also wirklich die nächste Stufe.
+        self.assertContains(response, "2. Mahnung")
+
+    def test_brief_nennt_die_frist_der_gesetzten_mahnung(self):
+        Mahnung.objects.create(
+            post=self.post, stufe=1, datum=date(2026, 3, 1), frist=date(2026, 4, 15)
+        )
+
+        response = self.client.get(self.url())
+
+        self.assertContains(response, "15.04.2026")
+
+    def test_ohne_frist_bleibt_der_brief_ohne_datumsangabe(self):
+        """Negativtest zur Frist: ohne Frist darf keine erfunden werden."""
+        Mahnung.objects.create(post=self.post, stufe=1, datum=date(2026, 3, 1))
+
+        response = self.client.get(self.url())
+
+        self.assertIsNone(response.context["naechste_frist"])
+        self.assertContains(response, "kurzfristig")
+
+    def test_interne_notiz_erscheint_nicht_im_brief(self):
+        Mahnung.objects.create(
+            post=self.post,
+            stufe=1,
+            datum=date(2026, 3, 1),
+            notiz="Rückruf am Dienstag vereinbart",
+        )
+
+        response = self.client.get(self.url())
+
+        # Die Zusicherung „erscheint nicht im Brief" (help_text am Feld notiz)
+        # muss als Test festgeschrieben werden — sonst entscheidet ein späteres
+        # Template still das Gegenteil. Der Statuscode gehört dazu: ein 404-Seite
+        # enthält die Notiz auch nicht, der Test wäre sonst vakuos grün.
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Mahnung.objects.get().notiz, "Rückruf am Dienstag vereinbart")
+        self.assertNotContains(response, "Rückruf am Dienstag")
+
+    def test_bezahlter_posten_ergibt_404(self):
+        """Kein leerer Brief in den Umschlag: ist nichts offen, gibt es 404."""
+        zahle(self.post)
+
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_unbekannter_posten_ergibt_404(self):
+        response = self.client.get(reverse("dues:mahnbrief", args=[999999]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_mitglied_erhaelt_403(self):
+        self.client.force_login(make_user("mitglied", "mitglied"))
+
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_kapitaen_erhaelt_403(self):
+        self.client.force_login(make_user("kapitaen", "kapitaen"))
+
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_brief_ohne_verein_daten_bricht_nicht_ab(self):
+        """Ein frisches Deployment hat leere Vereinsdaten — der Brief muss
+        trotzdem rendern, sonst ist die erste Mahnung nicht druckbar."""
+        Vereinsdaten.objects.all().delete()
+
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 200)
+        # aktuell() legt den Datensatz mit dem Vorgabenamen neu an — genau der
+        # Zustand, den ein frisches Deployment hat.
+        self.assertContains(response, "Schachverein")
+        self.assertNotContains(response, "Turnierweg 3")
+
+    def test_brief_ohne_adressdaten_zeigt_leere_zeilen_statt_crash(self):
+        """Ohne Straße/PLZ/Ort bleibt die Empfängerzeile leer, nicht kaputt."""
+        Vereinsdaten.objects.all().delete()
+        verein = Vereinsdaten.aktuell()
+        verein.name = "Schachverein ohne Adresse"
+        verein.save()
+        self.post.member.strasse = ""
+        self.post.member.plz = ""
+        self.post.member.ort = ""
+        self.post.member.save()
+
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Schachverein ohne Adresse")
+        self.assertContains(response, "Meier, Anna")
+
+    def test_brief_schreibt_nichts(self):
+        """Der Brief ist eine Leseansicht: kein Audit-Eintrag, keine Mahnung."""
+        Mahnung.objects.create(post=self.post, stufe=1, datum=date(2026, 3, 1))
+        # Baseline nach force_login: der Login selbst wird protokolliert
+        # (core.signals.login_protokollieren), das darf nicht mitgezählt werden.
+        vorher = AuditLog.objects.count()
+
+        self.client.get(self.url())
+
+        self.assertEqual(Mahnung.objects.count(), 1)
+        self.assertEqual(AuditLog.objects.count(), vorher)
 

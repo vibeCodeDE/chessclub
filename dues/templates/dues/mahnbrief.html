@@ -1,37 +1,157 @@
-{% extends "base.html" %}
-
-{% block title %}Mahnbrief – Schachverein{% endblock %}
-
-{% block content %}
-<h1>Mahnbrief {{ post.jahr }}</h1>
-
 {% comment %}
-Platzhalter für Task 7: hier kommen Vereinsdaten, die Postentabelle über
-posten_fuer_brief und der Brieftext. Bis dahin zeigt die Seite nur den Posten.
-{% endcomment %}
+Druckbarer Mahnbrief (PRD M2.5).
 
-<p class="tile-hinweis">
-  <a href="{% url 'dues:mahnliste' %}?jahr={{ post.jahr }}">Zurück zur Mahnliste {{ post.jahr }}</a>
-</p>
+Bewusst ein eigenständiges Dokument und **kein** base.html-Ableit: der Brief geht
+in den Umschlag. Navigation, Fußzeile und die Tailwind-Klassen der Oberfläche
+gehören nicht auf dieses Papier. Das Print-Stylesheet steht deshalb im eigenen
+<style>-Block — es gilt nur hier und wird nirgends sonst gebraucht.
 
-<div class="table-wrap">
-  <table class="data">
-    <thead>
-      <tr>
-        <th>Mitglied</th>
-        <th>Kategorie</th>
-        <th>Beitrag</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>
-          <a href="{% url 'members:member_detail' post.member.pk %}">{{ post.member }}</a>
-        </td>
-        <td>{{ post.kategorie }}</td>
-        <td>{{ post.betrag }}&nbsp;€</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-{% endblock %}
+Keine externen Schriften, keine CDN-Assets: Systemschriften, die Drucker und
+Browser überall mitbringen.
+
+Die interne Notiz einer Mahnung wird bewusst nicht gerendert — sie gehört in
+die Akte des Vorstands, nicht in den Brief an das Mitglied.
+{% endcomment %}<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mahnbrief {{ post.jahr }} — {{ post.member }}</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      color: #1a1a2e;
+      max-width: 42rem;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      line-height: 1.5;
+    }
+    .absender { font-size: 0.9rem; color: #444; }
+    .empfaenger { margin: 2rem 0; }
+    h1 { font-size: 1.2rem; }
+    /* Die Postentabelle behält ihre fünf Spalten; auf schmalen Bildschirmen
+       scrollt nur die Tabelle, nicht das ganze Dokument. Sonst schöbe sich die
+       Seitenbreite mit und der Brief bekäme einen horizontalen Balken. */
+    .tabelle { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+    th, td { border-bottom: 1px solid #ccc; padding: 0.4rem 0.2rem; text-align: left; }
+    th.numerisch, td.numerisch { text-align: right; }
+    tfoot td { font-weight: bold; border-top: 2px solid #1a1a2e; }
+    .hinweis { background: #f7f7f9; padding: 0.75rem 1rem; margin: 1.5rem 0; }
+    .hinweis p { margin: 0 0 0.5rem; }
+    .frist { font-weight: bold; }
+    .bezug { font-size: 0.9rem; color: #444; }
+    .gruss { margin-top: 2.5rem; }
+    .werkzeug { margin-bottom: 1.5rem; }
+    .werkzeug button {
+      font: inherit;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border: 1px solid #0f3460;
+      background: #0f3460;
+      color: #fff;
+      border-radius: 4px;
+    }
+    @media screen and (max-width: 30rem) {
+      body { padding: 0 0.75rem; }
+      th, td { padding: 0.35rem 0.1rem; font-size: 0.8rem; }
+    }
+    @media print {
+      .werkzeug { display: none; }
+      body { margin: 0; max-width: none; }
+      @page { margin: 2cm; }
+    }
+  </style>
+</head>
+<body>
+  <p class="werkzeug">
+    <button type="button" onclick="window.print()">Drucken / Als PDF speichern</button>
+  </p>
+
+  <p class="absender">
+    <strong>{{ verein.name }}</strong><br>
+    {% if verein.strasse %}{{ verein.strasse }}<br>{% endif %}
+    {% if verein.plz or verein.ort %}{{ verein.plz }} {{ verein.ort }}<br>{% endif %}
+    {% if verein.telefon %}Tel. {{ verein.telefon }}<br>{% endif %}
+    {% if verein.email %}{{ verein.email }}{% endif %}
+  </p>
+
+  <p class="empfaenger">
+    {{ post.member.vorname }} {{ post.member.nachname }}<br>
+    {% if post.member.strasse %}{{ post.member.strasse }}<br>{% endif %}
+    {% if post.member.plz or post.member.ort %}{{ post.member.plz }} {{ post.member.ort }}{% endif %}
+  </p>
+
+  <p>{{ heute|date:"d.m.Y" }}</p>
+
+  <h1>{{ stufe_text }} — Beiträge {{ post.jahr }}</h1>
+
+  {% comment %}
+  Bezugszeile statt Anrede-Anpassung: Member führt kein Anrede- oder
+  Geschlechtsfeld, deshalb bleibt die Anrede geschlechtsneutral („Sehr geehrte/r")
+  und die Zuordnung des Schreibens steht in dieser Zeile.
+  {% endcomment %}
+  <p class="bezug">
+    Ihr Mitglied: {{ post.member }} · Beitragsjahr {{ post.jahr }}
+  </p>
+
+  <p>
+    Sehr geehrte/r {{ post.member.nachname }},
+  </p>
+
+  <p>
+    nach unseren Unterlagen ist für das Beitragsjahr {{ post.jahr }} noch ein
+    Betrag von <strong>{{ summe_offen }}&nbsp;€</strong> offen. Wir bitten um
+    Ausgleich
+    {% if naechste_frist %}
+      <span class="frist">bis zum {{ naechste_frist|date:"d.m.Y" }}</span>.
+    {% else %}
+      kurzfristig.
+    {% endif %}
+  </p>
+
+  <div class="tabelle">
+    <table>
+      <thead>
+        <tr>
+          <th>Jahr</th>
+          <th>Kategorie</th>
+          <th class="numerisch">Beitrag</th>
+          <th class="numerisch">Bezahlt</th>
+          <th class="numerisch">Offen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for zeile in posten %}
+          <tr>
+            <td>{{ zeile.jahr }}</td>
+            <td>{{ zeile.kategorie }}</td>
+            <td class="numerisch">{{ zeile.betrag }}&nbsp;€</td>
+            <td class="numerisch">{{ zeile.bezahlt }}&nbsp;€</td>
+            <td class="numerisch">{{ zeile.offen }}&nbsp;€</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4">Offener Betrag</td>
+          <td class="numerisch">{{ summe_offen }}&nbsp;€</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  {% if verein.zahlungshinweis or verein.zahlungsziel %}
+    <div class="hinweis">
+      {% if verein.zahlungshinweis %}<p>{{ verein.zahlungshinweis|linebreaksbr }}</p>{% endif %}
+      {% if verein.zahlungsziel %}<p>{{ verein.zahlungsziel|linebreaksbr }}</p>{% endif %}
+    </div>
+  {% endif %}
+
+  <p class="gruss">
+    Mit freundlichen Grüßen<br>
+    {% if verein.kassierer %}{{ verein.kassierer }}{% else %}{{ verein.name }}{% endif %}
+  </p>
+</body>
+</html>
