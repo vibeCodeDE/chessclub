@@ -6,12 +6,15 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 ## Architecture Decisions
 
-- **Django 5 + PostgreSQL + server-seitige Templates (Tailwind via CDN-freiem lokalen Build oder plain CSS):** Nutzer kennt Django noch nicht — Djangos Admin-Oberfläche übernimmt 60 % der Verwaltungs-UI; Views bleiben einfache Function-Based Views. Keine SPA, kein Node-Build-Zwang im Prod-Betrieb (Tailwind-CLI nur zur Build-Zeit).
+> Begründungen einzelner Entscheidungen stehen als ADRs in `docs/decisions/` ([ADR-001](../docs/decisions/ADR-001-django-stack.md) bis ADR-009).
+
+- **Django 5 + PostgreSQL + server-seitige Templates (Tailwind über lokalen Build, kein CDN):** Nutzer kennt Django noch nicht — Djangos Admin-Oberfläche übernimmt 60 % der Verwaltungs-UI; Views bleiben einfache Function-Based Views. Keine SPA, kein Node-Build-Zwang im Prod-Betrieb (Tailwind-CLI nur zur Build-Zeit).
 - **Rollenmodell über Django Groups:** `admin` (Vorstand), `kapitaen`, `mitglied` — keine eigene Permission-Engine; `@login_required` + Gruppen-Checks; **verbindliche Matrix in PRD §3.8**.
 - **Single-Tenant, eine Organisation:** kein Tenant-Field, kein Multi-Club-Denkwerk.
 - **Fachlogik in `apps/`:** getrennte Apps `members`, `dues`, `teams`, `tournaments`, `comms`, `cashbook`, `core` (Dashboard, Audit, DSGVO-Tools).
 - **E-Mails über SMTP des Vereins/Providers,** Versand nur aus Gruppenverteilung mit Opt-in-Status.
 - **Schweizer Paarung:** zunächst eigene, kleine Implementierung (Buchholz-Wertung) statt exotischer Library — Risiko bewusst minimiert, Formate ≤ 64 Spieler reichen für den Verein. Erst in v1.1, wenn Handpaarungen (v1) laufen.
+- **Kleine Interaktionen mit HTMX + Alpine.js (lokal, `static/vendor/`), Betrieb mit Caddy + restic (+ Uptime Kuma):** Ergänzungen zum Stack, keine SPA und kein CDN — [ADR-008](../docs/decisions/ADR-008-htmx-alpine-lokal.md), [ADR-009](../docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md). Umsetzung als T10b, T24, T24b, T16b.
 - **Mobile-First + PWA:** alle Templates responsive ab 360 px (Burger-Menü, scrollbare Tabellen); zusätzlich Web-App-Manifest + Service Worker, damit die App auf dem Homescreen installierbar ist (keine nativen Apps, kein Store).
 
 ## Konventionen
@@ -22,7 +25,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 - Jeder Testblock enthält zwingend mindestens einen **Negativtest** (verweigerter Zugriff, Randfall, Dry-Run) und für Daten-/Wiederherstellungs-Tasks einen **Integrationstest** (End-to-End-Fluss).
 - **Traceability-Regel:** Jede PRD-Anforderungs-ID (M/S/K/N) ist genau einer Task zugeordnet. Beim Anlegen oder Umnummerieren einer Anforderung wird die Zuordnung hier und in `docs/prd.md` im selben Commit nachgezogen. Unzugeordnete IDs sind ein Review-Blocker.
 - **Nummernvergabe:** Aufgaben-IDs werden **nicht** wiederverwendet. Nachträge im mittleren Plan erhalten ein `b`-Suffix (T11b, T25b), damit bestehende Verweise in `tasks/todo.md` und im Code gültig bleiben.
-- **Status:** Checkboxen `[x]`/`[ ]` stehen **ausschließlich** in dieser Datei. `tasks/todo.md` führt nur das Fortschrittsprotokoll (erledete Tasks mit Verifikationsbelegen) und verlinkt auf die Task hier.
+- **Status:** Checkboxen `[x]`/`[ ]` stehen **ausschließlich** in dieser Datei. `tasks/todo.md` führt nur das Fortschrittsprotokoll (erledigte Tasks mit Verifikationsbelegen) und verlinkt auf die Task hier.
 
 ## Task List
 
@@ -64,26 +67,31 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 - [x] **T7: Beitragssätze + Beitragsjahre**
   Models `FeeCategory` (Erwachsene/Jugend/Familie/ermäßigt, Betrag, Jahr), Zuordnung zum Mitglied.
-  *Design (2026-09-28):* Kategorie und Jahresbetrag getrennt — `FeeCategory` = jahresunabhängige Identität (`code` unique, `bezeichnung`, `aktiv`), `FeeAmount` = (Kategorie, Jahr, Betrag) mit `unique_together`. Die Trennung *ist* der Mechanismus für den Jahreswechsel: eine 2027-Zeile ändert die 2026-Zeile nicht, kein Kopier-Job. `Member.beitragskategorie` FK `null=True` (null = „keine Kategorie" → T8 überspringt statt 0 € zu buchen). Seed über Datenmigration `0002_seed_beitragssaetze` (4 Kategorien × 2 Jahre, Platzhalterbeträge, `get_or_create` = idempotent, echte Werte später per Admin). Negativtests greifen in `FeeAmount.clean()` (Betrag < 0) und `Member.clean()` (ausgetreten + Kategorie). Bewusst *nicht* in T7: Beitragslauf, Posten-/Zahlungsmodelle, `dues`-Views, Nav-Eintrag.
+  *Design (2026-09-28):* Kategorie und Jahresbetrag getrennt (`FeeCategory` + `FeeAmount`, `Member.beitragskategorie` nullable, Seed `0002_seed_beitragssaetze` mit Platzhalterbeträgen) — Begründung in [ADR-004](../docs/decisions/ADR-004-beitragssaetze-kategorie-und-betrag-getrennt.md). Nicht in T7: Beitragslauf, Posten-/Zahlungsmodelle, `dues`-Views, Nav-Eintrag.
   *Acceptance:* 4 Kategorien (Erwachsene/Jugend/Familie/ermäßigt) mit je einem Betrag für 2026 und 2027 angelegt; Betrag 2027 ändert den 2026-Wert nicht; Mitglied ohne Kategorie wird beim Beitragslauf (T8) übersprungen, nicht mit 0 € gebucht.
   *Verify:* `pytest dues/` — **Negativtest:** negativer Betrag wird abgelehnt; Mitglied mit Status „ausgetreten" kann keiner Kategorie zugeordnet werden. · *Files:* `dues/models.py`, `dues/admin.py` · *Größe:* S · *PRD:* M2.1 · *Release:* v1 · *Deps:* T5
 
 - [x] **T8: Beitragslauf**
   Jahreslauf erzeugt für alle aktiven Mitglieder mit Kategorie einen Beitragsposten (idempotent — gleicher Lauf doppelt erzeugt nichts).
-  *Design (2026-09-28):* `FeePost` (Beitragsposten) mit `unique_together` über **Mitglied × Jahr** — genau diese Constraint *ist* die Idempotenz, kein eigenes Lauf-Flag. Deshalb ergänzt ein zweiter Lauf nur, was fehlt (im Jahresverlauf beigetretenes Mitglied), statt pauschal abzubrechen; entschieden mit dem Menschen am 2026-09-28. Kategorie und Betrag liegen als **Momentaufnahme** im Posten, damit eine spätere Satz-Änderung (T7-Pflege) die gebuchte Finanzhistorie nicht überschreibt; `PROTECT` auf Mitglied und Kategorie. Die Regelbasis liegt in `dues/services.py` (`plan_lauf` = Vorschau ohne Schreibzugriff, `fuehre_lauf` = atomare Ausführung) statt in der View, damit T10-Export und T11b-Kassenbericht dieselben Zahlen nutzen. **Kein eigenes Lauf-Modell**: die Nachvollziehbarkeit läuft über `core.AuditLog` (eine Sammelzeile je Lauf, Muster aus T4/T5) — ein zweiter, leerer Lauf erzeugt bewusst *keine* Log-Zeile. Status-Regel: gebucht wird `aktiv`, `passiv` nur über den Schalter im Lauf-Dialog (Default aus) — das PRD definiert `passiv` nicht als beitragspflichtig (M1.3/M1.6), deshalb entscheidet die Vorstandschaft pro Lauf; fehlende Sätze je Kategorie brechen den Lauf mit klarer Meldung ab (T7-Hinweis), statt 0-€-Posten zu erzeugen. UI `/beitraege/` (Liste + Vorschau + Lauf per POST, Nav nur für Admin, PRD §3.8); Dashboard-Kachel bleibt bis T11 Platzhalter.
+  *Design (2026-09-28):* `FeePost` mit `unique_together` Mitglied × Jahr als Idempotenz, Betrag als Momentaufnahme, Regelbasis in `dues/services.py` (`plan_lauf` / `fuehre_lauf`), Audit-Sammelzeile je Lauf, `passiv` nur über Schalter (Default aus) — Begründung in [ADR-005](../docs/decisions/ADR-005-beitragsposten-idempotenz-und-momentaufnahme.md). UI `/beitraege/` (Liste + Vorschau + Lauf per POST, Nav nur Admin); Dashboard-Kachel bleibt bis T11 Platzhalter.
   *Acceptance:* Lauf 2027 mit 10 Testmitgliedern → 10 Posten, zweiter Lauf → weiterhin 10.
   *Verify:* `pytest dues/` — **Negativtest:** Rolle „mitglied"/„kapitaen" erhält 403 (auch ohne dass dabei Posten entstehen); fehlender Satz bricht den Lauf ab und legt *keinen* Posten an; Mitglied ohne Kategorie wird übersprungen statt mit 0 € gebucht; ausgetretene Mitglieder werden nie gebucht; Lauf nur per POST, nicht per GET. · *Files:* `dues/services.py`, `dues/views.py`, `dues/urls.py`, `dues/models.py`, `dues/admin.py`, `dues/templates/dues/posten_liste.html` · *Größe:* M · *PRD:* M2.2 · *Release:* v1 · *Deps:* T7
 
 - [x] **T9: SEPA-Mandate + Zahlungserfassung**
   `SepaMandate` je Mitglied (Referenz, Datum, Status), Zahlungen buchen (SEPA-Einzug/Überweisung/Bar, manuell, Zahlungsart je Buchung), offener Betrag je Posten.
-  *Design (2026-09-28):* Vollständiges Design in `docs/superpowers/specs/2026-09-28-t9-zahlungserfassung-design.md`. `Payment` hängt per `PROTECT`-FK direkt am `FeePost` — damit ist der offene Betrag eindeutig (`betrag − Summe der Zahlungen inkl. Stornos`) und T10/T11b können dieselbe Regel aus `dues/services.py` nutzen (Muster aus T8). Mandat: nur Referenz/Datum/Status `aktiv`/`widerrufen`/`beendet`, **keine IBAN** (PRD M2.3: Einzug bankseitig manuell) — `clean()` auf `Payment` verlangt für `art=sepa` ein aktives Mandat. Falsche Buchungen werden **per Storno-Gegenbuchung** (negativer Betrag, `storno_von`-FK) aufgehoben, nicht gelöscht — konsequent zum v1-Beschluss aus T8. Überzahlung erzeugt einen negativen offenen Betrag und wird als Gutschrift **angezeigt, nicht gekappt**; kein gespeichertes Summenfeld am Posten, sondern Annotationen (`Coalesce(Sum(...))`) über `services.py`, damit die Postenliste ohne N+1 auskommt. UI: `/beitraege/` bekommt Spalten „Bezahlt"/„Offen" + Badge und einen Button je Zeile (`?posten=<id>`); gebucht wird auf der neuen Seite `/beitraege/zahlungen/` (Liste + Formular + Mandat-Abschnitt, Storno per POST auf `/beitraege/zahlungen/<pk>/storno/`), Nav nur für Admin. `Payment` im Admin nur einsehbar, Anlegen nur per Formular. Audit: „Zahlung gebucht"/„Zahlung storniert"/„SEPA-Mandat angelegt/geändert" mit `member=post.member`. Nicht in T9: Mitglieder-Sicht auf eigenen Beitragsstand (§3.8, spätere Aufgabe), Mahnwesen (T10), Dashboard (T11), Kassenbericht (T11b), Storno für Beitragsposten.
+  *Design (2026-09-28):* Vollständiges Design in [T9-Spec](../docs/superpowers/specs/2026-09-28-t9-zahlungserfassung-design.md). Kern: `Payment` per `PROTECT`-FK am `FeePost`, Mandat ohne IBAN ([ADR-002](../docs/decisions/ADR-002-kein-automatisierter-sepa-einzug.md)), Storno per Gegenbuchung ([ADR-006](../docs/decisions/ADR-006-storno-per-gegenbuchung.md)), Überzahlung als Gutschrift sichtbar. Nicht in T9: Mahnwesen (T10), Dashboard (T11), Kassenbericht (T11b), Storno für Beitragsposten.
   *Acceptance:* Zahlung markiert Posten als bezahlt; offene-Beitrags-Liste stimmt; kein Bank-API-Call im Code; Überzahlung wird als offener Gutschrift angezeigt, nicht gekappt.
   *Verify:* `pytest dues/` — **Negativtest:** Zahlung für ein Mitglied ohne Mandat bei Zahlungsart „SEPA-Einzug" wird abgelehnt. · *Files:* `dues/models.py`, `dues/views.py` · *Größe:* M · *PRD:* M2.3, M2.4 · *Release:* v1 · *Deps:* T8
 
-- [ ] **T10: Mahnwesen + Beitrags-Export**
+- [x] **T10: Mahnwesen + Beitrags-Export**
   Offene-Beitragsübersicht mit 1./2. Mahnung (Datum setzen), Mahnbrief als druckbares HTML/PDF, CSV-Export der Jahresbeiträge.
   *Acceptance:* Mahnbrief druckbar für ein Testmitglied; CSV enthält alle Posten des Jahres.
   *Verify:* `pytest dues/` — **Negativtest:** Nicht-Admin erhält 403 auf Mahnungsübersicht + Export; **Inhaltstest:** CSV enthält nur die erlaubten Felder (keine Adressen Dritter); zweiter Export identisch. · *Files:* `dues/templates/dues/mahnbrief.html`, `dues/views.py` · *Größe:* M · *PRD:* M2.5 · *Release:* v1 · *Deps:* T9
+
+- [ ] **T10b: HTMX + Alpine.js einbinden** *(Nachtrag)*
+  HTMX und Alpine.js als feste Dateien in `static/vendor/` (Versionsnummer im Dateinamen), Einbindung im Basis-Template, CSRF-Header für HTMX-Anfragen. Erster Einsatz: „Mahnung setzen“ in der Mahnliste (T10) ohne Seiten-Reload, Fragment-Antwort derselben View. Design und Abgrenzung: [ADR-008](../docs/decisions/ADR-008-htmx-alpine-lokal.md).
+  *Acceptance:* Mahnung lässt sich in der Mahnliste setzen, ohne dass die Seite neu lädt; ohne JavaScript funktioniert dasselbe Formular als normaler POST; keine Anfrage geht an einen fremden Host.
+  *Verify:* `pytest dues/` + `pytest core/` — **Negativtest:** HTMX-POST ohne CSRF-Token wird mit 403 abgewiesen; Nicht-Admin erhält 403 auch auf das Fragment; Aufruf ohne `HX-Request`-Header liefert die volle Seite statt des Fragments; Test, dass `static/vendor/` die einzigen Skripte ausliefert (kein `http(s)://` in `<script src>`). Browser-Check 360/1280 px. · *Files:* `static/vendor/`, `templates/base.html`, `dues/views.py`, `dues/templates/dues/` · *Größe:* S · *PRD:* — (Technik, keine Anforderung; unterstützt N2.3, N1.1) · *Release:* v1 · *Deps:* T10
 
 - [ ] **T11: Dashboard-Erweiterung offene Beiträge**
   Beitrags-Kacheln befüllen (offene Summe + Anzahl) sobald der Beitragslauf existiert.
@@ -114,7 +122,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 - [ ] **T14: E-Mail-Versand an Gruppen**
   Opt-in-Flag je Mitglied, Formular „E-Mail an Gruppe" (Betreff, Text, Empfängergruppe), Versand via SMTP, Versandprotokoll (An, Wann, Status).
   *Acceptance:* Testversand an drei Empfänger im Nur-Test-Modus (Console-Backend); Versandprotokoll enthält alle 3 mit Zeitpunkt und Status; 1 opt-out-Mitglied in der Gruppe wird übersprungen.
-  *Verify:* `pytest comms/` — **Negativtest:** Opt-out-Mitglied erhält keine Mail; Nicht-Admin darf nicht versenden (403); leerer Empfänger-Wurf bricht mit klarer Meldung ab, statt 0 Mails still zu senden. · *Files:* `comms/views.py`, `comms/services.py` · *Größe:* M · *PRD:* M5.2 · *Release:* v1 · *Deps:* T13
+  *Verify:* `pytest comms/` — **Negativtest:** Opt-out-Mitglied erhält keine Mail; Nicht-Admin darf nicht versenden (403); leere Empfängergruppe bricht mit klarer Meldung ab, statt 0 Mails still zu senden. · *Files:* `comms/views.py`, `comms/services.py` · *Größe:* M · *PRD:* M5.2 · *Release:* v1 · *Deps:* T13
 
 - [ ] **T15: Kassenbuch** *(v1.1)*
   `CashEntry` (Einnahme/Ausgabe, Kategorie, Betrag, Datum, Notiz), Liste + Jahresfilter, CSV-Export für Steuerberater.
@@ -127,8 +135,13 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 - [ ] **T16: Mannschaften + Ligaspiele**
   Models `Team`, `LeagueMatch` (Datum, Gegner, Heim/Auswärts, Liga), CRUD für Admin.
-  *Acceptance:* 2 Mannschaften und 1 Ligspiel (Heim, Gegner, Datum) angelegt und in der Liste sichtbar; Spiel erscheint in der Liste der eigenen Mannschaft.
+  *Acceptance:* 2 Mannschaften und 1 Ligaspiel (Heim, Gegner, Datum) angelegt und in der Liste sichtbar; Spiel erscheint in der Liste der eigenen Mannschaft.
   *Verify:* `pytest teams/` — **Negativtest:** Rollen „mitglied" und „kapitaen" erhalten 403 auf Anlegen/Bearbeiten; Änderung eines Spiels im Status „abgeschlossen" wird abgelehnt. · *Files:* `teams/models.py`, `teams/views.py` · *Größe:* S · *PRD:* M4.1, M4.2 · *Release:* v1 · *Deps:* T14 · *Note:* NAV-Eintrag `teams:team_list` in `core/context_processors.py` wieder ergänzen
+
+- [ ] **T16b: iCal-Feed der Ligaspiele** *(v1.1)*
+  Abonnierbarer Kalender-Feed (`.ics`) der Ligaspiele je Mannschaft und gesamt, Zugriff über geheimen Token-Link; Token durch Admin erneuerbar (macht alte Links ungültig). Reine Funktion für die Feed-Erzeugung in `teams/services.py`, ohne Bibliothek (RFC 5545, wenige Felder).
+  *Acceptance:* Feed enthält genau die Spiele der gewählten Mannschaft mit Datum, Gegner, Heim/Auswärts; Import in einen Kalender-Client zeigt die Termine; nach Token-Erneuerung liefert der alte Link 404.
+  *Verify:* `pytest teams/` — **Negativtest:** ungültiger oder fehlender Token → 404 (kein Hinweis, ob die Mannschaft existiert); Feed enthält keine Aufstellungs- und keine Personendaten; abgesagte Spiele werden als `STATUS:CANCELLED` ausgegeben, nicht weggelassen; `assertNumQueries` für den Feed. · *Files:* `teams/services.py`, `teams/views.py` · *Größe:* S · *PRD:* S4.6 · *Release:* v1.1 · *Deps:* T16
 
 - [ ] **T17: Aufstellung + Einzelergebnisse**
   Kapitän trägt Aufstellung (Reihenfolge Mitglieder) ein; Ergebnis je Brett (1/0/½) → Mannschaftsergebnis automatisch summieren; Frist-Status.
@@ -146,7 +159,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 - [ ] **T19: Turnier-Modell + öffentliche Anmeldung**
   `Tournament` (Datum, Ort, Format, Anmeldeschluss, Startgeld-Status), öffentliche Detailseite + Anmeldeformulare (Mitglied/Gast mit Name + E-Mail), Teilnehmerliste.
-  *Acceptance:* Öffentliche Seite ohne Login erreichbar; 1 Mitgliedsanmeldung + 1 Gastanmeldung landen in der Teilnehmerliste; Gast mit 3 Brettern im Paarungsraster, sobald die Runde existiert.
+  *Acceptance:* Öffentliche Seite ohne Login erreichbar; 1 Mitgliedsanmeldung + 1 Gastanmeldung landen in der Teilnehmerliste; die Gastanmeldung zeigt nur Name + E-Mail (N1.7).
   *Verify:* `pytest tournaments/` — **Negativtest:** Anmeldung nach Anmeldeschluss abgewiesen; doppelte Anmeldung derselben E-Mail unterbunden; Gast-Daten erscheinen nur in der Turnierverwaltung, nicht in der Mitgliederliste und nicht in der Mitgliedersuche (N1.7). · *Files:* `tournaments/models.py`, `tournaments/views.py` · *Größe:* M · *PRD:* M3.1, M3.2, N1.7 · *Release:* v1 · *Deps:* T17
 
 - [ ] **T20: Runden + Ergebniserfassung + Zwischenwertung**
@@ -155,7 +168,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Verify:* `pytest tournaments/` — **Negativtest:** Ergebnis ändern nur für Turnierverwalter; Doppelpartien in einer Runde abgewiesen. · *Files:* `tournaments/views.py`, `tournaments/scoring.py` · *Größe:* M · *PRD:* M3.3 · *Release:* v1 · *Deps:* T19
 
 - [ ] **T21: Schweizer Paarung** *(v1.1)*
-  Paarungsservice (Buchholz, Bye-Handling, Remis-Regeln), automatische Paarung je Runde — entkoppelt von der Ergebniserfassung (T20).
+  Paarungsservice (Buchholz, Bye-Handling, Remis-Regeln), automatische Paarung je Runde — entkoppelt von der Ergebniserfassung (T20). *Vor Beginn prüfen:* ob das FIDE-konforme Kommandozeilentool bbpPairings als Paarungsmaschine taugt (Lizenz, Docker-Größe, Testbarkeit). Bei Abweichung von der Eigenimplementierung neue ADR, die die Entscheidung in „Architecture Decisions“ ablöst.
   *Acceptance:* 8 Testspieler, 3 Runden: Paarungen ohne Doppel-Partien, Stand korrekt (Referenzrechnung).
   *Verify:* `pytest tournaments/` (Paarungs-Tests) — **Negativtest:** Spielerzahl ohne Bye-Regel → klare Fehlermeldung statt stummer Fehlpaarung. · *Files:* `tournaments/pairing.py`, `tournaments/views.py` · *Größe:* L · *PRD:* S3.4 · *Release:* v1.1 · *Deps:* T20
 
@@ -174,9 +187,14 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Verify:* `pytest core/` + `python manage.py anonymize_former_members --dry-run` — **Integrationstest:** Vollzyklus Austritt → Frist abgelaufen → Command → alle Felder geprüft; **Negativtest:** `--dry-run` ändert nichts; nach Anonymisierung ist Suche nach Name/E-Mail **leer**, Finanzhistorie aber intakt und anonymisiert. · *Files:* `core/views.py`, `core/management/commands/` · *Größe:* M · *PRD:* N1.2, N1.3, N1.4 · *Release:* v1 · *Deps:* T12
 
 - [ ] **T24: Deployment + Backup + Restore-Doku**
-  Produktions-Compose (TLS-Vorbereitung Reverse Proxy), nächtliches DB-Backup (pg_dump-Container, komprimiert + **verschlüsselt**, Schlüssel getrennt vom DB-Host), `docs/deployment.md` inkl. Restore-Anleitung, Restore-Test-Protokoll, Updatepfad (`docker compose pull` + `migrate`) und Nachweis des EU/DE-Hoststandorts.
+  Produktions-Compose mit **Caddy** als Reverse Proxy (automatisches TLS), nächtliches DB-Backup (Container mit pg_dump → **restic**, komprimiert + **verschlüsselt**, Passwort/Schlüssel getrennt vom DB-Host, Aufbewahrungsregeln; Begründung [ADR-009](../docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md)), `docs/deployment.md` inkl. Restore-Anleitung, Restore-Test-Protokoll, Updatepfad (`docker compose pull` + `migrate`) und Nachweis des EU/DE-Hoststandorts.
   *Acceptance:* Restore-Test dokumentiert und einmal erfolgreich (< 4 h), inklusive Entschlüsselung; ein Update auf eine neue Image-Version läuft per dokumentiertem Ablauf ohne Datenverlust; `docs/deployment.md` nennt Server/Provider mit EU/DE-Standort und erklärt, warum damit N1.1 erfüllt ist (keine Tracker, kein externes CDN, keine Drittanbieter-Fonts/-CDN in den Templates).
   *Verify:* **Integrationstest:** Backup → leere DB → Restore → Daten da + Integritäts-Abgleich (Zeilenanzahl/Stichprobe); **Negativtest:** korruptes Backup bzw. fehlender Schlüssel wird mit klarem Fehler abgewiesen statt stillschweigend leeren Datenbestand zu schreiben; **Update-Test:** Pull + `migrate` gegen eine frisch befüllte Kopie, danach Zeilenanzahl unverändert. · *Files:* `docker-compose.prod.yml`, `docs/deployment.md` · *Größe:* M · *PRD:* N2.1, N2.4, N1.1 · *Release:* v1 · *Deps:* T23
+
+- [ ] **T24b: Monitoring mit Uptime Kuma** *(v1.1)*
+  Uptime-Kuma-Container in `docker-compose.prod.yml`: Prüfung der Health-Check-Route, Push-Monitor für das nächtliche Backup (Backup-Container meldet Erfolg), Alarm per E-Mail an die Admin-Adresse. Anleitung in `docs/deployment.md`, Abschnitt „Monitoring“. Design: [ADR-009](../docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md).
+  *Acceptance:* Stoppt man den App-Container, kommt innerhalb des eingestellten Intervalls genau eine Alarm-Mail; bleibt die Backup-Meldung aus, kommt ebenfalls eine; nach Wiederanlauf folgt eine Entwarnung.
+  *Verify:* Integrationstest per Compose-Config (`docker compose -f docker-compose.prod.yml config`) + dokumentierter manueller Ausfalltest — **Negativtest:** Uptime Kuma ist von außen nicht ohne Login erreichbar; Alarm-Mails enthalten keine Personendaten (nur Dienstname, Zeit). · *Files:* `docker-compose.prod.yml`, `docs/deployment.md` · *Größe:* S · *PRD:* N2.8 · *Release:* v1.1 · *Deps:* T24
 
 - [ ] **T25: Härtung: Header, Fehlalarme, Wartungsdoku**
   Sicherheits-Header (HSTS, X-Frame, CSRF), Fehlerbenachrichtigung per E-Mail an Admin, Wartungsdoku `docs/wartung.md` (Django-Primer für den Nutzer). *(2FA ausgeschlossen → T26, v1.1)*
@@ -198,15 +216,15 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* „Zum Homescreen hinzufügen" auf Android + „Zum Bildschirm hinzufügen" auf iOS funktioniert; App öffnet sich ohne Browser-UI; Startseite lädt offline aus dem Cache; Update löscht alten Cache.
   *Verify:* `pytest core/` (SW-Route, Manifest-Route) + manuell Chrome DevTools → Application → Add to home screen — **Negativtest:** nach Deploy ist der alte Cache invalidiert (neue Version sichtbar, kein „stale content"); offline erscheint nur Startseite/News, **keine** angeforderten Seiten werden mit veralteten Daten aus Cache bedient. · *Files:* `core/templates/`, `static/manifest.webmanifest`, `static/sw.js` · *Größe:* M · *PRD:* N2.7 · *Release:* v1 · *Deps:* T25
 
-**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste (PRD §4.1 N1.1–N1.5, N1.7) abgehakt, NFR-Nachweis (T25b) in `docs/nfr-pruefung.md` abgelegt, Traceability-Tabelle oben abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch Vorstand. **Danach erst v1.1-Tasks:** T15, T18, T21, T22, T26 (+ optional Newsletter S5.3).
+**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste (PRD §4.1 N1.1–N1.5, N1.7) abgehakt, NFR-Nachweis (T25b) in `docs/nfr-pruefung.md` abgelegt, Traceability-Tabelle oben abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch Vorstand. **Danach erst v1.1-Tasks:** T15, T16b, T18, T21, T22, T24b, T26 (+ optional Newsletter S5.3).
 
 ## Release-Schnitt
 
-- **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T11b), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T18 Tabellen, T21 Paarung, T22 Turnierexport, T26 2FA
+- **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b), T16, T17, T19, T20, T23, T24, T25, T25b, T27
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T16b iCal-Feed, T18 Tabellen, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA
 - **Out of scope (K):** DSB-Meldeformate (K3.6), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
-**Traceability-Check (bei jedem Checkpoint):** Jede M- und N-ID aus `docs/prd.md` ist genau einer v1-Task zugeordnet.
+**Traceability-Check (bei jedem Checkpoint):** Jede M- und N-ID aus `docs/prd.md` ist genau einer Task zugeordnet — v1-Task, außer N1.6 (2FA) und N2.8 (Monitoring), die im PRD als S geführt werden und daher T26 bzw. T24b (v1.1) zugeordnet sind. T10b ist reine Technik ohne PRD-ID (ADR-008).
 
 | PRD-ID | Task |
 |---|---|
@@ -214,6 +232,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | M2.1 / M2.2 / M2.3 / M2.4 / M2.5 / M2.6 | T7 / T8 / T9 / T9 / T10 / T11b |
 | M3.1 / M3.2 / M3.3 | T19 / T19 / T20 |
 | M4.1 / M4.2 / M4.3 / M4.4 | T16 / T16 / T17 / T17 |
+| S4.6 | T16b *(v1.1)* |
 | M5.1 / M5.2 | T13 / T14 |
 | M7.1 / M7.2 / M7.3 | T6 + T11 / T1 + T2 / T5 |
 | N1.1 | T24 (Hoststandort + kein CDN/Tracker) |
@@ -223,6 +242,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | N1.7 | T19 |
 | N2.1 / N2.4 | T24 |
 | N2.2 / N2.3 | T25b |
+| N2.8 | T24b *(v1.1 — im PRD als S geführt)* |
 | N2.5 | T25 |
 | N2.6 / N2.7 | T1 / T27 |
 
@@ -243,5 +263,6 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 - SMTP-Zugangsdaten des Vereins (vor T14 nötig — vorerst Django-Console-Backend im Dev)
 - ~~Exakte Beitragssätze und Kategorien des Vereins~~ — **Struktur steht seit T7** (Seed mit Platzhalterbeträgen, per Admin überschreibbar). Offen bleibt nur das **Eintragen der echten Sätze vor dem ersten Produktiv-Beitragslauf** (T8).
+- **Traceability-Lücke:** Die Mitglieder-Sicht „nur eigener Beitragsstand“ (PRD §3.8, Zeile „Beiträge / Zahlungen / Mahnungen“) ist keiner Task zugeordnet. Task ergänzen (z. B. `T11c`, Dep. T11b) und entscheiden, ob v1 — vor Checkpoint 2 klären.
 - Domain/Hostname für das Deployment (vor T24)
 - Aufbewahrungsfristen mit Steuerberater bestätigen (vor T23): Default 36 Monate bis Anonymisierung, 8 Jahre anonymisierte Finanzhistorie (GoBD/§ 147 AO)
