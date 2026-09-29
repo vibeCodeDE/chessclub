@@ -8,6 +8,9 @@ app_name = "core"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("produkt/", views.produkt_seite, name="produkt"),
+    path("impressum/", views.rechtliches, {"seite": "impressum"}, name="impressum"),
+    path("datenschutz/", views.rechtliches, {"seite": "datenschutz"}, name="datenschutz"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("aktuelles/", views.news_archiv, name="news_archiv"),
     path("aktuelles/<int:pk>/", views.news_detail, name="news_detail"),

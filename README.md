@@ -33,6 +33,13 @@ TWOFA_PFLICHT=0 .venv/bin/python manage.py runserver
 
 `manage.py seed_demo --reset` löscht die Demo-Daten und legt sie neu an.
 
+## Produkt-Landingpage
+
+Die Verkaufsseite für andere Vereine liegt unter `/produkt/` (`/` bleibt die Vereinsseite).
+Name und Kontakt kommen aus `PRODUCT_NAME` und `PRODUCT_CONTACT`; Preise, Funktionen und FAQ
+stehen in `core/produkt.py`. Die Preise sind **Platzhalter**, `/impressum/` und `/datenschutz/`
+enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
+
 ## Tests
 
 ```bash
