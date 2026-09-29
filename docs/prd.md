@@ -1,6 +1,6 @@
 # PRD: Schachvereins-Software
 
-**Status:** Freigegeben v1.2 — Review-Feedback eingearbeitet: Priorisierung v1/v1.1, DSGVO-Anforderungen geschärft, Berechtigungsmatrix, Backup-Verschlüsselung
+**Status:** Freigegeben v1.4 (Ergänzungen S4.6, N2.8) — Änderungen siehe §9
 **Datum:** 2026-09-28
 
 ---
@@ -78,6 +78,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M4.3 Aufstellung: Kapitän trägt Aufstellung ein, Fristenverwaltung
 - M4.4 Ergebnisse je Liga-Match (Einzelbretter → Mannschaftsergebnis)
 - S4.5 automatische Tabellenberechnung je Liga
+- S4.6 iCal-Feed der Ligaspiele (abonnierbar im Handykalender, ohne Login nur mit geheimem Token-Link; keine Aufstellungs- oder Personendaten)
 
 ### 3.5 Kommunikation (M/S)
 
@@ -102,7 +103,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 
 ### 3.8 Berechtigungsmatrix (M)
 
-Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Aufstellung) und **alle** Export-/Übersichtstasks (T10, T11b, T15, T19, T22, T23); jede Zeile erhält einen Negativtest.
+Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Aufstellung), T19 (Turnieranmeldung/Gastdaten) und **alle** Export-/Übersichtstasks (T10, T11b, T15, T22, T23); jede Zeile erhält einen Negativtest.
 
 | Funktion | Admin (Vorstand) | Kapitän | Mitglied | Gast |
 |---|---|---|---|---|
@@ -131,7 +132,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 
 - N1.1 Datenhaltung nur in EU/DE; keine Drittanbieter-Tracker, kein externes CDN
 - N1.2 Auskunftsanfragen: personenbezogene Daten eines Mitglieds als PDF exportierbar
-- N1.3 Löschpflicht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Default 36 Monate); dabei Kontaktdaten + Stammdaten löschen/anonymisieren, Finanzhistorie (Beiträge, Zahlungen) anonymisiert erhalten (nur noch Mitglied-ID). Aufbewahrung der anonymisierten Finanzhistorie: **8 Jahre** nach § 147 AO; die GoBD verweist für die Orderstrukturierung darauf, ist aber nicht selbst die Fristquelle. Fristen vor Go-Live mit Steuerberater bestätigen
+- N1.3 Löschpflicht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Default 36 Monate); dabei Kontaktdaten + Stammdaten löschen/anonymisieren, Finanzhistorie (Beiträge, Zahlungen) anonymisiert erhalten (nur noch Mitglied-ID). Aufbewahrung der anonymisierten Finanzhistorie: **8 Jahre** nach § 147 AO; die GoBD verweist für die ordnungsgemäße Aufbewahrung darauf, ist aber nicht selbst die Fristquelle. Fristen vor Go-Live mit Steuerberater bestätigen
 - N1.4 Verzeichnis von Verarbeitungstätigkeiten: Maschinenlesbare Exportfunktion der Datenkategorien
 - N1.5 Protokollierung von Logins, Änderungen **und** Zugriffen auf Personendaten (mindestens 12 Monate). „Zugriff" = Aufruf einer Mitglieder-Detailansicht und Ausführung des Auskunfts-Exports; Listenansichten werden nicht einzeln protokolliert
 - N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S)
@@ -146,6 +147,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 - N2.5 **Beobachtbarkeit:** strukturierte Logs, Fehlerbenachrichtigung an Admin-E-Mail
 - N2.6 **Mobil:** Alle Kernflächen funktionieren ab 360 px Breite (Responsive, Mobile-First-Layout); Navigation als Burger-Menü; Tabellen scrollbar statt zerbrochen
 - N2.7 **Installierbarkeit (PWA):** App lässt sich auf Homescreen/Startmenü installieren (Web-App-Manifest + Service Worker), öffnet sich in eigenem Fenster ohne Browser-Chrome, Icons für iOS/Android; Basis-Offline-Anzeige der Startseite/letzten News
+- N2.8 **Monitoring (S):** Erreichbarkeit der App und ausbleibendes Backup werden überwacht und per E-Mail gemeldet (z. B. Uptime Kuma, ADR-009); keine Personendaten in den Meldungen
 
 **Nachweis-NFRs:** N2.2–N2.5 sind erst mit v1 erfüllt, wenn sie gemessen bzw. geprüft sind — siehe Plan-Task T25b (Messung + WCAG-Audit) und T24 (Updatepfad, EU-Hoststandort).
 
@@ -163,17 +165,19 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 
 ## 6. Meilensteine
 
-| M | Inhalt | Abnahme |
-|---|---|---|
-| M1 | Auth, Rollen, Mitgliederstammdaten, Änderungswunsch-Workflow | Vorstand legt Mitglieder an, Änderungswunsch-Testlauf |
-| M2 | Beitragsläufe, Zahlungserfassung, Mahnung, Dashboard | Jahresbeitragslauf als Testlauf komplett |
-| M3 | Mannschaften, Aufstellung, Ligaspiele | Beispielspiel Erfassen + Tabelle |
-| M4 | Turniere inkl. Anmeldung & Schweizer Paarung | Testturnier über 3 Runden gespielt |
-| M5 | Kommunikation (News + E-Mail), Kassenbuch | Testversand an Gruppe, Kassenexport |
-| M6 | DSGVO-Härte: Export/Löschfristen/Audit, NFR-Nachweis (Performance/WCAG/Updatepfad), Backups | DSGVO-Checkliste abgehakt, N2.2–N2.4 gemessen |
-| M7 | Mobil: Responsive-Feinschliff + PWA-Installation (iOS/Android) | App auf Homescreen installiert, 360-px-Check bestanden |
+Meilensteine heißen **MS1–MS7**, damit sie nicht mit den Anforderungs-IDs (M1.1 = Muss) und den Größenangaben im Plan verwechselt werden. Was zu v1.1 gehört, ist unten ausdrücklich markiert.
 
-**Release-Schnitt (v1 vs. v1.1):** **v1** umfasst alle M-Anforderungen (§3.1–§3.5 ohne S-Teile, §3.7), die gesamte DSGVO §4.1 (N1.1–N1.5, N1.7) und alle NFR §4.2 (N2.1–N2.7). N1.6 (2FA) ist im PRD als S geführt und gehört zu v1.1. **v1.1** ergänzt alle S-Anforderungen und wird erst nach v1-Abnahme gebaut: S3.4 Paarung, S3.5 Turnierexport, S4.5 Tabellen, S5.3 Newsletter, §3.6 Kassenbuch, N1.6 2FA. K-Anforderungen (K3.6, K5.4, K6.3) sind out of scope.
+| MS | Inhalt | Abnahme |
+|---|---|---|
+| MS1 | Auth, Rollen, Mitgliederstammdaten, Änderungswunsch-Workflow | Vorstand legt Mitglieder an, Änderungswunsch-Testlauf |
+| MS2 | Beitragsläufe, Zahlungserfassung, Mahnung, Dashboard | Jahresbeitragslauf als Testlauf komplett |
+| MS3 | Mannschaften, Aufstellung, Ligaspiele *(Tabelle S4.5: v1.1)* | Beispielspiel erfassen (Aufstellung → Ergebnis); Tabelle erst in v1.1 |
+| MS4 | Turniere inkl. Anmeldung, Runden, Handpaarung *(automatische Schweizer Paarung S3.4 und Export S3.5: v1.1)* | Testturnier über 3 Runden handgepaart gespielt |
+| MS5 | Kommunikation (News + E-Mail) *(Kassenbuch §3.6: v1.1)* | Testversand an Gruppe; Kassenexport erst in v1.1 |
+| MS6 | DSGVO-Härte: Export/Löschfristen/Audit, NFR-Nachweis (Performance/WCAG/Updatepfad), Backups | DSGVO-Checkliste abgehakt, N2.2–N2.4 gemessen |
+| MS7 | Mobil: Responsive-Feinschliff + PWA-Installation (iOS/Android) | App auf Homescreen installiert, 360-px-Check bestanden |
+
+**Release-Schnitt (v1 vs. v1.1):** **v1** umfasst alle M-Anforderungen (§3.1–§3.5 ohne S-Teile, §3.7), die gesamte DSGVO §4.1 (N1.1–N1.5, N1.7) und alle NFR §4.2 (N2.1–N2.7). N1.6 (2FA) und N2.8 (Monitoring) sind im PRD als S geführt und gehören zu v1.1. **v1.1** ergänzt alle S-Anforderungen und wird erst nach v1-Abnahme gebaut: S3.4 Paarung, S3.5 Turnierexport, S4.5 Tabellen, S4.6 iCal-Feed, S5.3 Newsletter, §3.6 Kassenbuch, N1.6 2FA, N2.8 Monitoring. K-Anforderungen (K3.6, K5.4, K6.3) sind out of scope.
 
 ---
 
@@ -204,3 +208,13 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | 5 | Hosting | **Selbst gehostet** durch den Verein (Docker Compose), Standort EU/DE (N1.1) |
 | 6 | Altbestand | **Keiner** — keine CSV-Importfunktion nötig |
 | 7 | Turnieranmeldung durch Gäste | **Zulässig** bis Anmeldeschluss; Gastdaten sind Personendaten Dritter und folgen N1.7 |
+
+---
+
+## 9. Änderungsverlauf
+
+| Version | Datum | Änderung |
+|---|---|---|
+| v1.2 | 2026-09-28 | Review-Feedback: Priorisierung v1/v1.1, DSGVO-Anforderungen geschärft (N1.5, N1.7), Berechtigungsmatrix §3.8, Backup-Verschlüsselung |
+| v1.3 | 2026-09-29 | Redaktionell: Meilensteine als MS1–MS7 umbenannt und an den v1/v1.1-Schnitt angepasst; Tippfehler in N1.3 behoben; §3.8-Verweisliste korrigiert (T19 ist kein Export-Task). Keine inhaltliche Anforderungsänderung |
+| v1.4 | 2026-09-29 | Ergänzungen aus Stack-Review: neu S4.6 (iCal-Feed, T16b) und N2.8 (Monitoring, T24b), beide v1.1; Technikentscheidungen in ADR-008 (HTMX/Alpine, T10b) und ADR-009 (Caddy/restic/Uptime Kuma, T24). N2.1 bleibt unverändert (restic erfüllt „verschlüsselt“) |

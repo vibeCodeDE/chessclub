@@ -27,7 +27,7 @@ CSV enthält nur erlaubte Felder; zweiter Export identisch.
    Aufrüstung, falls der Vorstand später serverseitige PDFs braucht.
 3. **`verein`-App für die Vereinsdaten.** Ein Model mit genau einem Datensatz
    (Absender, Kontakt, Kassierer, Zahlungshinweis). Es gibt heute nichts, wohin
-   diese Angaben gehören; sie werden später auch von T14 (Gruppemail) und T17
+   diese Angaben gehören; sie werden später auch von T14 (Gruppen-E-Mail) und T13
    (News) gebraucht. Nicht in `dues`, nicht in den Settings.
 4. **Stufe streng +1, Datum frei, Prüfungen im Service.** Kein Überspringen, kein
    Doppeln, kein Mahnen eines bezahlten Postens.
@@ -315,4 +315,4 @@ PDF-Serverseite (siehe Entscheidung Nr. 2).
   und `export.py`; `beitragszeilen(jahr)` ist die naheliegende Grundlage für
   dessen CSV, der Spaltenumfang ist dort aber zu entscheiden.
 - **`verein.Vereinsdaten`** ist die Quelle für Absender und Kontakt in T14
-  (Gruppemail) und T17 (News) — dort ist die Pflege im Admin bereits da.
+  (Gruppen-E-Mail) und T13 (News) — dort ist die Pflege im Admin bereits da.
