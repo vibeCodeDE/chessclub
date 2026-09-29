@@ -101,4 +101,5 @@ Vorher manuell sichern (siehe `docs/deployment.md`, Abschnitt 5).
 | Verzeichnis Verarbeitungstätigkeiten | `/datenschutz/verzeichnis.csv` |
 
 Technische Details für eine Nachfolge im Vorstand: `docs/prd.md` (Anforderungen),
-`docs/deployment.md` (Betrieb), `tasks/plan.md` (umgesetzte Pakete).
+`docs/abnahme.md` (Erfolgskriterien und DSGVO-Checkliste), `docs/deployment.md` (Betrieb),
+`tasks/plan.md` (umgesetzte Pakete).

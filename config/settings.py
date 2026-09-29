@@ -81,6 +81,18 @@ else:
         }
     }
 
+# PRD N1.6: Passwörter mit Argon2 (Fallback auf Djangos Standard, falls das
+# Paket in einer Umgebung fehlt – dann bleibt der Betrieb lauffähig).
+try:  # pragma: no cover - Umgebungsabhängig
+    import argon2  # noqa: F401
+
+    PASSWORD_HASHERS = [
+        "django.contrib.auth.hashers.Argon2PasswordHasher",
+        "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    ]
+except ImportError:  # pragma: no cover
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.PBKDF2PasswordHasher"]
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

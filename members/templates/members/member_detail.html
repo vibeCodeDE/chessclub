@@ -13,6 +13,9 @@
     <a class="btn secondary" href="{% url 'core:dsgvo_auskunft' member.pk %}">
       <svg class="icon icon-sm"><use href="#i-shield"></use></svg> Datenauskunft (DSGVO)
     </a>
+    <a class="btn secondary" href="{% url 'core:dsgvo_pdf' member.pk %}">
+      <svg class="icon icon-sm"><use href="#i-download"></use></svg> PDF
+    </a>
     <a class="btn secondary" href="{% url 'members:member_update' member.pk %}">
       <svg class="icon icon-sm"><use href="#i-edit"></use></svg> Bearbeiten
     </a>

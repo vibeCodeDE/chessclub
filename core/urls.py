@@ -17,6 +17,7 @@ urlpatterns = [
     path("offline/", views.offline, name="offline"),
     path("sw.js", views.service_worker, name="service_worker"),
     path("mitglieder/<int:pk>/auskunft/", views.dsgvo_auskunft, name="dsgvo_auskunft"),
+    path("mitglieder/<int:pk>/auskunft.pdf", views.dsgvo_pdf, name="dsgvo_pdf"),
     path("mitglieder/<int:pk>/auskunft.json", views.dsgvo_export, name="dsgvo_export"),
     path("datenschutz/verzeichnis.csv", views.dsgvo_verzeichnis, name="dsgvo_verzeichnis"),
     path("anmelden/", auth_views.anmelden, name="login"),

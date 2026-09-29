@@ -63,6 +63,28 @@ class DatenauskunftTests(TestCase):
         self.assertEqual(eintrag.member, self.member)
         self.assertEqual(eintrag.benutzer, self.admin)
 
+    def test_pdf_auskunft_ist_ein_pdf_und_wird_protokolliert(self):
+        """PRD N1.2: ein Klick → vollständiges PDF."""
+        response = self.client.get(f"/mitglieder/{self.member.pk}/auskunft.pdf")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn(".pdf", response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF"), "Antwort ist kein PDF")
+        self.assertGreater(len(response.content), 3000, "PDF wirkt leer")
+        self.assertTrue(
+            AuditLog.objects.filter(aktion="Datenauskunft erstellt", member=self.member).exists()
+        )
+
+    def test_pdf_auskunft_ohne_javascript_und_mit_daten_ohne_mandat(self):
+        """Auch Mitglieder ohne Mandat/Zahlungen erzeugen ein gültiges PDF."""
+        schlicht = Member.objects.create(
+            vorname="Ohne", nachname="Mandat", eintrittsdatum=date(2020, 1, 1)
+        )
+        response = self.client.get(f"/mitglieder/{schlicht.pk}/auskunft.pdf")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
     def test_json_export_ist_maschinenlesbar(self):
         response = self.client.get(f"/mitglieder/{self.member.pk}/auskunft.json")
         self.assertEqual(response.status_code, 200)

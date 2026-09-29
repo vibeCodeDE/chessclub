@@ -43,6 +43,26 @@ def dsgvo_auskunft(request, pk):
 
 
 @role_required(ADMIN_GROUP)
+def dsgvo_pdf(request, pk):
+    """Vollständige Datenauskunft als PDF (PRD N1.2, ein Klick)."""
+    from core.pdf import datenauskunft_pdf
+
+    member = get_object_or_404(Member, pk=pk)
+    daten = datenauskunft(member)
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="Datenauskunft erstellt",
+        text=f"Datenauskunft als PDF (Art. 15 DSGVO) für Mitglied {member.pk}.",
+        member=member,
+    )
+    antwort = HttpResponse(datenauskunft_pdf(member, daten), content_type="application/pdf")
+    antwort["Content-Disposition"] = (
+        f'attachment; filename="datenauskunft-{member.pk}-{timezone.localdate():%Y-%m-%d}.pdf"'
+    )
+    return antwort
+
+
+@role_required(ADMIN_GROUP)
 def dsgvo_export(request, pk):
     """Maschinenlesbare Auskunft (JSON) zum Herunterladen (PRD N1.2/N1.4)."""
     member = get_object_or_404(Member, pk=pk)

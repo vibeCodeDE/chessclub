@@ -41,4 +41,4 @@ Details & Akzeptanzkriterien: `tasks/plan.md` · Spez: `docs/prd.md`
 - [x] T21: Prod-Deployment, Backup + dokumentierter Restore-Test — Verify: manueller Restore ✅ docker-compose.prod.yml + docs/deployment.md angelegt (Restore-Test beim Verein durchzuführen)
 - [x] T22: 2FA für Admins, Security-Header, `docs/wartung.md` — Verify: `pytest core/` ✅ 2FA-Pflicht für Admin (TOTP ohne Fremdpaket), Security-Header, docs/wartung.md
 - [x] T23: PWA — Manifest, Service Worker, iOS/Android-Icons, installierbar + Offline-Startseite — Verify: `pytest core/` + DevTools „Add to home screen" ✅ Manifest, Service Worker (/sw.js), Icons, Offline-Seite
-- [ ] ☑ Final: PRD-Erfolgskriterien + DSGVO-Checkliste, Abnahme Vorstand
+- [ ] ☑ Final: PRD-Erfolgskriterien + DSGVO-Checkliste, Abnahme Vorstand — Checkliste erstellt (`docs/abnahme.md`, Teil A–E); die Freigabe selbst erfolgt durch den Vorstand, siehe offene Punkte D1–D7

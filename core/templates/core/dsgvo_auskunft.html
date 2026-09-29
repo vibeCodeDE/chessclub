@@ -8,7 +8,8 @@
 <div class="page-head">
   <p class="lede">Vollständige Auskunft über alle zu dieser Person gespeicherten Daten. Jede Erstellung wird im Audit-Protokoll vermerkt.</p>
   <div class="page-actions no-print">
-    <a class="btn secondary" href="{% url 'core:dsgvo_export' member.pk %}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> JSON herunterladen</a>
+    <a class="btn" href="{% url 'core:dsgvo_pdf' member.pk %}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> PDF herunterladen</a>
+    <a class="btn secondary" href="{% url 'core:dsgvo_export' member.pk %}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> JSON</a>
     <button class="btn secondary" type="button" onclick="window.print()"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Drucken</button>
     <a class="btn ghost" href="{% url 'members:member_detail' member.pk %}">Zurück</a>
   </div>
