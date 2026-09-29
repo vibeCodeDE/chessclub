@@ -40,6 +40,8 @@ def formdaten(**aenderungen):
         "eintrittsdatum": "15.01.2020",
         "austrittsdatum": "",
         "status": "aktiv",
+        "beitragskategorie": "",
+        "email_opt_in": "on",
         "status_history-TOTAL_FORMS": "0",
         "status_history-INITIAL_FORMS": "0",
     }

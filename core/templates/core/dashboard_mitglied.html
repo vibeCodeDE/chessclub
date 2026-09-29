@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Mein Bereich{% endblock %}
+{% block page_title %}Hallo {{ user.get_full_name|default:user.get_username }}{% endblock %}
+{% block crumbs %}<div class="crumbs">Mein Bereich · Beitragskonto, Termine und Einsätze</div>{% endblock %}
+
+{% block content %}
+{% if offen %}
+  <div class="alert alert-warning">
+    <strong>Offener Beitrag:</strong>
+    {% for fee in offen %}{{ fee.jahr }}: {{ fee.offener_betrag|floatformat:2 }} €{% if not forloop.last %}, {% endif %}{% endfor %} –
+    bitte überweisen Sie den Betrag oder sprechen Sie die Kasse an.
+  </div>
+{% endif %}
+
+<div class="grid main-side">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Meine Beiträge</h2>
+        <a class="link-btn" href="{% url 'dues:mein_konto' %}">Details &amp; Zahlungen</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Jahr</th><th>Kategorie</th><th class="right">Betrag</th><th class="right">Bezahlt</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for fee in posten %}
+              <tr>
+                <td class="cell-main">{{ fee.jahr }}</td>
+                <td>{{ fee.kategorie_name }}</td>
+                <td class="num mono">{{ fee.betrag|floatformat:2 }} €</td>
+                <td class="num mono">{{ fee.bezahlter_betrag|floatformat:2 }} €</td>
+                <td><span class="badge badge-{{ fee.status }}">{{ fee.get_status_display }}</span></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5">{% include "includes/empty_state.html" with icon="wallet" titel="Noch kein Beitragsposten" text="Die Kasse legt Ihren Beitrag mit dem nächsten Beitragslauf an." small=True %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Meine Einsätze</h2></div>
+      <ul class="list">
+        {% for eintrag in meine_aufstellungen %}
+          <li>
+            <span class="badge badge-bar">Brett {{ eintrag.brett }}</span>
+            <span class="grow">
+              <span class="title">{{ eintrag.match.team.name }} {{ eintrag.match.heimspiel|yesno:"gegen,bei" }} {{ eintrag.match.gegner }}</span>
+              <span class="meta">{{ eintrag.match.datum|date:"d.m.Y" }}{% if eintrag.gegner_name %} · gegen {{ eintrag.gegner_name }}{% endif %}</span>
+            </span>
+            <span class="badge {% if eintrag.ergebnis == '1' %}badge-sieg{% elif eintrag.ergebnis == '0' %}badge-niederlage{% elif eintrag.ergebnis == '0.5' %}badge-remis{% else %}badge-neutral{% endif %}">{{ eintrag.ergebnis_anzeige }}</span>
+          </li>
+        {% empty %}
+          <li>{% include "includes/empty_state.html" with icon="swords" titel="Noch keine Einsätze" text="Sobald die Mannschaftsführung Sie aufstellt, sehen Sie hier Ihren Einsatz." small=True %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Meine Änderungswünsche</h2></div>
+      <ul class="list">
+        {% for wunsch in wuensche %}
+          <li>
+            <span class="grow">
+              <span class="title">{{ wunsch.get_feld_display }} → „{{ wunsch.wunschwert }}“</span>
+              <span class="meta">eingereicht {{ wunsch.eingereicht_am|date:"d.m.Y" }}</span>
+            </span>
+            <span class="badge badge-{{ wunsch.status }}">{{ wunsch.get_status_display }}</span>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Keine Wünsche offen.</li>
+        {% endfor %}
+      </ul>
+      <div class="card-foot"><a class="btn small secondary" href="{% url 'members:profil' %}">Daten ändern anfragen</a></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Termine</h2></div>
+      <ul class="list">
+        {% for spiel in kommende_spiele %}
+          <li>
+            <span class="grow">
+              <span class="title">{{ spiel.team.name }} {{ spiel.heimspiel|yesno:"gegen,bei" }} {{ spiel.gegner }}</span>
+              <span class="meta">{{ spiel.datum|date:"D, d.m.Y" }}{% if spiel.uhrzeit %} · {{ spiel.uhrzeit|time:"H:i" }}{% endif %}</span>
+            </span>
+          </li>
+        {% endfor %}
+        {% for turnier in kommende_turniere %}
+          <li>
+            <span class="grow">
+              <span class="title">{{ turnier.name }}</span>
+              <span class="meta">Turnier · {{ turnier.datum|date:"d.m.Y" }}</span>
+            </span>
+            <a class="btn small secondary" href="{% url 'tournaments:public_detail' turnier.pk %}">Turnier ansehen</a>
+          </li>
+        {% endfor %}
+        {% if not kommende_spiele and not kommende_turniere %}
+          <li class="muted" style="padding:1rem">Keine Termine geplant.</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Vereinsnews</h2></div>
+      <ul class="list">
+        {% for post in news %}
+          <li>
+            <span class="grow">
+              <span class="title"><a href="{% url 'core:news_detail' post.pk %}">{{ post.titel }}</a></span>
+              <span class="meta">{{ post.veroeffentlicht_am|date:"d.m.Y" }}</span>
+            </span>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Keine Ankündigungen.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

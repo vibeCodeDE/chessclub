@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Mein Beitragskonto{% endblock %}
+{% block page_title %}Mein Beitragskonto{% endblock %}
+{% block crumbs %}<div class="crumbs">Offen: {{ offen_summe|floatformat:2 }} €{% if mandat %} · SEPA-Mandat {{ mandat.referenz }} ({{ mandat.iban_kurz }}){% endif %}</div>{% endblock %}
+
+{% block content %}
+{% if not member %}
+  <div class="card">{% include "includes/empty_state.html" with icon="user" titel="Kein Mitgliedsprofil" text="Ihr Konto ist noch nicht mit einem Mitglied verknüpft – bitte wenden Sie sich an die Vorstandschaft." %}</div>
+{% else %}
+  <div class="grid main-side">
+    <div>
+      {% for fee in posten %}
+        <div class="card">
+          <div class="card-head">
+            <h2>Beitrag {{ fee.jahr }}</h2>
+            <span class="badge badge-{{ fee.status }}">{{ fee.get_status_display }}</span>
+          </div>
+          <div class="card-body">
+            <div class="flex between center mb-1"><span class="muted">Kategorie</span><strong>{{ fee.kategorie_name }}</strong></div>
+            <div class="flex between center mb-1"><span class="muted">Beitrag</span><strong class="mono">{{ fee.betrag|floatformat:2 }} €</strong></div>
+            <div class="flex between center mb-1"><span class="muted">Bezahlt</span><strong class="mono">{{ fee.bezahlter_betrag|floatformat:2 }} €</strong></div>
+            <div class="flex between center mb-2"><span class="muted">Offen</span><strong class="mono">{{ fee.offener_betrag|floatformat:2 }} €</strong></div>
+            <div class="progress {% if fee.offener_betrag %}warn{% else %}success{% endif %}" data-progress="{{ fee.fortschritt_prozent }}"><span style="width:0"></span></div>
+          </div>
+          {% if fee.zahlungen.all %}
+            <ul class="list">
+              {% for zahlung in fee.zahlungen.all %}
+                <li>
+                  <span class="badge badge-{{ zahlung.art }}">{{ zahlung.get_art_display }}</span>
+                  <span class="grow"><span class="title">{{ zahlung.betrag|floatformat:2 }} €</span><span class="meta">{{ zahlung.datum|date:"d.m.Y" }}</span></span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="card">{% include "includes/empty_state.html" with icon="wallet" titel="Noch keine Beiträge" text="Sobald die Kasse Ihren Beitrag bucht, erscheint er hier mit allen Zahlungen." %}</div>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Fragen zum Beitrag?</h2></div>
+      <div class="card-body">
+        <p>Bei Fragen zu Beitrag, Ermäßigung oder Zahlungsart hilft die Kassenwart:in gerne weiter.</p>
+        <p class="mb-0"><a href="mailto:{{ club_contact }}">{{ club_contact }}</a></p>
+        <a class="btn secondary block mt-2" href="{% url 'members:profil' %}">Änderung beantragen</a>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

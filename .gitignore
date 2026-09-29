@@ -5,3 +5,6 @@ __pycache__/
 staticfiles/
 .pytest_cache/
 *.log
+.venv/
+backups/
+.env.prod

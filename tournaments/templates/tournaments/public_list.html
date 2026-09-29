@@ -1,0 +1,63 @@
+{% extends "public_base.html" %}
+
+{% block title %}Turniere – {{ club_short }}{% endblock %}
+
+{% block content %}
+<div class="public-hero" style="padding:2rem 0 2.2rem">
+  <div class="public-wrap">
+    <h1>Turnierkalender</h1>
+    <p>Vereinsmeisterschaft, Rapid- und Blitzturniere, Jugendturniere – hier finden Sie alle Termine und können sich anmelden.</p>
+  </div>
+</div>
+
+<div class="public-wrap" style="padding-top:1.6rem">
+  <h2>Kommende Turniere</h2>
+  <div class="grid cols-2 mt-1">
+    {% for turnier in kommende %}
+      <article class="card">
+        <div class="card-body">
+          <div class="flex between center wrap gap-1">
+            <span class="date" style="font-size:.8rem;color:var(--muted);font-weight:650">{{ turnier.datum|date:"D, d.m.Y" }}</span>
+            <span class="badge badge-{{ turnier.status }}">{{ turnier.get_status_display }}</span>
+          </div>
+          <h3 class="mt-1"><a href="{% url 'tournaments:public_detail' turnier.pk %}">{{ turnier.name }}</a></h3>
+          <p class="muted mb-1">{{ turnier.beschreibung|truncatewords:22|default:"Ausschreibung folgt." }}</p>
+          <div class="flex wrap gap-1">
+            <span class="chip"><svg class="icon icon-sm"><use href="#i-pin"></use></svg> {{ turnier.ort|default:"Vereinsheim" }}</span>
+            <span class="chip"><svg class="icon icon-sm"><use href="#i-users"></use></svg> {{ turnier.teilnehmer_anzahl }} Anmeldungen</span>
+            {% if turnier.startgeld %}<span class="chip"><svg class="icon icon-sm"><use href="#i-euro"></use></svg> {{ turnier.startgeld|floatformat:2 }} € Startgeld</span>{% endif %}
+            {% if turnier.anmeldeschluss %}<span class="chip"><svg class="icon icon-sm"><use href="#i-clock"></use></svg> Anmeldung bis {{ turnier.anmeldeschluss|date:"d.m.Y" }}</span>{% endif %}
+          </div>
+          <a class="btn mt-2" href="{% url 'tournaments:public_detail' turnier.pk %}">
+            {% if turnier.anmeldung_offen %}Jetzt anmelden{% else %}Details ansehen{% endif %}
+          </a>
+        </div>
+      </article>
+    {% empty %}
+      <div class="card" style="grid-column:1/-1">
+        {% include "includes/empty_state.html" with icon="trophy" titel="Aktuell keine Turniere geplant" text="Sobald der neue Turnierplan steht, erscheinen hier alle Termine mit Anmeldung." %}
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if vergangene %}
+    <h2 class="mt-2">Vergangene Turniere</h2>
+    <div class="card">
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Datum</th><th>Turnier</th><th>Sieger / Ergebnisse</th></tr></thead>
+          <tbody>
+            {% for turnier in vergangene %}
+              <tr>
+                <td class="nowrap">{{ turnier.datum|date:"d.m.Y" }}</td>
+                <td class="cell-main"><a href="{% url 'tournaments:public_detail' turnier.pk %}">{{ turnier.name }}</a></td>
+                <td class="cell-sub">{{ turnier.teilnehmer_anzahl }} Teilnehmer:innen</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

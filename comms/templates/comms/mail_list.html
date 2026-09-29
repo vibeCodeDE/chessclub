@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}E-Mail-Versand{% endblock %}
+{% block page_title %}E-Mail-Versand{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ empfaenger_anzahl }} Empfänger:innen mit Opt-in · {{ uebersprungen_anzahl }} ohne Einwilligung übersprungen</div>{% endblock %}
+
+{% block content %}
+{% if demo_modus %}
+  <div class="alert info mb-2">
+    <svg class="icon icon-sm"><use href="#i-alert"></use></svg>
+    <div><strong>Testmodus:</strong> Der Versand läuft über das Konsolen-Backend und schreibt nur ins Server-Log –
+    es wird keine echte E-Mail zugestellt. Für den Echtbetrieb <code>EMAIL_BACKEND</code> und SMTP-Zugang setzen.</div>
+  </div>
+{% endif %}
+
+<div class="grid main-side">
+  <div class="card">
+    <div class="card-head"><h2>Nachricht verfassen</h2><span class="sub">Opt-out wird automatisch beachtet</span></div>
+    <div class="card-body">
+      <form method="post" data-ajax data-ajax-reset>
+        {% csrf_token %}
+        {% include "includes/form_fields.html" with form=form columns="cols-2" %}
+        <div class="form-foot">
+          <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-mail"></use></svg> E-Mail versenden</button>
+          <span class="muted" style="font-size:.85rem">Versand einzeln – Empfänger:innen sehen einander nicht.</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Wer bekommt die Mail?</h2></div>
+    <ul class="list">
+      <li>
+        <div class="cell-main">Mitglieder mit E-Mail-Rundbrief</div>
+        <div class="cell-sub">Opt-in im Stammdaten-Feld „E-Mail-Rundbrief erlaubt“</div>
+      </li>
+      <li>
+        <div class="cell-main">Ausgetretene werden nie angeschrieben</div>
+        <div class="cell-sub">Datenschutz: kein Kontakt nach Austritt</div>
+      </li>
+      <li>
+        <div class="cell-main">Testversand möglich</div>
+        <div class="cell-sub">Adresse im Feld „Nur Testversand an“ eintragen</div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2>Versandprotokoll</h2><span class="sub">Letzte 25 Sendungen · DSGVO-Nachweis</span></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Zeitpunkt</th><th>Betreff</th><th>Zielgruppe</th><th class="num">Empfänger</th><th class="num">Ohne Opt-in</th><th>Von</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td class="nowrap">{{ log.erstellt_am|date:"d.m.Y H:i" }}</td>
+            <td class="cell-main">{{ log.betreff }}</td>
+            <td>{{ log.get_zielgruppe_display }}{% if log.test_empfaenger %}<div class="cell-sub">Test: {{ log.test_empfaenger }}</div>{% endif %}</td>
+            <td class="num mono">{{ log.anzahl_empfaenger }}</td>
+            <td class="num mono">{{ log.anzahl_uebersprungen }}</td>
+            <td>{{ log.erstellt_von.get_username|default:"–" }}</td>
+            <td><span class="badge {{ log.status_badge }}">{{ log.get_status_display }}</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7">{% include "includes/empty_state.html" with icon="mail" titel="Noch keine E-Mails versendet" text="Das Protokoll zeigt jede Sendung mit Zeitpunkt, Zielgruppe und Empfängerzahl." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

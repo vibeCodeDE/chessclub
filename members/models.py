@@ -40,6 +40,25 @@ class Member(models.Model):
         choices=Status.choices,
         default=Status.AKTIV,
     )
+    beitragskategorie = models.ForeignKey(
+        "dues.FeeCategory",
+        verbose_name="Beitragskategorie",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="mitglieder",
+    )
+    email_opt_in = models.BooleanField(
+        "E-Mail-Rundbrief erlaubt",
+        default=True,
+        help_text="Opt-in für Gruppen-E-Mails (PRD M5.2).",
+    )
+    anonymisiert_am = models.DateTimeField(
+        "Anonymisiert am",
+        null=True,
+        blank=True,
+        help_text="Gesetzt, wenn Kontaktdaten nach der Aufbewahrungsfrist entfernt wurden (PRD N1.3).",
+    )
 
     class Meta:
         ordering = ["nachname", "vorname"]

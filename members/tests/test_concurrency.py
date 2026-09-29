@@ -1,8 +1,9 @@
 import threading
 import time
+import unittest
 from unittest.mock import patch
 
-from django.db import connections
+from django.db import connection, connections
 from django.test import Client, TransactionTestCase
 
 from core.models import AuditLog
@@ -12,6 +13,10 @@ from members.models import ChangeRequest
 from .test_selfservice import make_member, make_user
 
 
+@unittest.skipIf(
+    connection.vendor != "postgresql",
+    "select_for_update()-Zeilensperren sind nur mit PostgreSQL belastbar (SQLite sperrt die ganze Datei).",
+)
 class ConcurrentDecisionTests(TransactionTestCase):
     """Zwei Admins entscheiden gleichzeitig – nur eine Entscheidung darf zählen."""
 

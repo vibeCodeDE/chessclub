@@ -1,23 +1,33 @@
-{% extends "base.html" %}
+{% extends "auth_base.html" %}
 
-{% block title %}Anmelden – Schachverein{% endblock %}
+{% block title %}Anmelden · {{ club_short }}{% endblock %}
 
-{% block content %}
-<h1>Anmelden</h1>
-<form method="post" class="auth-form">
+{% block card %}
+<span class="brand-mark" aria-hidden="true">♞</span>
+<h1>Vereinsverwaltung</h1>
+<p class="lede">{{ club_name }}</p>
+
+<form method="post" novalidate>
   {% csrf_token %}
   {% if form.non_field_errors %}
-    <p class="form-error">{{ form.non_field_errors }}</p>
+    <div class="alert error"><svg class="icon icon-sm"><use href="#i-alert"></use></svg>
+      <div>Benutzername oder Passwort ist nicht korrekt.</div></div>
   {% endif %}
-  {% for field in form %}
-    <p>
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {{ field.errors }}
-    </p>
-  {% endfor %}
-  <input type="hidden" name="next" value="{{ next }}">
-  <button type="submit">Anmelden</button>
+  <div class="field">
+    <label for="id_username">Benutzername</label>
+    <input class="input" type="text" id="id_username" name="username" autofocus autocomplete="username"
+           required value="{{ form.username.value|default:'' }}">
+  </div>
+  <div class="field">
+    <label for="id_password">Passwort</label>
+    <input class="input" type="password" id="id_password" name="password" autocomplete="current-password" required>
+  </div>
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  <button class="btn block" type="submit"><svg class="icon icon-sm"><use href="#i-lock"></use></svg> Anmelden</button>
 </form>
-<p><a href="{% url 'core:password_reset' %}">Passwort vergessen?</a></p>
+
+<p class="center mt-2 mb-0"><a href="{% url 'core:password_reset' %}">Passwort vergessen?</a></p>
+<p class="center mt-2 mb-0 muted" style="font-size:.82rem">
+  Vorstandskonten sind zusätzlich durch einen Code aus der Authenticator-App geschützt.
+</p>
 {% endblock %}

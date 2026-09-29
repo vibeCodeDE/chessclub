@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{{ match.team.name }} – {{ match.gegner }}{% endblock %}
+{% block page_title %}{{ match.team.name }} {{ match.heimspiel|yesno:"gegen,bei" }} {{ match.gegner }}{% endblock %}
+{% block crumbs %}
+<div class="crumbs">
+  <a href="{% url 'teams:match_list' %}">Ligaspiele</a> › {{ match.datum|date:"d.m.Y" }}{% if match.runde %} · {{ match.runde }}{% endif %} ·
+  <span class="badge badge-{{ match.status }}" data-match-status="{{ match.pk }}">{{ match.get_status_display }}</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">{{ match.datum|date:"d.m.Y" }}{% if match.uhrzeit %}, {{ match.uhrzeit|time:"H:i" }} Uhr{% endif %} · {{ match.ort|default:match.team.liga|default:"Spielort offen" }}</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'teams:match_update' match.pk %}"><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Spieldaten</a>
+    <a class="btn secondary" href="{% url 'teams:team_detail' match.team.pk %}">Mannschaft</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-4">
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Brettpunkte</span><span class="stat-icon"><svg class="icon"><use href="#i-swords"></use></svg></span></div>
+    <div class="stat-value scoreline" data-brettpunkte>{{ match.brettpunkte_anzeige }}</div>
+    <div class="stat-foot">Summe aller Bretter</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Mannschaftsergebnis</span><span class="stat-icon"><svg class="icon"><use href="#i-trophy"></use></svg></span></div>
+    <div class="stat-value" style="font-size:1.2rem" data-mannschaftspunkte>{% if match.mannschaftspunkte is None %}–{% elif match.mannschaftspunkte == 2 %}Sieg{% elif match.mannschaftspunkte == 1 %}Remis{% else %}Niederlage{% endif %}</div>
+    <div class="stat-foot">2 / 1 / 0 Punkte</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Bretter</span><span class="stat-icon"><svg class="icon"><use href="#i-table"></use></svg></span></div>
+    <div class="stat-value">{{ match.brettanzahl }}</div>
+    <div class="stat-foot">{{ match.aufstellung.count }} benannt</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Offen</span><span class="stat-icon"><svg class="icon"><use href="#i-clock"></use></svg></span></div>
+    <div class="stat-value">{{ offene_bretter }}</div>
+    <div class="stat-foot">Bretter ohne Ergebnis</div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head">
+    <h2>Aufstellung &amp; Ergebnisse</h2>
+    <span class="sub">{% if darf_aufstellen %}Änderungen werden sofort gespeichert{% else %}Nur Ansicht – Aufstellung macht die Mannschaftsführung{% endif %}</span>
+  </div>
+  <form method="post" action="{% url 'teams:lineup_save' match.pk %}">
+    {% csrf_token %}
+    <div class="card-body board-grid">
+      {% for brett in bretter %}
+        <div class="board-row" data-brett-row="{{ brett.brett }}" data-row>
+          <span class="brett">{{ brett.brett }}</span>
+          <div class="fields">
+            <select class="input" name="member_{{ brett.brett }}" aria-label="Spieler:in Brett {{ brett.brett }}"
+                    {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="member"{% else %}disabled{% endif %}>
+              <option value="">– nicht benannt –</option>
+              {% for m in mitglieder %}
+                <option value="{{ m.pk }}" {% if brett.eintrag and brett.eintrag.member_id == m.pk %}selected{% endif %}>{{ m }}</option>
+              {% endfor %}
+            </select>
+            <input class="input" type="text" name="gegner_{{ brett.brett }}" placeholder="Gegner am Brett"
+                   value="{{ brett.eintrag.gegner_name|default:'' }}"
+                   {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="gegner_name"{% else %}disabled{% endif %}>
+            <select class="input" name="ergebnis_{{ brett.brett }}" aria-label="Ergebnis Brett {{ brett.brett }}"
+                    {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="ergebnis"{% else %}disabled{% endif %}>
+              {% for value, label in ergebnis_choices %}
+                <option value="{{ value }}" {% if brett.eintrag and brett.eintrag.ergebnis == value %}selected{% endif %}>{{ label|default:"Offen" }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% if darf_aufstellen %}
+      <div class="card-foot">
+        <div class="flex gap-1 wrap center">
+          <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-check"></use></svg> Aufstellung speichern</button>
+          <span class="cell-sub">Tipp: Einzelne Änderungen werden bereits beim Auswählen gespeichert.</span>
+        </div>
+      </div>
+    {% endif %}
+  </form>
+</div>
+
+{% if tabelle %}
+  <div class="card">
+    <div class="card-head"><h2>Ligatabelle {{ match.team.liga|default:"(ohne Liga)" }}</h2><a class="link-btn" href="{% url 'teams:tabelle_list' %}">Alle Tabellen</a></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Platz</th><th>Mannschaft</th><th class="num">Spiele</th><th class="num">MP</th><th class="num">BP</th><th class="num">Diff.</th></tr></thead>
+        <tbody>
+          {% for zeile in tabelle %}
+            <tr {% if zeile.name == match.gegner %}class="row-warn"{% endif %}>
+              <td class="mono">{{ zeile.platz }}</td>
+              <td class="cell-main">{{ zeile.name }}{% if zeile.eigene_mannschaft %} <span class="badge badge-bar">wir</span>{% endif %}</td>
+              <td class="num mono">{{ zeile.spiele }}</td>
+              <td class="num mono">{{ zeile.mannschaftspunkte }}</td>
+              <td class="num mono">{{ zeile.brettpunkte|floatformat:1 }}</td>
+              <td class="num mono">{{ zeile.brettdifferenz|floatformat:1 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

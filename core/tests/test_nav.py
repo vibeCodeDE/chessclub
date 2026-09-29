@@ -22,7 +22,8 @@ class NavTests(TestCase):
     def test_member_sees_profile_but_no_admin(self):
         make_user("mitglied1", "mitglied")
         self.client.login(username="mitglied1", password="x")
-        response = self.client.get("/")
+        # Navigation der App-Shell liegt im Dashboard (öffentliche Seite ist "/")
+        response = self.client.get("/dashboard/")
         content = response.content.decode()
         self.assertEqual(response.context["user_role"], "mitglied")
         self.assertIn("Profil", content)
@@ -32,7 +33,7 @@ class NavTests(TestCase):
     def test_kapitaen_sees_profile_but_no_admin(self):
         make_user("kapit1", "kapitaen")
         self.client.login(username="kapit1", password="x")
-        response = self.client.get("/")
+        response = self.client.get("/dashboard/")
         content = response.content.decode()
         self.assertEqual(response.context["user_role"], "kapitaen")
         self.assertIn("Profil", content)
@@ -43,7 +44,7 @@ class NavTests(TestCase):
     def test_admin_sees_verwaltung(self):
         make_user("admin1", "admin")
         self.client.login(username="admin1", password="x")
-        response = self.client.get("/")
+        response = self.client.get("/dashboard/")
         content = response.content.decode()
         self.assertEqual(response.context["user_role"], "admin")
         self.assertIn("Verwaltung", content)

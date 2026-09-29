@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Jahresabschluss {{ jahr }}{% endblock %}
+{% block page_title %}Jahresabschluss {{ jahr }}{% endblock %}
+{% block crumbs %}<div class="crumbs">Kassenbericht für die Mitgliederversammlung · Stand {{ heute|date:"d.m.Y" }}</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head no-print">
+  <p class="lede">Summen je Kategorie – als CSV direkt an die Steuerberatung weitergebbar.</p>
+  <div class="page-actions">
+    <div class="segmented">
+      {% for j in jahre %}<a class="{% if j == jahr %}is-active{% endif %}" href="?jahr={{ j }}">{{ j }}</a>{% endfor %}
+    </div>
+    <a class="btn secondary" href="{% url 'cashbook:export' %}?jahr={{ jahr }}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV</a>
+    <button class="btn" type="button" onclick="window.print()"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Drucken</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-3">
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Einnahmen {{ jahr }}</span><span class="stat-icon"><svg class="icon"><use href="#i-euro"></use></svg></span></div>
+    <div class="stat-value">{{ abschluss.einnahmen|floatformat:2 }} €</div>
+  </div>
+  <div class="stat accent-danger">
+    <div class="stat-head"><span class="stat-label">Ausgaben {{ jahr }}</span><span class="stat-icon"><svg class="icon"><use href="#i-book"></use></svg></span></div>
+    <div class="stat-value">{{ abschluss.ausgaben|floatformat:2 }} €</div>
+  </div>
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Saldo</span><span class="stat-icon"><svg class="icon"><use href="#i-chart"></use></svg></span></div>
+    <div class="stat-value">{{ abschluss.saldo|floatformat:2 }} €</div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2>Kategorien</h2><span class="sub">{{ abschluss.anzahl }} Buchungen</span></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Kategorie</th><th class="num">Einnahmen</th><th class="num">Ausgaben</th><th class="num">Saldo</th></tr></thead>
+      <tbody>
+        {% for key, zeile in abschluss.kategorien.items %}
+          <tr>
+            <td class="cell-main">{{ zeile.label }}</td>
+            <td class="num mono">{{ zeile.einnahmen|floatformat:2 }} €</td>
+            <td class="num mono">{{ zeile.ausgaben|floatformat:2 }} €</td>
+            <td class="num mono">{{ zeile.saldo|floatformat:2 }} €</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">{% include "includes/empty_state.html" with icon="book" titel="Keine Buchungen in {{ jahr }}" text="Sobald Buchungen erfasst sind, erscheint hier der Kassenbericht." small=True %}</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Summe</th>
+          <th class="num mono">{{ abschluss.einnahmen|floatformat:2 }} €</th>
+          <th class="num mono">{{ abschluss.ausgaben|floatformat:2 }} €</th>
+          <th class="num mono">{{ abschluss.saldo|floatformat:2 }} €</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

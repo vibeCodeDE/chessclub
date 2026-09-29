@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Mahnbrief {{ member }}{% endblock %}
+{% block page_title %}Mahnbrief – {{ member }}{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ stufe }}. Mahnung · Beitragsjahr {{ fee.jahr }}</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head no-print">
+  <p class="lede">Druckansicht im A4-Format – „Drucken“ öffnet den Systemdialog.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'dues:dunning_list' %}">Zurück zum Mahnwesen</a>
+    <button class="btn" type="button" onclick="window.print()"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Drucken</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:46rem;margin:0 auto">
+  <div class="card-body" style="padding:2.2rem 2.4rem">
+    <div class="flex between wrap">
+      <div>
+        <strong>{{ club_name }}</strong><br>
+        <span class="cell-sub">Vorstand / Kassenwart<br>{{ club_contact }}</span>
+      </div>
+      <div class="right cell-sub">
+        {{ heute|date:"d.m.Y" }}<br>
+        Beitragsjahr {{ fee.jahr }}
+      </div>
+    </div>
+    <hr>
+    <p>
+      {{ member.vorname }} {{ member.nachname }}<br>
+      {% if member.strasse %}{{ member.strasse }}<br>{% endif %}
+      {% if member.plz or member.ort %}{{ member.plz }} {{ member.ort }}{% endif %}
+    </p>
+
+    <h2>{{ stufe }}. Mahnung – Mitgliedsbeitrag {{ fee.jahr }}</h2>
+    <p>Sehr geehrte{% if member.vorname %} Frau/Herr{% endif %} {{ member.nachname }},</p>
+    <p>{{ text }}</p>
+
+    <table class="data" style="margin:1.2rem 0">
+      <tbody>
+        <tr><td>Beitrag {{ fee.jahr }} ({{ fee.kategorie_name }})</td><td class="num mono">{{ fee.betrag|floatformat:2 }} €</td></tr>
+        <tr><td>bereits gezahlte Beträge</td><td class="num mono">-{{ fee.bezahlter_betrag|floatformat:2 }} €</td></tr>
+        {% if gebuehr %}
+          <tr><td>Mahngebühr</td><td class="num mono">{{ gebuehr|floatformat:2 }} €</td></tr>
+        {% endif %}
+        <tr><td><strong>Offener Betrag</strong></td><td class="num mono"><strong>{{ fee.offener_betrag|floatformat:2 }} €</strong></td></tr>
+        <tr><td>fällig seit</td><td class="num mono">{{ fee.faellig_am|date:"d.m.Y" }}</td></tr>
+      </tbody>
+    </table>
+
+    {% if mandat %}
+      <p>Für Ihr Konto liegt ein SEPA-Mandat ({{ mandat.referenz }}) vor. Sollte sich Ihre Bankverbindung geändert haben, teilen Sie uns das bitte mit.</p>
+    {% else %}
+      <p>Bitte überweisen Sie den Betrag auf das Vereinskonto oder begleichen Sie ihn beim nächsten Vereinsabend in bar.</p>
+    {% endif %}
+
+    <p>Mit freundlichen Grüßen<br><br>
+      {{ club_name }}<br>
+      <span class="cell-sub">Kassenwart:in</span>
+    </p>
+  </div>
+</div>
+{% endblock %}

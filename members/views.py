@@ -4,16 +4,18 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.models import AuditLog
-from core.roles import ADMIN_GROUP, role_required
+from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_required
+from core.ui import fehler, is_ajax, ok, paginate
+from dues.models import FeeCategory, MembershipFee, Payment, SepaMandate
 
-from .forms import ChangeRequestForm
+from .forms import ChangeRequestForm, MemberForm, MemberStatusForm
 from .models import ChangeRequest, Member, clean_member_value
 
 
@@ -22,11 +24,12 @@ def _parse_filters(request):
     status = request.GET.get("status", "")
     if status not in Member.Status.values:
         status = ""
-    return query, status
+    kategorie = request.GET.get("kategorie", "")
+    return query, status, kategorie
 
 
-def _filtered_members(query, status):
-    members = Member.objects.all()
+def _filtered_members(query, status, kategorie=""):
+    members = Member.objects.select_related("beitragskategorie")
     if query:
         members = members.filter(
             Q(vorname__icontains=query)
@@ -36,35 +39,180 @@ def _filtered_members(query, status):
         )
     if status:
         members = members.filter(status=status)
+    if kategorie.isdigit():
+        members = members.filter(beitragskategorie_id=int(kategorie))
     return members
 
 
 @role_required(ADMIN_GROUP)
 def member_list(request):
-    query, status = _parse_filters(request)
-    context = {
-        "members": _filtered_members(query, status),
+    query, status, kategorie = _parse_filters(request)
+    members = _filtered_members(query, status, kategorie)
+    kontext = {
+        "members": members,
+        "page_obj": paginate(members, request, per_page=25),
         "q": query,
         "status": status,
         "status_choices": Member.Status.choices,
+        "kategorie": kategorie,
+        "kategorien": FeeCategory.objects.all(),
+        "gesamt": Member.objects.count(),
+        "aktiv_count": Member.objects.filter(status=Member.Status.AKTIV).count(),
+        "passiv_count": Member.objects.filter(status=Member.Status.PASSIV).count(),
+        "ausgetreten_count": Member.objects.filter(status=Member.Status.AUSGETRETEN).count(),
+        "status_form": MemberStatusForm(),
     }
-    return render(request, "members/member_list.html", context)
+    return render(request, "members/member_list.html", kontext)
 
 
 @role_required(ADMIN_GROUP)
 def member_detail(request, pk):
-    member = get_object_or_404(Member, pk=pk)
-    context = {
+    member = get_object_or_404(
+        Member.objects.select_related("beitragskategorie"), pk=pk
+    )
+    posten = (
+        MembershipFee.objects.filter(member=member)
+        .prefetch_related("zahlungen")
+        .order_by("-jahr")
+    )
+    kontext = {
         "member": member,
-        "status_history": member.status_history.all(),
+        "status_history": member.status_history.select_related("geaendert_von"),
+        "posten": posten,
+        "offene_posten": [fee for fee in posten if fee.ist_offen],
+        "bezahlt_summe": Payment.objects.filter(fee__member=member).aggregate(
+            s=Sum("betrag")
+        )["s"],
+        "mandat": getattr(member, "sepa_mandat", None),
+        "aufstellungen": member.lineups.select_related("match", "match__team").order_by(
+            "-match__datum"
+        )[:10],
+        "wuensche": member.change_requests.select_related("eingereicht_von")[:8],
+        "protokoll": AuditLog.objects.filter(member=member).select_related("benutzer")[:25],
+        "turniere": member.turnierteilnahmen.select_related("tournament").order_by(
+            "-tournament__datum"
+        )[:8],
     }
-    return render(request, "members/member_detail.html", context)
+    return render(request, "members/member_detail.html", kontext)
+
+
+@role_required(ADMIN_GROUP)
+def member_create(request):
+    if request.method == "POST":
+        form = MemberForm(request.POST)
+        if form.is_valid():
+            member = form.save(commit=False)
+            member._changed_by = request.user
+            member.save()
+            AuditLog.objects.create(
+                benutzer=request.user,
+                aktion="Mitglied angelegt",
+                text=f"{member} neu aufgenommen",
+                member=member,
+            )
+            if is_ajax(request):
+                return ok(
+                    message=f"{member} wurde angelegt.",
+                    redirect=f"/mitglieder/{member.pk}/",
+                )
+            messages.success(request, f"{member} wurde angelegt.")
+            return redirect("members:member_detail", pk=member.pk)
+        if is_ajax(request):
+            return fehler("Bitte Eingaben prüfen.", errors=form.errors)
+    else:
+        form = MemberForm(initial={"eintrittsdatum": timezone.localdate()})
+    return render(
+        request,
+        "members/member_form.html",
+        {"form": form, "titel": "Mitglied aufnehmen", "member": None},
+    )
+
+
+@role_required(ADMIN_GROUP)
+def member_update(request, pk):
+    member = get_object_or_404(Member, pk=pk)
+    if request.method == "POST":
+        form = MemberForm(request.POST, instance=member)
+        if form.is_valid():
+            objekt = form.save(commit=False)
+            objekt._changed_by = request.user
+            objekt.save()
+            if is_ajax(request):
+                return ok(message=f"Änderungen an {objekt} gespeichert.")
+            messages.success(request, f"Änderungen an {objekt} gespeichert.")
+            return redirect("members:member_detail", pk=member.pk)
+        if is_ajax(request):
+            return fehler("Bitte Eingaben prüfen.", errors=form.errors)
+    else:
+        form = MemberForm(instance=member)
+    return render(
+        request,
+        "members/member_form.html",
+        {"form": form, "titel": f"{member} bearbeiten", "member": member},
+    )
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def member_delete(request, pk):
+    """Kein Hard-Delete (PRD M1.3): Mitglied wird auf „ausgetreten“ gesetzt."""
+    member = get_object_or_404(Member, pk=pk)
+    if member.status == Member.Status.AUSGETRETEN:
+        messages.info(request, f"{member} ist bereits ausgetreten.")
+        return redirect("members:member_detail", pk=member.pk)
+    member._changed_by = request.user
+    member.status = Member.Status.AUSGETRETEN
+    member.austrittsdatum = member.austrittsdatum or timezone.localdate()
+    member.save()
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="Austritt erfasst",
+        text=f"{member} ausgetreten zum {member.austrittsdatum:%d.%m.%Y}",
+        member=member,
+    )
+    messages.success(
+        request,
+        f"{member} wurde als ausgetreten markiert – die Daten bleiben für die Fristen erhalten.",
+    )
+    return redirect("members:member_detail", pk=member.pk)
+
+
+@role_required(ADMIN_GROUP, KAPITAEN_GROUP)
+@require_POST
+def member_status(request, pk):
+    """Optimistischer Statuswechsel aus der Mitgliederliste."""
+    member = get_object_or_404(Member, pk=pk)
+    form = MemberStatusForm(request.POST)
+    if not form.is_valid():
+        return fehler("Statuswechsel nicht möglich.", errors=form.errors)
+    neuer_status = form.cleaned_data["status"]
+    member._changed_by = request.user
+    member.status = neuer_status
+    if neuer_status == Member.Status.AUSGETRETEN:
+        member.austrittsdatum = form.cleaned_data["austrittsdatum"] or timezone.localdate()
+    else:
+        member.austrittsdatum = None
+    try:
+        member.full_clean(exclude=["user"])
+    except ValidationError as exc:
+        return fehler(" ".join(exc.messages))
+    member.save()
+    return ok(
+        message=f"{member}: Status auf „{member.get_status_display()}“ gesetzt.",
+        patch={f"[data-status-text='{member.pk}']": member.get_status_display()},
+        classes={
+            f"[data-status-badge='{member.pk}']": {
+                "add": [f"badge-{member.status}"],
+                "remove": [f"badge-{wert}" for wert in Member.Status.values],
+            }
+        },
+    )
 
 
 @role_required(ADMIN_GROUP)
 def member_export(request):
-    query, status = _parse_filters(request)
-    members = _filtered_members(query, status)
+    query, status, kategorie = _parse_filters(request)
+    members = _filtered_members(query, status, kategorie)
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="mitglieder.csv"'
     response.write("\ufeff")  # BOM für Excel
@@ -80,6 +228,7 @@ def member_export(request):
             "PLZ",
             "Ort",
             "Status",
+            "Beitragskategorie",
             "Eintrittsdatum",
             "Austrittsdatum",
         ]
@@ -96,11 +245,22 @@ def member_export(request):
                 member.plz,
                 member.ort,
                 member.get_status_display(),
+                member.beitragskategorie.name if member.beitragskategorie else "",
                 member.eintrittsdatum.isoformat(),
                 member.austrittsdatum.isoformat() if member.austrittsdatum else "",
             ]
         )
     return response
+
+
+def join_info(request):
+    """Öffentliche Beitrittsinfo mit Beitragssätzen (PRD M1.6)."""
+    kategorien = FeeCategory.objects.filter(aktiv=True)
+    return render(
+        request,
+        "members/join_info.html",
+        {"kategorien": kategorien, "aktive_mitglieder": Member.objects.filter(status=Member.Status.AKTIV).count()},
+    )
 
 
 @login_required
@@ -129,12 +289,23 @@ def profil(request):
     else:
         form = ChangeRequestForm(member=member)
 
-    context = {
+    kontext = {
         "member": member,
         "form": form,
         "change_requests": member.change_requests.all() if member else [],
+        "posten": (
+            MembershipFee.objects.filter(member=member).prefetch_related("zahlungen").order_by("-jahr")
+            if member
+            else []
+        ),
+        "mandat": getattr(member, "sepa_mandat", None) if member else None,
+        "aufstellungen": (
+            member.lineups.select_related("match", "match__team").order_by("-match__datum")[:6]
+            if member
+            else []
+        ),
     }
-    return render(request, "members/profil.html", context)
+    return render(request, "members/profil.html", kontext)
 
 
 @role_required(ADMIN_GROUP)
@@ -149,12 +320,12 @@ def change_request_list(request):
         .select_related("member", "eingereicht_von", "entschieden_von")
         .order_by("-eingereicht_am")
     )
-    context = {
+    kontext = {
         "open_requests": open_requests,
         "decided_requests": decided_requests,
         "open_count": open_requests.count(),
     }
-    return render(request, "members/change_request_list.html", context)
+    return render(request, "members/change_request_list.html", kontext)
 
 
 def _finish_decision(request, change_request, status, aktion, text):
@@ -200,16 +371,18 @@ def change_request_approve(request, pk):
                 f"{member}: {label}: „{old_value}“ → „{value}“",
             )
     except ValidationError as exc:
-        messages.error(
-            request,
-            "Der Wunschwert kann nicht übernommen werden: " + " ".join(exc.messages),
+        nachricht = (
+            "Der Wunschwert kann nicht übernommen werden: " + " ".join(exc.messages)
         )
+        if is_ajax(request):
+            return fehler(nachricht)
+        messages.error(request, nachricht)
         return redirect("members:change_request_list")
 
-    messages.success(
-        request,
-        f"Änderungswunsch von {change_request.member} freigegeben und übernommen.",
-    )
+    nachricht = f"Änderungswunsch von {change_request.member} freigegeben und übernommen."
+    if is_ajax(request):
+        return ok(message=nachricht, remove_selector=f"[data-row='wunsch-{pk}']")
+    messages.success(request, nachricht)
     return redirect("members:change_request_list")
 
 
@@ -232,7 +405,8 @@ def change_request_reject(request, pk):
             f"{change_request.member}: {change_request.get_feld_display()} → "
             f"„{change_request.wunschwert}“ (keine Übernahme)",
         )
-    messages.info(
-        request, f"Änderungswunsch von {change_request.member} abgelehnt."
-    )
+    nachricht = f"Änderungswunsch von {change_request.member} abgelehnt."
+    if is_ajax(request):
+        return ok(message=nachricht, remove_selector=f"[data-row='wunsch-{pk}']")
+    messages.info(request, nachricht)
     return redirect("members:change_request_list")

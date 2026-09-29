@@ -1,0 +1,24 @@
+{
+  "name": "Schachclub Königsspringer – Vereinsverwaltung",
+  "short_name": "Schachverein",
+  "description": "Mitglieder, Beiträge, Spielbetrieb und Turniere des Schachvereins – DSGVO-konform auf eigener Infrastruktur.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1526",
+  "theme_color": "#0d1526",
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/dashboard/" },
+    { "name": "Turnierkalender", "url": "/turniere/" },
+    { "name": "Aktuelles", "url": "/aktuelles/" }
+  ]
+}

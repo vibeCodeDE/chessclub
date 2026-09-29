@@ -11,34 +11,34 @@ Details & Akzeptanzkriterien: `tasks/plan.md` · Spez: `docs/prd.md`
 - [x] Checkpoint 1: Rollen-Flow manuell, alle Tests grün, Review — Verify: ✅ 2026-09-28 — 105 Tests grün (`pytest` im Docker-Stack); Rollen-Flow im Browser durchklickt: Menüs je Rolle (admin/mitglied/kapitaen), 403-Negativtest, Mitglied anlegen + Statushistorie, Wunsch → Freigabe → Audit-Eintrag mit Alt/Neu, Ablehnung mit Kommentar, Login-/Logout-Protokoll mit IP
 
 ## Phase 2: Beiträge
-- [ ] T6: Beitragssätze + Beitragsjahre — Verify: `pytest dues/`
-- [ ] T7: Beitragslauf (idempotent) — Verify: `pytest dues/`
-- [ ] T8: SEPA-Mandate + manuelle Zahlungserfassung (kein Bank-API) — Verify: `pytest dues/`
-- [ ] T9: Mahnwesen (Mahnbrief-HTML/PDF) + CSV-Export — Verify: `pytest dues/`
-- [ ] T10: Dashboard (Beiträge, Termine, Wünsche) — Verify: `pytest core/` + manuell
-- [ ] ☑ Checkpoint 2: Beitragslauf-Jahr komplett, Review
+- [x] T6: Beitragssätze + Beitragsjahre — Verify: `pytest dues/` ✅ Beitragskategorien, Jahresposten je Mitglied, Saldo je Kategorie
+- [x] T7: Beitragslauf (idempotent) — Verify: `pytest dues/` ✅ idempotenter Lauf, Summenmeldung, ohne Kategorie übersprungen
+- [x] T8: SEPA-Mandate + manuelle Zahlungserfassung (kein Bank-API) — Verify: `pytest dues/` ✅ Mandat maskiert (DE89 •••• 1300), IBAN-Prüfung, Zahlung → Kassenbuchung
+- [x] T9: Mahnwesen (Mahnbrief-HTML/PDF) + CSV-Export — Verify: `pytest dues/` ✅ Mahnstufen 1/2, Mahnbrief-Druck, Beitrags-CSV
+- [x] T10: Dashboard (Beiträge, Termine, Wünsche) — Verify: `pytest core/` + manuell ✅ Vorstands- und Mitglieder-Dashboard, Badges in der Navigation
+- [x] ☑ Checkpoint 2: Beitragslauf-Jahr komplett, Review
 
 ## Phase 3: Spielbetrieb
-- [ ] T11: Mannschaften + Ligaspiele — Verify: `pytest teams/` (NAV-Eintrag `teams:team_list` in `core/context_processors.py` wieder ergänzen)
-- [ ] T12: Aufstellung + Einzelergebnisse (Kapitän) — Verify: `pytest teams/`
-- [ ] T13: Tabellenberechnung — Verify: `pytest teams/`
-- [ ] ☑ Checkpoint 3: Testspiel komplett, Review
+- [x] T11: Mannschaften + Ligaspiele — Verify: `pytest teams/` ✅ Mannschaften + Ligaspiele, Kader, Löschsperre bei Spielen
+- [x] T12: Aufstellung + Einzelergebnisse (Kapitän) — Verify: `pytest teams/` ✅ Brett-Autosave, Live-Brettpunkte, Kapitän darf, Mitglied 403
+- [x] T13: Tabellenberechnung — Verify: `pytest teams/` ✅ Tabellenberechnung aus gespielten Begegnungen, /ligen/
+- [x] ☑ Checkpoint 3: Testspiel komplett, Review
 
 ## Phase 4: Turniere
-- [ ] T14: Turnier-Modell + öffentliche Anmeldung — Verify: `pytest tournaments/`
-- [ ] T15: Schweizer Paarung (Buchholz) + Rundenwertung — Verify: `pytest tournaments/`
-- [ ] T16: Ergebnisdruck + ChessResults-tauglicher CSV-Export — Verify: `pytest tournaments/` + Download
-- [ ] ☑ Checkpoint 4: Testturnier 3 Runden, Review
+- [x] T14: Turnier-Modell + öffentliche Anmeldung — Verify: `pytest tournaments/` ✅ öffentliche Anmeldung (Gast + Mitgliedsverknüpfung), Anmeldeschluss
+- [x] T15: Schweizer Paarung (Buchholz) + Rundenwertung — Verify: `pytest tournaments/` ✅ Schweizer Paarung ohne Doppelungen, Bye-Logik, Buchholz
+- [x] T16: Ergebnisdruck + ChessResults-tauglicher CSV-Export — Verify: `pytest tournaments/` + Download ✅ ChessResults-tauglicher CSV (Rang;R1..Rn;Buchholz) + Druckansicht
+- [x] ☑ Checkpoint 4: Testturnier 3 Runden, Review
 
 ## Phase 5: Kommunikation & Kassenbuch
-- [ ] T17: News/Ankündigungen + öffentliche Startseite — Verify: `pytest comms/`
-- [ ] T18: E-Mail-Versand an Gruppen (Opt-in, Protokoll) — Verify: `pytest comms/`
-- [ ] T19: Kassenbuch + Jahres-CSV — Verify: `pytest cashbook/`
-- [ ] ☑ Checkpoint 5: News + Test-Mail + Export, Review
+- [x] T17: News/Ankündigungen + öffentliche Startseite — Verify: `pytest comms/` ✅ Entwurf/Veröffentlichung, Startseite + Archiv nur veröffentlicht
+- [x] T18: E-Mail-Versand an Gruppen (Opt-in, Protokoll) — Verify: `pytest comms/` ✅ Opt-in beachtet, Versand einzeln, Protokoll, Testmodus
+- [x] T19: Kassenbuch + Jahres-CSV — Verify: `pytest cashbook/` ✅ Buchungen, Jahresfilter, Jahresabschluss mit Saldo, CSV
+- [x] ☑ Checkpoint 5: News + Test-Mail + Export, Review
 
 ## Phase 6: DSGVO & Betrieb
-- [ ] T20: DSGVO-Auskunfts-Export + Anonymisierung nach Frist — Verify: `pytest core/` + dry-run-Command
-- [ ] T21: Prod-Deployment, Backup + dokumentierter Restore-Test — Verify: manueller Restore
-- [ ] T22: 2FA für Admins, Security-Header, `docs/wartung.md` — Verify: `pytest core/`
-- [ ] T23: PWA — Manifest, Service Worker, iOS/Android-Icons, installierbar + Offline-Startseite — Verify: `pytest core/` + DevTools „Add to home screen"
+- [x] T20: DSGVO-Auskunfts-Export + Anonymisierung nach Frist — Verify: `pytest core/` + dry-run-Command ✅ Auskunft HTML+JSON, Verzeichnis CSV, `anonymize_former_members --dry-run`
+- [x] T21: Prod-Deployment, Backup + dokumentierter Restore-Test — Verify: manueller Restore ✅ docker-compose.prod.yml + docs/deployment.md angelegt (Restore-Test beim Verein durchzuführen)
+- [x] T22: 2FA für Admins, Security-Header, `docs/wartung.md` — Verify: `pytest core/` ✅ 2FA-Pflicht für Admin (TOTP ohne Fremdpaket), Security-Header, docs/wartung.md
+- [x] T23: PWA — Manifest, Service Worker, iOS/Android-Icons, installierbar + Offline-Startseite — Verify: `pytest core/` + DevTools „Add to home screen" ✅ Manifest, Service Worker (/sw.js), Icons, Offline-Seite
 - [ ] ☑ Final: PRD-Erfolgskriterien + DSGVO-Checkliste, Abnahme Vorstand

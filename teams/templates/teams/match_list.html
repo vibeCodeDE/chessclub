@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Ligaspiele{% endblock %}
+{% block page_title %}Ligaspiele{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ matches.paginator.count }} Begegnungen · Ergebnisse werden aus den Brettern summiert</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Termine, Gegner und Ergebnisse des Ligabetriebs.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'teams:tabelle_list' %}"><svg class="icon icon-sm"><use href="#i-table"></use></svg> Tabellen</a>
+    <a class="btn" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ligaspiel planen</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <form class="filters" method="get">
+    <label class="visually-hidden" for="team">Mannschaft</label>
+    <select id="team" name="team">
+      <option value="">Alle Mannschaften</option>
+      {% for t in teams %}
+        <option value="{{ t.pk }}" {% if team_id == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
+      {% endfor %}
+    </select>
+    <label class="visually-hidden" for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">Alle Status</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <div class="segmented">
+      <a class="{% if not zeitraum %}is-active{% endif %}" href="?{% if team_id %}team={{ team_id }}&{% endif %}{% if status %}status={{ status }}{% endif %}">Alle</a>
+      <a class="{% if zeitraum == 'kommend' %}is-active{% endif %}" href="?zeitraum=kommend">Kommend</a>
+      <a class="{% if zeitraum == 'vergangen' %}is-active{% endif %}" href="?zeitraum=vergangen">Vergangen</a>
+    </div>
+    <button class="btn small" type="submit">Filtern</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Datum</th><th>Mannschaft</th><th>Gegner</th><th>Ort</th><th class="right">Ergebnis</th><th>Status</th><th class="right">Aktionen</th></tr></thead>
+      <tbody>
+        {% for m in matches %}
+          <tr data-row="match-{{ m.pk }}" data-row>
+            <td class="nowrap">{{ m.datum|date:"d.m.Y" }}{% if m.uhrzeit %}<div class="cell-sub">{{ m.uhrzeit|time:"H:i" }}</div>{% endif %}</td>
+            <td class="cell-main">{{ m.team.name }}<div class="cell-sub">{{ m.runde|default:m.team.liga }}</div></td>
+            <td>{{ m.gegner }}<div class="cell-sub">{{ m.heimspiel|yesno:"Heimspiel,Auswärtsspiel" }}</div></td>
+            <td class="cell-sub">{{ m.ort|default:"–" }}</td>
+            <td class="num mono">{{ m.brettpunkte_anzeige }}</td>
+            <td><span class="badge badge-{{ m.status }}">{{ m.get_status_display }}</span></td>
+            <td class="right">
+              <div class="table-actions">
+                <a class="btn small" href="{% url 'teams:match_detail' m.pk %}">Aufstellen</a>
+                <a class="btn small ghost" href="{% url 'teams:match_update' m.pk %}">Bearbeiten</a>
+                <button class="btn small ghost" type="button" data-optimistic="remove-row"
+                        data-url="{% url 'teams:match_delete' m.pk %}" data-confirm="Ligaspiel gegen {{ m.gegner }} löschen?">Löschen</button>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7">{% include "includes/empty_state.html" with icon="calendar" titel="Keine Ligaspiele gefunden" text="Passen Sie die Filter an oder planen Sie ein neues Spiel." action_url="/spiele/neu/" action_label="Ligaspiel planen" %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
+</div>
+{% endblock %}

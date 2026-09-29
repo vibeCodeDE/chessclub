@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditLog
+from .models import AuditLog, TwoFactorDevice
 
 
 @admin.register(AuditLog)
@@ -34,3 +34,10 @@ class AuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(TwoFactorDevice)
+class TwoFactorDeviceAdmin(admin.ModelAdmin):
+    list_display = ("user", "bestaetigt", "erstellt_am", "letzte_nutzung")
+    search_fields = ("user__username",)
+    readonly_fields = ("secret", "erstellt_am", "letzte_nutzung")

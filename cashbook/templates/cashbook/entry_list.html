@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Kassenbuch {{ jahr }}{% endblock %}
+{% block page_title %}Kassenbuch {{ jahr }}{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ abschluss.anzahl }} Buchungen · Saldo {{ abschluss.saldo|floatformat:2 }} €</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Einnahmen und Ausgaben des Vereinsjahres – Beiträge werden automatisch aus dem Beitragswesen übernommen.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'cashbook:jahresabschluss' %}?jahr={{ jahr }}"><svg class="icon icon-sm"><use href="#i-chart"></use></svg> Jahresabschluss</a>
+    <a class="btn secondary" href="{% url 'cashbook:export' %}?jahr={{ jahr }}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV</a>
+    <button class="btn" type="button" data-dialog-open="#buchung-dialog"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Buchung erfassen</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-4">
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Einnahmen</span><span class="stat-icon"><svg class="icon"><use href="#i-euro"></use></svg></span></div>
+    <div class="stat-value">{{ abschluss.einnahmen|floatformat:2 }} €</div>
+  </div>
+  <div class="stat accent-danger">
+    <div class="stat-head"><span class="stat-label">Ausgaben</span><span class="stat-icon"><svg class="icon"><use href="#i-book"></use></svg></span></div>
+    <div class="stat-value">{{ abschluss.ausgaben|floatformat:2 }} €</div>
+  </div>
+  <div class="stat {% if abschluss.saldo >= 0 %}accent-success{% else %}accent-danger{% endif %}">
+    <div class="stat-head"><span class="stat-label">Saldo</span><span class="stat-icon"><svg class="icon"><use href="#i-chart"></use></svg></span></div>
+    <div class="stat-value">{{ abschluss.saldo|floatformat:2 }} €</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Buchungen</span><span class="stat-icon"><svg class="icon"><use href="#i-list"></use></svg></span></div>
+    <div class="stat-value">{{ abschluss.anzahl }}</div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <form class="filters" method="get">
+    <label class="visually-hidden" for="jahr">Jahr</label>
+    <select id="jahr" name="jahr" onchange="this.form.submit()">
+      {% for j in jahre %}<option value="{{ j }}" {% if j == jahr %}selected{% endif %}>{{ j }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="art">Art</label>
+    <select id="art" name="art">
+      <option value="">Alle Arten</option>
+      {% for value, label in art_choices %}<option value="{{ value }}" {% if art == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="kategorie">Kategorie</label>
+    <select id="kategorie" name="kategorie">
+      <option value="">Alle Kategorien</option>
+      {% for value, label in kategorie_choices %}<option value="{{ value }}" {% if kategorie == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="btn small" type="submit">Filtern</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Datum</th><th>Beschreibung</th><th>Kategorie</th><th>Art</th><th class="right">Betrag</th><th>Beleg</th><th class="right"></th></tr></thead>
+      <tbody>
+        {% for buchung in buchungen %}
+          <tr data-row="buchung-{{ buchung.pk }}" data-row>
+            <td class="nowrap">{{ buchung.datum|date:"d.m.Y" }}</td>
+            <td class="cell-main">{{ buchung.beschreibung }}
+              <div class="cell-sub">erfasst von {{ buchung.erfasst_von.get_username|default:"–" }}</div>
+            </td>
+            <td><span class="chip">{{ buchung.kategorie_label }}</span></td>
+            <td><span class="badge badge-{{ buchung.art }}">{{ buchung.get_art_display }}</span></td>
+            <td class="num mono {% if buchung.ist_einnahme %}trend up{% else %}trend down{% endif %}">
+              {% if buchung.ist_einnahme %}+{% else %}−{% endif %}{{ buchung.betrag|floatformat:2 }} €
+            </td>
+            <td class="cell-sub">{{ buchung.belegnummer|default:"–" }}</td>
+            <td class="right">
+              <div class="table-actions">
+                <a class="btn small secondary" href="{% url 'cashbook:entry_update' buchung.pk %}">Bearbeiten</a>
+                <button class="btn small ghost" type="button" data-optimistic="remove-row"
+                        data-url="{% url 'cashbook:entry_delete' buchung.pk %}"
+                        data-confirm="Buchung „{{ buchung.beschreibung }}“ löschen?">Löschen</button>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7">{% include "includes/empty_state.html" with icon="book" titel="Keine Buchungen in {{ jahr }}" text="Erfassen Sie die erste Einnahme oder Ausgabe – Beiträge erscheinen nach dem Buchen automatisch hier." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
+</div>
+
+<div class="dialog modal-backdrop" id="buchung-dialog" data-dialog>
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Buchung erfassen</h3>
+      <button class="icon-btn" type="button" data-dialog-close aria-label="Schließen"><svg class="icon"><use href="#i-x"></use></svg></button>
+    </div>
+    <form method="post" action="{% url 'cashbook:entry_create' %}" data-ajax data-ajax-reset>
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="form-grid cols-2">
+          <div class="field required"><label for="id_art">Art</label>
+            <select class="input" name="art" id="id_art">
+              {% for value, label in art_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field required"><label for="id_kategorie">Kategorie</label>
+            <select class="input" name="kategorie" id="id_kategorie">
+              {% for value, label in kategorie_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field required"><label for="id_betrag">Betrag (€)</label><input class="input" type="number" step="0.01" min="0.01" name="betrag" id="id_betrag" required></div>
+          <div class="field required"><label for="id_datum">Buchungsdatum</label><input class="input" type="date" name="datum" id="id_datum" required></div>
+        </div>
+        <div class="field required mt-1"><label for="id_beschreibung">Beschreibung</label><input class="input" type="text" name="beschreibung" id="id_beschreibung" maxlength="250" required></div>
+        <div class="field mt-1"><label for="id_belegnummer">Beleg-Nr.</label><input class="input" type="text" name="belegnummer" id="id_belegnummer" maxlength="60"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" type="button" data-dialog-close>Abbrechen</button>
+        <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-check"></use></svg> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

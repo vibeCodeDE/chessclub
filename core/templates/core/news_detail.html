@@ -1,0 +1,30 @@
+{% extends "public_base.html" %}
+
+{% block title %}{{ post.titel }} – {{ club_short }}{% endblock %}
+
+{% block content %}
+<div class="public-wrap" style="padding-top:1.8rem">
+  <a class="link-btn" href="{% url 'core:news_archiv' %}">‹ Zurück zu allen Ankündigungen</a>
+  <article class="card mt-1">
+    <div class="card-body">
+      <span class="date" style="font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">
+        {{ post.veroeffentlicht_am|date:"d.m.Y" }} · {{ post.kategorie }}{% if post.autor %} · {{ post.autor.get_full_name|default:post.autor.get_username }}{% endif %}
+      </span>
+      <h1 class="mt-1">{{ post.titel }}</h1>
+      <div class="prose">{{ post.text|linebreaks }}</div>
+    </div>
+  </article>
+
+  {% if weitere %}
+    <h2 class="mt-2">Weitere Ankündigungen</h2>
+    <div class="grid cols-3">
+      {% for anderer in weitere %}
+        <div class="card"><div class="card-body news-card">
+          <span class="date">{{ anderer.veroeffentlicht_am|date:"d.m.Y" }}</span>
+          <h3><a href="{% url 'core:news_detail' anderer.pk %}">{{ anderer.titel }}</a></h3>
+        </div></div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

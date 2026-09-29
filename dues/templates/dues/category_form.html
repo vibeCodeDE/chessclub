@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}{{ kategorie.name }} bearbeiten{% endblock %}
+{% block page_title %}Kategorie „{{ kategorie.name }}“{% endblock %}
+{% block crumbs %}<div class="crumbs"><a href="{% url 'dues:category_list' %}">Beitragskategorien</a> › bearbeiten</div>{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+  <form class="card-body" method="post">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" with form=form columns="cols-2" %}
+    <div class="form-actions">
+      <button class="btn" type="submit">Speichern</button>
+      <a class="btn ghost" href="{% url 'dues:category_list' %}">Abbrechen</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

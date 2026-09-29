@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Datenauskunft{% endblock %}
+{% block page_title %}Datenauskunft DSGVO{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ member }} · erstellt am {{ erstellt_am|date:"d.m.Y H:i" }} · Art. 15 DSGVO</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Vollständige Auskunft über alle zu dieser Person gespeicherten Daten. Jede Erstellung wird im Audit-Protokoll vermerkt.</p>
+  <div class="page-actions no-print">
+    <a class="btn secondary" href="{% url 'core:dsgvo_export' member.pk %}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> JSON herunterladen</a>
+    <button class="btn secondary" type="button" onclick="window.print()"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Drucken</button>
+    <a class="btn ghost" href="{% url 'members:member_detail' member.pk %}">Zurück</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head"><h2>1. Stammdaten</h2><span class="sub">Datenkategorie: Mitgliederverwaltung</span></div>
+  <div class="table-wrap">
+    <table class="data">
+      <tbody>
+        <tr><th style="width:16rem">Name</th><td>{{ daten.stammdaten.vorname }} {{ daten.stammdaten.nachname }}</td></tr>
+        <tr><th>Geburtsdatum</th><td>{{ daten.stammdaten.geburtsdatum|date:"d.m.Y"|default:"–" }}</td></tr>
+        <tr><th>Anschrift</th><td>{{ daten.stammdaten.strasse }} {{ daten.stammdaten.plz }} {{ daten.stammdaten.ort }}</td></tr>
+        <tr><th>E-Mail / Telefon</th><td>{{ daten.stammdaten.email|default:"–" }} · {{ daten.stammdaten.telefon|default:"–" }}</td></tr>
+        <tr><th>Opt-in Rundbrief</th><td>{{ daten.stammdaten.email_opt_in|yesno:"Ja,Nein" }}</td></tr>
+        <tr><th>Eintritt / Austritt</th><td>{{ daten.stammdaten.eintrittsdatum|date:"d.m.Y" }} – {{ daten.stammdaten.austrittsdatum|date:"d.m.Y"|default:"–" }}</td></tr>
+        <tr><th>Status / Kategorie</th><td>{{ daten.stammdaten.status }} · {{ daten.stammdaten.beitragskategorie|default:"keine" }}</td></tr>
+        <tr><th>Benutzerkonto</th><td>{{ daten.stammdaten.benutzerkonto|default:"keins" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2>2. Beiträge und Zahlungen</h2><span class="sub">{{ daten.zahlungen_gesamt|floatformat:2 }} € erfasst</span></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Jahr</th><th>Kategorie</th><th class="num">Betrag</th><th>Status</th><th>Fällig</th><th>Mahnstufe</th><th>Zahlungen</th></tr></thead>
+      <tbody>
+        {% for posten in daten.beitraege %}
+          <tr>
+            <td class="mono">{{ posten.jahr }}</td>
+            <td>{{ posten.kategorie }}</td>
+            <td class="num mono">{{ posten.betrag|floatformat:2 }} €</td>
+            <td>{{ posten.status }}</td>
+            <td class="nowrap">{{ posten.faellig_am|date:"d.m.Y" }}</td>
+            <td>{{ posten.mahnstufe }}</td>
+            <td>
+              {% for zahlung in posten.zahlungen %}
+                <div>{{ zahlung.datum|date:"d.m.Y" }} · {{ zahlung.betrag|floatformat:2 }} € · {{ zahlung.art }}</div>
+              {% empty %}<span class="muted">–</span>{% endfor %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="muted">Keine Beitragsdaten.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid cols-2 mt-2">
+  <div class="card">
+    <div class="card-head"><h2>3. SEPA-Mandat</h2></div>
+    <div class="card-body">
+      {% if daten.sepa_mandat %}
+        <p class="mb-1"><strong>Referenz:</strong> <span class="mono">{{ daten.sepa_mandat.referenz }}</span></p>
+        <p class="mb-1"><strong>IBAN:</strong> <span class="mono">{{ daten.sepa_mandat.iban_kurz|default:daten.sepa_mandat.iban }}</span></p>
+        <p class="mb-1"><strong>Kontoinhaber:</strong> {{ daten.sepa_mandat.kontoinhaber }}</p>
+        <p class="mb-0"><strong>Erteilt:</strong> {{ daten.sepa_mandat.erteilt_am|date:"d.m.Y" }} · {{ daten.sepa_mandat.status }}</p>
+      {% else %}
+        <p class="muted mb-0">Kein Mandat gespeichert.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>4. Statusverlauf</h2></div>
+    <ul class="timeline">
+      {% for wechsel in daten.statusverlauf %}
+        <li><span class="when">{{ wechsel.am|date:"d.m.Y H:i" }}</span> {{ wechsel.von }} → {{ wechsel.nach }}{% if wechsel.notiz %} <span class="muted">· {{ wechsel.notiz }}</span>{% endif %}</li>
+      {% empty %}<li class="muted">Keine Statuswechsel.</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2>5. Spielbetrieb und Kommunikation</h2></div>
+  <div class="grid cols-2">
+    <div class="card-body">
+      <h3 class="h4">Turnierteilnahmen</h3>
+      <ul class="list borderless">
+        {% for teilnahme in daten.turnierteilnahmen %}
+          <li>{{ teilnahme.datum|date:"d.m.Y" }} · {{ teilnahme.turnier }}{% if teilnahme.twz %} (TWZ {{ teilnahme.twz }}){% endif %}</li>
+        {% empty %}<li class="muted">Keine Teilnahmen.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card-body">
+      <h3 class="h4">Mannschaftseinsätze</h3>
+      <ul class="list borderless">
+        {% for einsatz in daten.mannschaftseinsaetze %}
+          <li>{{ einsatz.datum|date:"d.m.Y" }} · {{ einsatz.spiel }} · Brett {{ einsatz.brett }} ({{ einsatz.ergebnis|default:"offen" }})</li>
+        {% empty %}<li class="muted">Keine Einsätze.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2>6. Protokolle und Änderungswünsche</h2><span class="sub">Nachweis nach Art. 32 DSGVO</span></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Zeitpunkt</th><th>Aktion</th><th>Feld</th><th>Alt → Neu</th><th>Benutzer</th></tr></thead>
+      <tbody>
+        {% for eintrag in daten.protokollierung %}
+          <tr>
+            <td class="nowrap">{{ eintrag.zeitpunkt|date:"d.m.Y H:i" }}</td>
+            <td>{{ eintrag.aktion }}</td>
+            <td>{{ eintrag.feld|default:"–" }}</td>
+            <td class="mono">{{ eintrag.alt_wert|default:"–" }} → {{ eintrag.neu_wert|default:"–" }}</td>
+            <td>{{ eintrag.benutzer|default:"System" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted">Keine Protokolleinträge.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="alert info mt-2">
+  <svg class="icon icon-sm"><use href="#i-shield"></use></svg>
+  <div><strong>Hinweis:</strong> Diese Auskunft enthält alle personenbezogenen Daten, die die Vereinsverwaltung zu diesem Mitglied speichert.
+  Steuerlich aufbewahrungspflichtige Finanzdaten bleiben nach einem Austritt zeitlich begrenzt gespeichert (siehe Verzeichnis der Verarbeitungstätigkeiten).</div>
+</div>
+{% endblock %}

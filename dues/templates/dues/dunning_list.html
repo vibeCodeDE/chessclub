@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Mahnwesen{% endblock %}
+{% block page_title %}Mahnwesen{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ posten|length }} fällige offene Posten · {{ summe_offen|floatformat:2 }} € offen</div>{% endblock %}
+
+{% block content %}
+<div class="grid cols-3">
+  <div class="stat accent-warn">
+    <div class="stat-head"><span class="stat-label">Offene Forderungen</span><span class="stat-icon"><svg class="icon"><use href="#i-euro"></use></svg></span></div>
+    <div class="stat-value">{{ summe_offen|floatformat:2 }} €</div>
+    <div class="stat-foot">{{ posten|length }} Posten mit Fälligkeit in der Vergangenheit</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Erste Mahnung</span><span class="stat-icon"><svg class="icon"><use href="#i-mail"></use></svg></span></div>
+    <div class="stat-value">{{ mahnungen|length }}</div>
+    <div class="stat-foot">zuletzt erstellte Mahnungen</div>
+  </div>
+  <div class="stat accent-danger">
+    <div class="stat-head"><span class="stat-label">Zweite Mahnung</span><span class="stat-icon"><svg class="icon"><use href="#i-alert"></use></svg></span></div>
+    <div class="stat-value">{% for m in mahnungen %}{% if m.stufe == 2 %}✓{% endif %}{% empty %}–{% endfor %}</div>
+    <div class="stat-foot">letzte Stufe vor dem Verband</div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head">
+    <h2>Fällige Posten</h2>
+    <span class="sub">Mahnbrief wird als Druckansicht erzeugt (A4)</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Mitglied</th><th>Jahr</th><th class="right">Offen</th><th>Fällig am</th><th>Mahnstufe</th><th class="right">Aktionen</th></tr></thead>
+      <tbody>
+        {% for fee in posten %}
+          <tr data-row class="{% if fee.mahnstufe >= 2 %}row-danger{% elif fee.mahnstufe == 1 %}row-warn{% endif %}">
+            <td>
+              <div class="row-lead">
+                <span class="avatar-sm">{{ fee.member.nachname|slice:":1" }}</span>
+                <span>
+                  <span class="name"><a href="{% url 'members:member_detail' fee.member.pk %}">{{ fee.member }}</a></span>
+                  <span class="cell-sub">{{ fee.member.email|default:"keine E-Mail" }}</span>
+                </span>
+              </div>
+            </td>
+            <td>{{ fee.jahr }}</td>
+            <td class="num mono">{{ fee.offener_betrag|floatformat:2 }} €</td>
+            <td class="nowrap">{{ fee.faellig_am|date:"d.m.Y" }}</td>
+            <td>
+              {% if fee.mahnstufe %}
+                <span class="badge badge-mahnung" data-mahn-badge="{{ fee.pk }}"><span data-mahnstufe="{{ fee.pk }}">{{ fee.mahnstufe }}. Mahnung</span></span>
+              {% else %}
+                <span class="badge badge-neutral" data-mahn-badge="{{ fee.pk }}"><span data-mahnstufe="{{ fee.pk }}">–</span></span>
+              {% endif %}
+            </td>
+            <td class="right">
+              <div class="table-actions">
+                <form method="post" action="{% url 'dues:dunning_create' fee.pk %}" style="display:inline">
+                  {% csrf_token %}
+                  <button class="btn small" type="submit" data-optimistic="none" data-url="{% url 'dues:dunning_create' fee.pk %}"
+                          data-confirm="Mahnung für {{ fee.member }} ({{ fee.offener_betrag|floatformat:2 }} € offen) erstellen?"
+                          data-confirm-title="Mahnung erstellen" data-confirm-button="Mahnung erstellen" data-confirm-style="gold">Mahnen</button>
+                </form>
+                <a class="btn small secondary" href="{% url 'dues:dunning_letter' fee.pk %}" target="_blank">Brief</a>
+                <a class="btn small ghost" href="{% url 'dues:fee_detail' fee.pk %}">Buchen</a>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">{% include "includes/empty_state.html" with icon="check" titel="Keine fälligen Forderungen" text="Alle Beiträge sind bezahlt oder noch nicht fällig – Mahnungen sind nicht nötig." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Mahnprotokoll</h2><span class="sub">letzte 20 Mahnungen</span></div>
+  <ul class="list">
+    {% for mahnung in mahnungen %}
+      <li>
+        <span class="badge badge-mahnung">{{ mahnung.stufe }}. Mahnung</span>
+        <span class="grow">
+          <span class="title">{{ mahnung.fee.member }} · {{ mahnung.fee.jahr }}</span>
+          <span class="meta">{{ mahnung.datum|date:"d.m.Y" }} · {{ mahnung.gebuehr|floatformat:2 }} € Gebühr · {{ mahnung.erstellt_von.get_username|default:"System" }}</span>
+        </span>
+        <a class="btn small secondary" href="{% url 'dues:dunning_letter' mahnung.fee.pk %}">Brief</a>
+      </li>
+    {% empty %}
+      <li class="muted" style="padding:1rem">Noch keine Mahnung erstellt.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
