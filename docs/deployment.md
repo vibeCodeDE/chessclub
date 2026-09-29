@@ -1,7 +1,8 @@
 # Betrieb & Wiederherstellung (T21)
 
-Anleitung für den Vereinsserver. Alles setzt **Docker Compose** voraus; die Daten
-liegen ausschließlich auf vereinseigener Infrastruktur in DE/EU (PRD N1.1).
+Anleitung für den Vereinsserver. Die Abschnitte 1–7 setzen **Docker Compose** voraus;
+die Daten liegen ausschließlich auf vereinseigener Infrastruktur in DE/EU (PRD N1.1).
+Für Demos und Vorschauen gibt es in Abschnitt 8 eine Variante für **Vercel**.
 
 ## 1. Erstinstallation
 
@@ -111,3 +112,74 @@ docker compose -f docker-compose.prod.yml exec backup sh -c \
 | Datenauskunft | auf Anfrage | Mitgliedsseite → „Datenauskunft (DSGVO)“ |
 | Audit-Protokoll sichten | quartalsweise | `/audit/` |
 | Backup-Restore-Test | jährlich | Abschnitt 4 |
+
+## 8. Vercel (Demo & Vorschau)
+
+Für Vorführungen und Vorschauen läuft die App auch auf Vercel. Der Echtbetrieb mit
+Mitgliederdaten bleibt bei den Abschnitten 1–7 (PRD N1.1: Daten nur auf vereinseigener
+Infrastruktur in DE/EU). Wer trotzdem echte Daten auf Vercel hält, braucht
+Auftragsverarbeitungsverträge mit Vercel und dem Datenbankanbieter und legt Funktion
+und Datenbank in die EU: `vercel.json` setzt die Funktion auf `fra1` (Frankfurt), die
+Region der Datenbank wählst du beim Anlegen.
+
+**So funktioniert es:** Vercel erkennt Django an `manage.py` und startet
+`config.wsgi.application` als serverlose Funktion. `collectstatic` läuft im Build, die
+statischen Dateien kommen vom Vercel-CDN. Die Funktion ist kurzlebig und hat kein
+beschreibbares Dateisystem – die App braucht deshalb eine externe **PostgreSQL**-Datenbank
+(SQLite funktioniert dort nicht). Migrationen laufen im Build: `vercel.json` ruft
+`tools/vercel_build.py` auf.
+
+### Einrichtung (einmalig im Vercel-Dashboard)
+
+1. **Datenbank anlegen:** Projekt → *Storage* → PostgreSQL-Anbieter wählen (z. B. Neon),
+   Region Frankfurt/EU, dem Projekt zuweisen und die Umgebungen *Production* und – für
+   Vorschau-Deployments – *Preview* auswählen. Vercel setzt `DATABASE_URL` (über Pooler)
+   und `DATABASE_URL_UNPOOLED` (direkt) selbst. Die App liest `DATABASE_URL` bzw.
+   `POSTGRES_URL`; Migrationen laufen über die direkte Verbindung.
+2. **Geheimen Schlüssel setzen:** *Settings → Environment Variables* →
+   `DJANGO_SECRET_KEY` = langer Zufallswert, erzeugt mit
+   `python -c "import secrets; print(secrets.token_urlsafe(64))"`. Ohne ihn gilt der
+   öffentlich bekannte Entwicklungsschlüssel (das Build-Log warnt davor).
+3. **System-Variablen freigeben:** Im selben Bereich muss die Option *Automatically expose
+   System Environment Variables* aktiv sein (normalerweise ist sie es). Daran erkennt die
+   App, dass sie auf Vercel läuft (`VERCEL=1`), und lässt die Vercel-Domains zu.
+4. **Neu deployen:** *Deployments → Redeploy* oder ein neuer Commit. Der Build legt die
+   Tabellen an.
+5. **Prüfen:** `https://<projekt>.vercel.app/health/` muss `{"status": "ok"}` liefern,
+   danach Startseite und Anmeldung.
+
+### Optionale Variablen
+
+| Variable | Wirkung |
+| --- | --- |
+| `SEED_DEMO=1` | Der Build legt Demo-Daten an, solange noch keine Mitglieder existieren (Logins: README). Nur für Demos – die Passwörter sind öffentlich bekannt. |
+| `TWOFA_PFLICHT=0` | Zwei-Faktor-Pflicht für den Vorstand aus (nur Demo) |
+| `DJANGO_ALLOWED_HOSTS` | eigene Domain(s), kommagetrennt, z. B. `portal.schachverein.de` |
+| `MIGRATE_ON_BUILD=1` | migriert auch Preview-Builds. Ohne die Option migriert nur Production, denn Previews teilen sich die Datenbank oft mit Production. Hat jede Vorschau dank *Preview Branching* (Neon) eine eigene Datenbank-Kopie, ist die Option sinnvoll. |
+| `EMAIL_BACKEND`, `EMAIL_HOST`, … | SMTP wie in Abschnitt 1; ohne SMTP landen Mails nur in den Funktions-Logs |
+| `DJANGO_SETTINGS_MODULE=config.production` | strengere Settings; verlangt zusätzlich `DJANGO_EMAIL_BACKEND` (SMTP) |
+
+Session- und CSRF-Cookies sind auf Vercel standardmäßig `Secure`. HTTPS-Erkennung und die
+Weiterleitung von HTTP auf HTTPS übernimmt Vercel.
+
+### Erstes Vorstandskonto
+
+Ohne `SEED_DEMO` gibt es noch keine Benutzer. Das Konto entsteht lokal gegen die
+Vercel-Datenbank:
+
+```bash
+vercel env pull .env.local          # Variablen des Projekts holen (nicht ins Git)
+set -a; . ./.env.local; set +a
+python manage.py createsuperuser
+```
+
+Danach im Django-Admin (`/admin/`) dem Konto die Gruppe `admin` geben – die Rollen folgen
+den Gruppen, ohne sie fehlt die Vorstands-Navigation.
+
+### Fehlersuche
+
+| Symptom | Ursache und Abhilfe |
+| --- | --- |
+| `Bad Request (400)` auf jeder Seite | Die Domain ist in `ALLOWED_HOSTS` nicht erlaubt. Schritt 3 prüfen; eigene Domain in `DJANGO_ALLOWED_HOSTS` eintragen. Falls die System-Variablen nicht freigegeben werden sollen: `DJANGO_ALLOWED_HOSTS=.vercel.app` setzen. Danach neu deployen. |
+| `Server Error (500)` auf `/`, aber `/health/` antwortet | Keine Datenbank oder keine Tabellen. Build-Log nach „Keine Datenbank-URL gefunden“ durchsuchen: dann fehlt `DATABASE_URL` in der Umgebung dieses Deployments (Schritt 1, Umgebungen prüfen). Preview-Builds migrieren nur mit `MIGRATE_ON_BUILD=1`. Ursache steht unter *Deployments → Logs*. |
+| Build bricht bei `migrate` ab | Zugangsdaten und Erreichbarkeit der Datenbank prüfen. Die bisherige Version bleibt online. |
