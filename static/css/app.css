@@ -223,10 +223,14 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 1rem 0; }
 .card-foot { padding: 0.75rem 1.1rem; border-top: 1px solid var(--line); background: var(--surface-2); }
 
 .grid { display: grid; gap: 1rem; }
-.grid.cols-2 { grid-template-columns: 1fr; }
-.grid.cols-3 { grid-template-columns: 1fr; }
+/* minmax(0, …) statt 1fr: sonst ist die minimale Spaltenbreite die
+   Tabellenbreite, und .table-wrap (overflow-x: auto) greift nicht – die Seite
+   scrollt bei 360 px quer. */
+.grid.cols-2 { grid-template-columns: minmax(0, 1fr); }
+.grid.cols-3 { grid-template-columns: minmax(0, 1fr); }
 .grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.grid.main-side { grid-template-columns: 1fr; }
+.grid.main-side { grid-template-columns: minmax(0, 1fr); }
+.grid.main-side > * { min-width: 0; }
 
 .stat {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
@@ -298,8 +302,8 @@ table.data tr.row-danger { background: #fff7f7; }
 .pagination .info { border: 0; background: transparent; color: var(--muted); }
 
 /* ------------------------------------------------------------------- Forms */
-.form-grid { display: grid; gap: 0.9rem; grid-template-columns: 1fr; }
-.form-grid.cols-2, .form-grid.cols-3 { grid-template-columns: 1fr; }
+.form-grid { display: grid; gap: 0.9rem; grid-template-columns: minmax(0, 1fr); }
+.form-grid.cols-2, .form-grid.cols-3 { grid-template-columns: minmax(0, 1fr); }
 .field { display: flex; flex-direction: column; gap: 0.3rem; }
 .field > label { font-weight: 620; font-size: 0.88rem; }
 .field .help { font-size: 0.79rem; color: var(--muted); }

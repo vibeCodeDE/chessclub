@@ -21,6 +21,9 @@ services:
       POSTGRES_HOST: db
       DJANGO_DEBUG: "1"
       DJANGO_SECRET_KEY: dev-only-secret-key
+      # Entwicklung ohne Zwei-Faktor, wie in der README beschrieben. Der
+      # Produktivbetrieb setzt TWOFA_PFLICHT=1 (docker-compose.prod.yml).
+      TWOFA_PFLICHT: "0"
       # Nur Entwicklung: fester Schluessel, damit Mandatsdaten in der Dev-Datenbank
       # gelesen werden koennen. Im Betrieb gehoert der Schluessel nach .env.prod
       # (siehe .env.prod.example) – dieser Wert niemals produktiv verwenden.
