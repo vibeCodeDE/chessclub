@@ -1,281 +1,273 @@
+"""Beitragswesen: Kategorien, Beitragsläufe, SEPA-Mandate, Zahlungen (PRD M2)."""
+
+import re
+from decimal import Decimal
+from functools import reduce
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
+
+IBAN_MUSTER = re.compile(r"^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$")
+
+
+def normalize_iban(value):
+    return re.sub(r"\s+", "", (value or "")).upper()
+
+
+def format_iban(iban):
+    """IBAN in Vierergruppen – lesbar, aber ohne Klartext-Anzeige in Listen."""
+    return " ".join(iban[i : i + 4] for i in range(0, len(iban), 4))
+
+
+def mask_iban(iban):
+    """DSGVO-freundliche Kurzanzeige: DE89 •••• •••• 1234."""
+    if not iban:
+        return ""
+    if len(iban) <= 8:
+        return iban
+    return f"{iban[:4]} •••• •••• {iban[-4:]}"
 
 
 class FeeCategory(models.Model):
-    """Beitragskategorie des Vereins (PRD M2.1).
+    """Beitragssatz, z. B. Erwachsene, Jugendliche, Familie (PRD M2.1)."""
 
-    Die Kategorie ist die jahresunabhängige Identität (Erwachsene, Jugend,
-    Familie, ermäßigt). Der konkrete Betrag steht je Jahr in :class:`FeeAmount`
-    — dadurch ändert ein neuer Satz für 2027 den Wert für 2026 nicht.
-    """
-
-    code = models.SlugField("Code", max_length=50, unique=True)
-    bezeichnung = models.CharField("Bezeichnung", max_length=100)
+    name = models.CharField("Bezeichnung", max_length=100, unique=True)
+    beschreibung = models.CharField("Beschreibung", max_length=200, blank=True)
+    betrag = models.DecimalField("Jahresbeitrag (€)", max_digits=8, decimal_places=2)
     aktiv = models.BooleanField("Aktiv", default=True)
 
     class Meta:
-        ordering = ["bezeichnung"]
+        verbose_name = "Beitragskategorie"
         verbose_name_plural = "Beitragskategorien"
+        ordering = ["betrag", "name"]
 
     def __str__(self):
-        return self.bezeichnung
+        return f"{self.name} ({self.betrag} €)"
 
-
-class FeeAmount(models.Model):
-    """Beitragssatz einer Kategorie für genau ein Jahr."""
-
-    kategorie = models.ForeignKey(
-        FeeCategory,
-        verbose_name="Kategorie",
-        on_delete=models.CASCADE,
-        related_name="betraege",
-    )
-    jahr = models.PositiveIntegerField("Jahr")
-    betrag = models.DecimalField(
-        "Betrag",
-        max_digits=6,
-        decimal_places=2,
-        validators=[MinValueValidator(0)],
-    )
-
-    class Meta:
-        ordering = ["kategorie__bezeichnung", "jahr"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["kategorie", "jahr"],
-                name="unique_fee_amount_per_kategorie_jahr",
-            )
-        ]
-        verbose_name_plural = "Beitragssätze"
-
-    def __str__(self):
-        if self.betrag is None:
-            return f"{self.kategorie} {self.jahr}: —"
-        # Deutsches Zahlenformat, die App ist durchgängig deutschsprachig.
-        betrag = f"{self.betrag:.2f}".replace(".", ",")
-        return f"{self.kategorie} {self.jahr}: {betrag} €"
-
-    def clean(self):
-        super().clean()
-        # MinValueValidator greift nur über full_clean()/Formulare; der
-        # explizite Check macht die Regel auch im Service-/Testpfad sichtbar.
-        if self.betrag is not None and self.betrag < 0:
-            raise ValidationError({"betrag": "Der Betrag darf nicht negativ sein."})
-
-
-class FeePost(models.Model):
-    """Beitragsposten eines Mitglieds für ein Beitragsjahr (PRD M2.2).
-
-    Der Posten entsteht ausschließlich über den Beitragslauf
-    (:func:`dues.services.fuehre_lauf`) und ist ein Finanznachweis: Kategorie
-    und Betrag werden als Momentaufnahme kopiert, damit eine spätere Änderung
-    am :class:`FeeAmount` die gebuchte Historie nicht überschreibt.
-    """
-
-    member = models.ForeignKey(
-        "members.Member",
-        verbose_name="Mitglied",
-        # Kein Hard-Delete: die Finanzhistorie bleibt nach § 147 AO erhalten.
-        on_delete=models.PROTECT,
-        related_name="beitragsposten",
-    )
-    jahr = models.PositiveIntegerField("Jahr")
-    kategorie = models.ForeignKey(
-        FeeCategory,
-        verbose_name="Kategorie",
-        on_delete=models.PROTECT,
-        related_name="posten",
-    )
-    betrag = models.DecimalField(
-        "Betrag", max_digits=6, decimal_places=2, validators=[MinValueValidator(0)]
-    )
-    erstellt = models.DateTimeField("Erstellt", auto_now_add=True)
-
-    class Meta:
-        ordering = ["-jahr", "member__nachname", "member__vorname"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["member", "jahr"],
-                name="unique_fee_post_per_member_jahr",
-            )
-        ]
-        verbose_name = "Beitragsposten"
-        verbose_name_plural = "Beitragsposten"
-
-    def __str__(self):
-        betrag = f"{self.betrag:.2f}".replace(".", ",")
-        return f"{self.jahr} · {self.member} · {betrag} €"
+    @property
+    def mitglieder_anzahl(self):
+        return self.mitglieder.exclude(status="ausgetreten").count()
 
 
 class SepaMandate(models.Model):
-    """SEPA-Mandat eines Mitglieds (PRD M2.3).
+    """SEPA-Lastschriftmandat je Mitglied (PRD M2.3).
 
-    Verwaltet wird nur, was der Einzug braucht: Referenz, Datum, Status. Die
-    IBAN liegt beim Verein in der Lastschriftdatei der Bank — die Software
-    nimmt **keinen** Einzug vor, sondern nur den Zahlungsstatus (PRD M2.3,
-    Entscheidung Nr. 2). Deshalb wird hier bewusst keine IBAN gespeichert.
-
-    Ein Mandatswechsel (neue Bankverbindung) erzeugt einen neuen Datensatz;
-    der alte behält ``widerrufen`` bzw. ``beendet``. Maßgeblich ist, ob ein
-    Mandat **aktiv** ist (:func:`dues.services.hat_sepa_mandat`).
+    Der Verein zieht bankseitig manuell ein – hier wird nur das Mandat
+    verwaltet, es gibt bewusst keine Banking-API-Anbindung.
     """
 
     class Status(models.TextChoices):
         AKTIV = "aktiv", "Aktiv"
         WIDERRUFEN = "widerrufen", "Widerrufen"
-        BEENDET = "beendet", "Beendet"
 
-    member = models.ForeignKey(
+    member = models.OneToOneField(
         "members.Member",
         verbose_name="Mitglied",
-        # Mandate sind Finanznachweis — kein Hard-Delete an der Historie.
-        on_delete=models.PROTECT,
-        related_name="sepa_mandate",
+        on_delete=models.CASCADE,
+        related_name="sepa_mandat",
     )
-    referenz = models.CharField("Referenz", max_length=50, unique=True)
-    datum = models.DateField("Mandatsdatum", default=timezone.localdate)
-    status = models.CharField(
-        "Status", max_length=20, choices=Status.choices, default=Status.AKTIV
-    )
-    notiz = models.TextField("Notiz", blank=True)
+    referenz = models.CharField("Mandatsreferenz", max_length=50, unique=True)
+    iban = models.CharField("IBAN", max_length=34)
+    kontoinhaber = models.CharField("Kontoinhaber:in", max_length=150, blank=True)
+    erteilt_am = models.DateField("Erteilt am")
+    status = models.CharField("Status", max_length=20, choices=Status.choices, default=Status.AKTIV)
+    widerrufen_am = models.DateField("Widerrufen am", null=True, blank=True)
+    notiz = models.CharField("Notiz", max_length=200, blank=True)
 
     class Meta:
-        ordering = ["-datum", "member__nachname"]
         verbose_name = "SEPA-Mandat"
         verbose_name_plural = "SEPA-Mandate"
+        ordering = ["member__nachname", "member__vorname"]
 
     def __str__(self):
         return f"{self.member} · {self.referenz}"
 
+    @property
+    def iban_formatiert(self):
+        return format_iban(self.iban)
+
+    @property
+    def iban_kurz(self):
+        return mask_iban(self.iban)
+
+    def clean(self):
+        super().clean()
+        iban = normalize_iban(self.iban)
+        if iban and not IBAN_MUSTER.match(iban):
+            raise ValidationError({"iban": "Bitte eine gültige IBAN angeben (z. B. DE89 3704 0044 0532 0130 00)."})
+        if self.status == self.Status.WIDERRUFEN and not self.widerrufen_am:
+            raise ValidationError({"widerrufen_am": "Bei widerrufenem Mandat ist das Datum erforderlich."})
+
+    def save(self, *args, **kwargs):
+        self.iban = normalize_iban(self.iban)
+        super().save(*args, **kwargs)
+
+
+class MembershipFee(models.Model):
+    """Beitragsposten eines Mitglieds für ein Jahr (PRD M2.2)."""
+
+    class Status(models.TextChoices):
+        OFFEN = "offen", "Offen"
+        TEILWEISE = "teilweise", "Teilweise bezahlt"
+        BEZAHLT = "bezahlt", "Bezahlt"
+        ERLASSEN = "erlassen", "Erlassen"
+
+    member = models.ForeignKey(
+        "members.Member",
+        verbose_name="Mitglied",
+        on_delete=models.CASCADE,
+        related_name="fees",
+    )
+    jahr = models.PositiveSmallIntegerField("Beitragsjahr")
+    kategorie_name = models.CharField("Kategorie", max_length=100)
+    betrag = models.DecimalField("Betrag (€)", max_digits=8, decimal_places=2)
+    faellig_am = models.DateField("Fällig am")
+    status = models.CharField("Status", max_length=20, choices=Status.choices, default=Status.OFFEN)
+    mahnstufe = models.PositiveSmallIntegerField("Mahnstufe", default=0)
+    letzte_mahnung_am = models.DateField("Letzte Mahnung am", null=True, blank=True)
+    erstellt_am = models.DateTimeField("Erstellt am", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Beitragsposten"
+        verbose_name_plural = "Beitragsposten"
+        ordering = ["-jahr", "member__nachname", "member__vorname"]
+        constraints = [
+            models.UniqueConstraint(fields=["member", "jahr"], name="unique_beitrag_pro_jahr"),
+        ]
+
+    def __str__(self):
+        return f"{self.member} · {self.jahr}"
+
+    @property
+    def bezahlter_betrag(self):
+        return self.zahlungen.aggregate(s=Sum("betrag"))["s"] or Decimal("0.00")
+
+    @property
+    def offener_betrag(self):
+        if self.status in {self.Status.BEZAHLT, self.Status.ERLASSEN}:
+            return Decimal("0.00")
+        return max(self.betrag - self.bezahlter_betrag, Decimal("0.00"))
+
+    @property
+    def ist_offen(self):
+        return self.offener_betrag > Decimal("0.00")
+
+    @property
+    def fortschritt_prozent(self):
+        if self.betrag <= 0:
+            return 100
+        return min(int(round(float(self.bezahlter_betrag) / float(self.betrag) * 100)), 100)
+
+    def status_aktualisieren(self, commit=True):
+        bezahlt = self.bezahlter_betrag
+        if self.status != self.Status.ERLASSEN:
+            if bezahlt >= self.betrag:
+                self.status = self.Status.BEZAHLT
+            elif bezahlt > 0:
+                self.status = self.Status.TEILWEISE
+            else:
+                self.status = self.Status.OFFEN
+            if self.status == self.Status.BEZAHLT:
+                self.mahnstufe = 0
+        if commit:
+            self.save(update_fields=["status", "mahnstufe"])
+        return self.status
+
 
 class Payment(models.Model):
-    """Zahlung auf einen Beitragsposten (PRD M2.4).
-
-    Von Hand gebucht: Überweisung, SEPA-Einzug oder Barzahlung. Ein
-    **negativer** Betrag ist eine Gegenbuchung (Storno) — Zahlungen werden nie
-    gelöscht, damit die Finanzhistorie nach § 147 AO nachvollziehbar bleibt.
-    """
+    """Zahlungseingang – manuell gebucht (PRD M2.3b), kein Bank-API-Zugriff."""
 
     class Art(models.TextChoices):
         SEPA = "sepa", "SEPA-Einzug"
         UEBERWEISUNG = "ueberweisung", "Überweisung"
         BAR = "bar", "Barzahlung"
 
-    post = models.ForeignKey(
-        FeePost,
+    fee = models.ForeignKey(
+        MembershipFee,
         verbose_name="Beitragsposten",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="zahlungen",
     )
-    # Bewusst ohne MinValueValidator: ein negativer Betrag ist ein Storno.
-    betrag = models.DecimalField("Betrag", max_digits=6, decimal_places=2)
-    art = models.CharField("Zahlungsart", max_length=20, choices=Art.choices)
+    betrag = models.DecimalField("Betrag (€)", max_digits=8, decimal_places=2)
     datum = models.DateField("Zahlungsdatum", default=timezone.localdate)
-    referenz = models.CharField("Referenz", max_length=100, blank=True)
-    storno_von = models.ForeignKey(
-        "self",
-        verbose_name="Storno zu",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="stornos",
-    )
-    notiz = models.TextField("Notiz", blank=True)
-    erfasst = models.DateTimeField("Erfasst", auto_now_add=True)
+    art = models.CharField("Zahlungsart", max_length=20, choices=Art.choices, default=Art.UEBERWEISUNG)
+    notiz = models.CharField("Notiz", max_length=200, blank=True)
     erfasst_von = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="Erfasst von",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="erfasste_zahlungen",
+        related_name="payments",
     )
+    erstellt_am = models.DateTimeField("Erfasst am", auto_now_add=True)
 
     class Meta:
-        ordering = ["-datum", "-pk"]
         verbose_name = "Zahlung"
         verbose_name_plural = "Zahlungen"
+        ordering = ["-datum", "-erstellt_am"]
 
     def __str__(self):
-        betrag = f"{self.betrag:.2f}".replace(".", ",")
-        return f"{self.get_art_display()} {self.datum}: {betrag} €"
+        return f"{self.betrag} € · {self.fee.member} ({self.get_art_display()})"
 
     def clean(self):
         super().clean()
-        if self.betrag == 0:
-            raise ValidationError({"betrag": "Der Betrag darf nicht 0,00 € sein."})
-        if self.art == self.Art.SEPA and self.post_id:
-            if not SepaMandate.objects.filter(
-                member_id=self.post.member_id, status=SepaMandate.Status.AKTIV
-            ).exists():
-                raise ValidationError(
-                    {
-                        "art": "Für einen SEPA-Einzug wird ein aktives SEPA-Mandat "
-                        "des Mitglieds benötigt — bitte es unter „Zahlungen“ "
-                        "zuerst anlegen."
-                    }
-                )
+        if self.betrag is not None and self.betrag <= 0:
+            raise ValidationError({"betrag": "Der Betrag muss größer als 0 sein."})
 
 
-class Mahnung(models.Model):
-    """Eine Mahnung für einen Beitragsposten (PRD M2.5).
+class DunningLetter(models.Model):
+    """Versandte Mahnung (PRD M2.4) – Nachweis und Druckvorlage."""
 
-    Die Mahnung hängt am **Posten**, nicht am Mitglied: ein Mitglied kann
-    Posten aus mehreren Jahren haben, und gemahnt wird je Posten. Die Stufe ist
-    Teil der Historie (1. und 2. Mahnung), nicht ein Zähler am Posten — so
-    bleiben Datum, Frist und der ausstellende Vorstand nachvollziehbar.
-
-    Es gibt keinen Storno-Pfad: eine Mahnung wird nicht zurückgezogen. Zahlt
-    das Mitglied, fällt der Posten aus der Offene-Übersicht; die Historie
-    bleibt lesbar.
-    """
-
-    class Stufe(models.IntegerChoices):
-        MAHNUNG_1 = 1, "1. Mahnung"
-        MAHNUNG_2 = 2, "2. Mahnung"
-
-    post = models.ForeignKey(
-        FeePost,
+    fee = models.ForeignKey(
+        MembershipFee,
         verbose_name="Beitragsposten",
-        # Mahnungen sind Finanznachweis — kein Hard-Delete an der Historie.
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="mahnungen",
     )
-    stufe = models.PositiveSmallIntegerField("Stufe", choices=Stufe.choices)
+    stufe = models.PositiveSmallIntegerField("Mahnstufe")
     datum = models.DateField("Mahndatum", default=timezone.localdate)
-    frist = models.DateField(
-        "Zahlungsfrist",
-        null=True,
-        blank=True,
-        help_text="Optionales Fristdatum für den Brief; leer heißt „keine Frist“.",
-    )
-    notiz = models.TextField(
-        "Notiz", blank=True, help_text="Interner Vermerk — erscheint nicht im Brief."
-    )
-    erstellt = models.DateTimeField("Erstellt", auto_now_add=True)
+    gebuehr = models.DecimalField("Mahngebühr (€)", max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    notiz = models.CharField("Notiz", max_length=200, blank=True)
     erstellt_von = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="Erstellt von",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="erstellte_mahnungen",
+        related_name="dunning_letters",
     )
+    erstellt_am = models.DateTimeField("Erstellt am", auto_now_add=True)
 
     class Meta:
-        ordering = ["-datum", "-pk"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["post", "stufe"],
-                name="unique_mahnung_pro_post_stufe",
-            )
-        ]
         verbose_name = "Mahnung"
         verbose_name_plural = "Mahnungen"
+        ordering = ["-datum", "-stufe"]
 
     def __str__(self):
-        return f"{self.stufe}. Mahnung · {self.post}"
+        return f"{self.stufe}. Mahnung · {self.fee.member} ({self.fee.jahr})"
+
+
+def jahres_uebersicht(jahr):
+    """Kennzahlen eines Beitragsjahres für Dashboard und Kassenbericht."""
+    posten = MembershipFee.objects.filter(jahr=jahr)
+    summen = posten.aggregate(
+        soll=Sum("betrag"),
+    )
+    bezahlt = Payment.objects.filter(fee__jahr=jahr).aggregate(s=Sum("betrag"))["s"] or Decimal("0.00")
+    soll = summen["soll"] or Decimal("0.00")
+    return {
+        "jahr": jahr,
+        "soll": soll,
+        "bezahlt": bezahlt,
+        "offen": max(soll - bezahlt, Decimal("0.00")),
+        "anzahl": posten.count(),
+        "offene_anzahl": reduce(
+            lambda acc, fee: acc + (1 if fee.ist_offen else 0),
+            posten.prefetch_related("zahlungen"),
+            0,
+        ),
+    }

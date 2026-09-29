@@ -15,7 +15,8 @@ class AuthFlowTests(TestCase):
             {"username": "klaus", "password": "sicheres-passwort-1"},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, "/")
+        # LOGIN_REDIRECT_URL zeigt auf das rollenabhängige Dashboard
+        self.assertEqual(response.url, "/dashboard/")
         self.assertIn("_auth_user_id", self.client.session)
 
     def test_logout_requires_post_and_works(self):

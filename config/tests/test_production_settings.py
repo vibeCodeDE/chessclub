@@ -1,6 +1,7 @@
 import importlib
 import os
 import sys
+from pathlib import Path
 from unittest.mock import patch
 
 from django.core.exceptions import ImproperlyConfigured
@@ -8,8 +9,10 @@ from django.test import SimpleTestCase
 
 GOOD_ENV = {
     "DJANGO_SECRET_KEY": "prod-test-key",
-    "DJANGO_EMAIL_BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+    "EMAIL_BACKEND": "django.core.mail.backends.smtp.EmailBackend",
 }
+
+WURZEL = Path(__file__).resolve().parents[2]
 
 
 def load_production(**overrides):
@@ -34,7 +37,19 @@ class ProductionSettingsTests(SimpleTestCase):
         for value in ("", "django.core.mail.backends.console.EmailBackend"):
             with self.subTest(backend=value):
                 with self.assertRaises(ImproperlyConfigured):
-                    load_production(DJANGO_EMAIL_BACKEND=value)
+                    load_production(EMAIL_BACKEND=value)
+
+    def test_email_backend_ist_die_vorlagenvariable(self):
+        """Die Vorlage und die Settings sprechen dieselbe Variable an."""
+        vorlage = (WURZEL / ".env.prod.example").read_text(encoding="utf-8")
+        self.assertIn("EMAIL_BACKEND=django.core.mail", vorlage)
+        production = load_production()
+        self.assertEqual(production.EMAIL_BACKEND, GOOD_ENV["EMAIL_BACKEND"])
+
+    def test_prod_compose_aktiviert_die_produktions_settings(self):
+        """Ohne DJANGO_SETTINGS_MODULE liefe der Dev-Fallback mit."""
+        compose = (WURZEL / "docker-compose.prod.yml").read_text(encoding="utf-8")
+        self.assertIn('DJANGO_SETTINGS_MODULE: "config.production"', compose)
 
     def test_debug_is_off_even_if_env_requests_it(self):
         production = load_production(DJANGO_DEBUG="1")

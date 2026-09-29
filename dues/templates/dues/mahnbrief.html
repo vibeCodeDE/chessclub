@@ -1,158 +1,65 @@
-{% comment %}
-Druckbarer Mahnbrief (PRD M2.5).
+{% extends "base.html" %}
 
-Bewusst ein eigenständiges Dokument und **kein** base.html-Ableit: der Brief geht
-in den Umschlag. Navigation, Fußzeile und die Tailwind-Klassen der Oberfläche
-gehören nicht auf dieses Papier. Das Print-Stylesheet steht deshalb im eigenen
-<style>-Block — es gilt nur hier und wird nirgends sonst gebraucht.
+{% block title %}Mahnbrief {{ member }}{% endblock %}
+{% block page_title %}Mahnbrief – {{ member }}{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ stufe }}. Mahnung · Beitragsjahr {{ fee.jahr }}</div>{% endblock %}
 
-Keine externen Schriften, keine CDN-Assets: Systemschriften, die Drucker und
-Browser überall mitbringen.
-
-Die interne Notiz einer Mahnung wird bewusst nicht gerendert — sie gehört in
-die Akte des Vorstands, nicht in den Brief an das Mitglied.
-{% endcomment %}<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mahnbrief {{ post.jahr }} — {{ post.member }}</title>
-  <style>
-    :root { color-scheme: light; }
-    body {
-      font-family: Georgia, "Times New Roman", serif;
-      color: #1a1a2e;
-      max-width: 42rem;
-      margin: 2rem auto;
-      padding: 0 1.25rem;
-      line-height: 1.5;
-    }
-    .absender { font-size: 0.9rem; color: #444; }
-    .empfaenger { margin: 2rem 0; }
-    h1 { font-size: 1.2rem; }
-    /* Die Postentabelle behält ihre fünf Spalten; auf schmalen Bildschirmen
-       scrollt nur die Tabelle, nicht das ganze Dokument. Sonst schöbe sich die
-       Seitenbreite mit und der Brief bekäme einen horizontalen Balken. */
-    .tabelle { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
-    th, td { border-bottom: 1px solid #ccc; padding: 0.4rem 0.2rem; text-align: left; }
-    th.numerisch, td.numerisch { text-align: right; }
-    tfoot td { font-weight: bold; border-top: 2px solid #1a1a2e; }
-    .hinweis { background: #f7f7f9; padding: 0.75rem 1rem; margin: 1.5rem 0; }
-    .hinweis p { margin: 0 0 0.5rem; }
-    .frist { font-weight: bold; }
-    .gruss { margin-top: 2.5rem; }
-    .werkzeug { margin-bottom: 1.5rem; }
-    .werkzeug button {
-      font: inherit;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      border: 1px solid #0f3460;
-      background: #0f3460;
-      color: #fff;
-      border-radius: 4px;
-    }
-    @media screen and (max-width: 30rem) {
-      body { padding: 0 0.75rem; }
-      th, td { padding: 0.35rem 0.1rem; font-size: 0.8rem; }
-    }
-    @media print {
-      .werkzeug { display: none; }
-      body { margin: 0; max-width: none; }
-      @page { margin: 2cm; }
-    }
-  </style>
-</head>
-<body>
-  <p class="werkzeug">
-    <button type="button" onclick="window.print()">Drucken / Als PDF speichern</button>
-  </p>
-
-  <p class="absender">
-    <strong>{{ verein.name }}</strong>
-    {% if verein.strasse %}<br>{{ verein.strasse }}{% endif %}
-    {% comment %}
-    PLZ und Ort stehen in drei ausgeschriebenen Fällen statt in einem
-    `{{ plz }} {{ ort }}`: sonst bleibt bei fehlender PLZ ein führendes
-    Leerzeichen stehen. Der <br> steht jeweils *vor* der Zeile, damit am Ende
-    des Blocks keiner hängen bleibt, wenn Telefon oder E-Mail leer sind.
-    {% endcomment %}
-    {% if verein.plz and verein.ort %}<br>{{ verein.plz }} {{ verein.ort }}{% elif verein.plz %}<br>{{ verein.plz }}{% elif verein.ort %}<br>{{ verein.ort }}{% endif %}
-    {% if verein.telefon %}<br>Tel. {{ verein.telefon }}{% endif %}
-    {% if verein.email %}<br>{{ verein.email }}{% endif %}
-  </p>
-
-  <p class="empfaenger">
-    {{ post.member.vorname }} {{ post.member.nachname }}
-    {% if post.member.strasse %}<br>{{ post.member.strasse }}{% endif %}
-    {% if post.member.plz and post.member.ort %}<br>{{ post.member.plz }} {{ post.member.ort }}{% elif post.member.plz %}<br>{{ post.member.plz }}{% elif post.member.ort %}<br>{{ post.member.ort }}{% endif %}
-  </p>
-
-  <p>{{ heute|date:"d.m.Y" }}</p>
-
-  {% comment %}
-  Ohne offene Mahnstufe bleibt die Stufe weg: „ausgeschöpft" ist ein internes
-  Steuerwort der Oberfläche und gehört nicht in ein Schreiben an das Mitglied.
-  Die View reicht `stufe_text` in diesem Fall nicht durch (dues/views.py).
-  {% endcomment %}
-  <h1>{% if stufe_text %}{{ stufe_text }} — {% endif %}Beiträge {{ post.jahr }}</h1>
-
-  <p>
-    Sehr geehrte/r {{ post.member.nachname }},
-  </p>
-
-  <p>
-    nach unseren Unterlagen ist für das Beitragsjahr {{ post.jahr }} noch ein
-    Betrag von <strong>{{ summe_offen }}&nbsp;€</strong> offen. Wir bitten um
-    Ausgleich
-    {% if naechste_frist %}
-      <span class="frist">bis zum {{ naechste_frist|date:"d.m.Y" }}</span>.
-    {% else %}
-      kurzfristig.
-    {% endif %}
-  </p>
-
-  <div class="tabelle">
-    <table>
-      <thead>
-        <tr>
-          <th>Jahr</th>
-          <th>Kategorie</th>
-          <th class="numerisch">Beitrag</th>
-          <th class="numerisch">Bezahlt</th>
-          <th class="numerisch">Offen</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for zeile in posten %}
-          <tr>
-            <td>{{ zeile.jahr }}</td>
-            <td>{{ zeile.kategorie }}</td>
-            <td class="numerisch">{{ zeile.betrag }}&nbsp;€</td>
-            <td class="numerisch">{{ zeile.bezahlt }}&nbsp;€</td>
-            <td class="numerisch">{{ zeile.offen }}&nbsp;€</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="4">Offener Betrag</td>
-          <td class="numerisch">{{ summe_offen }}&nbsp;€</td>
-        </tr>
-      </tfoot>
-    </table>
+{% block page_actions %}
+<div class="page-head no-print">
+  <p class="lede">Druckansicht im A4-Format – „Drucken“ öffnet den Systemdialog.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'dues:dunning_list' %}">Zurück zum Mahnwesen</a>
+    <button class="btn" type="button" onclick="window.print()"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Drucken</button>
   </div>
+</div>
+{% endblock %}
 
-  {% if verein.zahlungshinweis or verein.zahlungsziel %}
-    <div class="hinweis">
-      {% if verein.zahlungshinweis %}<p>{{ verein.zahlungshinweis|linebreaksbr }}</p>{% endif %}
-      {% if verein.zahlungsziel %}<p>{{ verein.zahlungsziel|linebreaksbr }}</p>{% endif %}
+{% block content %}
+<div class="card" style="max-width:46rem;margin:0 auto">
+  <div class="card-body" style="padding:2.2rem 2.4rem">
+    <div class="flex between wrap">
+      <div>
+        <strong>{{ club_name }}</strong><br>
+        <span class="cell-sub">Vorstand / Kassenwart<br>{{ club_contact }}</span>
+      </div>
+      <div class="right cell-sub">
+        {{ heute|date:"d.m.Y" }}<br>
+        Beitragsjahr {{ fee.jahr }}
+      </div>
     </div>
-  {% endif %}
+    <hr>
+    <p>
+      {{ member.vorname }} {{ member.nachname }}<br>
+      {% if member.strasse %}{{ member.strasse }}<br>{% endif %}
+      {% if member.plz or member.ort %}{{ member.plz }} {{ member.ort }}{% endif %}
+    </p>
 
-  <p class="gruss">
-    Mit freundlichen Grüßen<br>
-    {% if verein.kassierer %}{{ verein.kassierer }}{% else %}{{ verein.name }}{% endif %}
-  </p>
-</body>
-</html>
+    <h2>{{ stufe }}. Mahnung – Mitgliedsbeitrag {{ fee.jahr }}</h2>
+    <p>Sehr geehrte{% if member.vorname %} Frau/Herr{% endif %} {{ member.nachname }},</p>
+    <p>{{ text }}</p>
+
+    <table class="data" style="margin:1.2rem 0">
+      <tbody>
+        <tr><td>Beitrag {{ fee.jahr }} ({{ fee.kategorie_name }})</td><td class="num mono">{{ fee.betrag|floatformat:2 }} €</td></tr>
+        <tr><td>bereits gezahlte Beträge</td><td class="num mono">-{{ fee.bezahlter_betrag|floatformat:2 }} €</td></tr>
+        {% if gebuehr %}
+          <tr><td>Mahngebühr</td><td class="num mono">{{ gebuehr|floatformat:2 }} €</td></tr>
+        {% endif %}
+        <tr><td><strong>Offener Betrag</strong></td><td class="num mono"><strong>{{ fee.offener_betrag|floatformat:2 }} €</strong></td></tr>
+        <tr><td>fällig seit</td><td class="num mono">{{ fee.faellig_am|date:"d.m.Y" }}</td></tr>
+      </tbody>
+    </table>
+
+    {% if mandat %}
+      <p>Für Ihr Konto liegt ein SEPA-Mandat ({{ mandat.referenz }}) vor. Sollte sich Ihre Bankverbindung geändert haben, teilen Sie uns das bitte mit.</p>
+    {% else %}
+      <p>Bitte überweisen Sie den Betrag auf das Vereinskonto oder begleichen Sie ihn beim nächsten Vereinsabend in bar.</p>
+    {% endif %}
+
+    <p>Mit freundlichen Grüßen<br><br>
+      {{ club_name }}<br>
+      <span class="cell-sub">Kassenwart:in</span>
+    </p>
+  </div>
+</div>
+{% endblock %}

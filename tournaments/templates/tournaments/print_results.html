@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Ergebnisliste {{ turnier.name }}{% endblock %}
+{% block page_title %}Ergebnisliste – {{ turnier.name }}{% endblock %}
+
+{% block page_actions %}
+<div class="page-head no-print">
+  <p class="lede">{{ turnier.datum|date:"d.m.Y" }} · {{ turnier.get_format_display }} · {{ turnier.teilnehmer_anzahl }} Teilnehmer:innen</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'tournaments:manage_detail' turnier.pk %}">Zurück</a>
+    <a class="btn secondary" href="{% url 'tournaments:export_csv' turnier.pk %}">CSV</a>
+    <button class="btn" type="button" onclick="window.print()"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Drucken</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <h1 style="text-align:center">{{ turnier.name }}</h1>
+    <p style="text-align:center">{{ club_name }} · {{ turnier.datum|date:"d.m.Y" }} · {{ turnier.ort|default:"Vereinsheim" }} · {{ turnier.get_format_display }}</p>
+    <table class="data">
+      <thead><tr><th>Rang</th><th>Name</th><th>Verein</th><th class="num">DWZ</th><th class="num">Punkte</th><th class="num">Buchholz</th></tr></thead>
+      <tbody>
+        {% for t in stand %}
+          <tr>
+            <td class="mono">{{ t.rang }}</td>
+            <td class="cell-main">{{ t.name }}</td>
+            <td>{{ t.verein|default:club_short }}</td>
+            <td class="num mono">{{ t.twz|default:"–" }}</td>
+            <td class="num mono">{{ t.aktuelle_punkte|floatformat:1 }}</td>
+            <td class="num mono">{{ t.aktuelle_buchholz|floatformat:1 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Keine Ergebnisse vorhanden.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="cell-sub mt-2">Erstellt am {{ heute|date:"d.m.Y" }} · {{ club_name }} · Stand nach {{ turnier.runden_count }} Runde(n)</p>
+  </div>
+</div>
+{% endblock %}

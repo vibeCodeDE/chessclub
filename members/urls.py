@@ -6,7 +6,9 @@ app_name = "members"
 
 urlpatterns = [
     path("profil/", views.profil, name="profil"),
+    path("mitglied-werden/", views.join_info, name="join_info"),
     path("mitglieder/", views.member_list, name="member_list"),
+    path("mitglieder/neu/", views.member_create, name="member_create"),
     path("mitglieder/export.csv", views.member_export, name="member_export"),
     path(
         "mitglieder/wuensche/",
@@ -24,4 +26,7 @@ urlpatterns = [
         name="change_request_reject",
     ),
     path("mitglieder/<int:pk>/", views.member_detail, name="member_detail"),
+    path("mitglieder/<int:pk>/bearbeiten/", views.member_update, name="member_update"),
+    path("mitglieder/<int:pk>/status/", views.member_status, name="member_status"),
+    path("mitglieder/<int:pk>/austritt/", views.member_delete, name="member_delete"),
 ]

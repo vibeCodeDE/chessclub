@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}{{ turnier.name }}{% endblock %}
+{% block page_title %}{{ turnier.name }}{% endblock %}
+{% block crumbs %}
+<div class="crumbs">
+  <a href="{% url 'tournaments:manage_list' %}">Turniere</a> › {{ turnier.datum|date:"d.m.Y" }} ·
+  <span class="badge badge-{{ turnier.status }}">{{ turnier.get_status_display }}</span> ·
+  {{ turnier.teilnehmer_anzahl }} Anmeldungen
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">{{ turnier.get_format_display }} · {{ turnier.runden_anzahl }} Runden · {{ turnier.ort|default:"Vereinsheim" }}</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'tournaments:export_csv' turnier.pk %}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV</a>
+    <a class="btn secondary" href="{% url 'tournaments:print_results' turnier.pk %}" target="_blank"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Ergebnisliste</a>
+    {% if turnier.status != 'beendet' %}
+      <form method="post" action="{% url 'tournaments:tournament_finish' turnier.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button class="btn gold" type="submit" data-kind="ajax" data-optimistic="none"
+                data-confirm="Turnier abschließen und Ergebnisliste veröffentlichen?"
+                data-confirm-title="Turnier abschließen" data-confirm-button="Abschließen" data-confirm-style="gold">
+          Turnier abschließen
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-4">
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Teilnehmer:innen</span><span class="stat-icon"><svg class="icon"><use href="#i-users"></use></svg></span></div>
+    <div class="stat-value">{{ turnier.teilnehmer_anzahl }}</div>
+  </div>
+  <div class="stat accent-warn">
+    <div class="stat-head"><span class="stat-label">Startgeld offen</span><span class="stat-icon"><svg class="icon"><use href="#i-euro"></use></svg></span></div>
+    <div class="stat-value">{{ startgeld_offen }}</div>
+  </div>
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Runden</span><span class="stat-icon"><svg class="icon"><use href="#i-table"></use></svg></span></div>
+    <div class="stat-value">{{ turnier.runden_count }} / {{ turnier.runden_anzahl }}</div>
+  </div>
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Nächste Runde</span><span class="stat-icon"><svg class="icon"><use href="#i-plus"></use></svg></span></div>
+    <div class="stat-value">{{ naechste_runde }}</div>
+    {% if naechste_runde <= turnier.runden_anzahl %}
+      <form method="post" action="{% url 'tournaments:round_generate' turnier.pk %}" class="mt-1">
+        {% csrf_token %}
+        <button class="btn small block" type="submit" data-kind="ajax" data-optimistic="none">
+          <svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Paarungen auslosen
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid main-side mt-2">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Paarungen {% if aktuelle_runde %}– Runde {{ aktuelle_runde.nummer }}{% endif %}</h2>
+        <span class="sub">Ergebnisse werden sofort gespeichert</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Brett</th><th>Weiß</th><th>Schwarz</th><th>Ergebnis</th><th class="right">Aktion</th></tr></thead>
+          <tbody>
+            {% for paarung in paarungen %}
+              <tr data-row>
+                <td class="mono">{{ paarung.brett }}</td>
+                <td class="cell-main">{{ paarung.weiss.name|default:"–" }}{% if paarung.weiss.verein %}<div class="cell-sub">{{ paarung.weiss.verein }}</div>{% endif %}</td>
+                <td>{% if paarung.schwarz %}{{ paarung.schwarz.name }}{% if paarung.schwarz.verein %}<div class="cell-sub">{{ paarung.schwarz.verein }}</div>{% endif %}{% else %}<span class="badge badge-neutral">Bye</span>{% endif %}</td>
+                <td>
+                  <select class="input" style="min-width:9rem" data-autosave="1" data-field-name="ergebnis"
+                          data-url="{% url 'tournaments:pairing_result' paarung.pk %}" aria-label="Ergebnis Brett {{ paarung.brett }}">
+                    {% for value, label in ergebnis_choices %}
+                      <option value="{{ value }}" {% if paarung.ergebnis == value %}selected{% endif %}>{{ label|default:"Offen" }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td class="right"><span class="badge badge-neutral" data-punkte="{{ paarung.pk }}">{{ paarung.ergebnis_anzeige }}</span></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5">
+                {% if turnier.teilnehmer_anzahl < 2 %}
+                  {% include "includes/empty_state.html" with icon="users" titel="Noch keine Paarungen möglich" text="Es sind mindestens zwei Anmeldungen nötig." small=True %}
+                {% else %}
+                  {% include "includes/empty_state.html" with icon="swords" titel="Noch keine Runde ausgelost" text="Starten Sie die erste Runde – die Paarung erfolgt nach Schweizer System mit Buchholz-Wertung." small=True %}
+                {% endif %}
+              </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if runden %}
+        <div class="card-foot flex wrap gap-1 center">
+          {% for runde in runden %}
+            <span class="chip">Runde {{ runde.nummer }} · {{ runde.paarungen.count }} Partien{% if runde.offene_partien %} · {{ runde.offene_partien }} offen{% endif %}</span>
+          {% endfor %}
+          {% if turnier.runden.exists %}
+            <form method="post" action="{% url 'tournaments:round_delete' turnier.pk runden.last.nummer %}">
+              {% csrf_token %}
+              <button class="link-btn danger" type="submit" data-kind="ajax" data-optimistic="none"
+                      data-confirm="Letzte Runde ({{ runden.last.nummer }}) inklusive Ergebnisse zurücknehmen?">letzte Runde zurücknehmen</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Teilnehmer:innen</h2><span class="sub">Startgeld-Status per Klick umschaltbar</span></div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Name</th><th>Verein</th><th class="num">DWZ</th><th>Startgeld</th><th>Angemeldet</th><th class="right"></th></tr></thead>
+          <tbody>
+            {% for teilnehmer in teilnehmer %}
+              <tr data-row="teilnehmer-{{ teilnehmer.pk }}" data-row>
+                <td class="cell-main">{{ teilnehmer.name }}{% if teilnehmer.ist_mitglied %} <span class="badge badge-bar">Mitglied</span>{% endif %}{% if teilnehmer.email %}<div class="cell-sub">{{ teilnehmer.email }}</div>{% endif %}</td>
+                <td>{{ teilnehmer.verein|default:"–" }}</td>
+                <td class="num mono">{{ teilnehmer.twz|default:"–" }}</td>
+                <td>
+                  <label class="check" style="display:flex;align-items:center;gap:.5rem">
+                    <input type="checkbox" {% if teilnehmer.startgeld_bezahlt %}checked{% endif %}
+                           data-toggle-url="{% url 'tournaments:participant_toggle_startgeld' teilnehmer.pk %}"
+                           data-toggle-param="startgeld_bezahlt"
+                           aria-label="Startgeld für {{ teilnehmer.name }}">
+                    <span class="badge {% if teilnehmer.startgeld_bezahlt %}badge-bezahlt{% else %}badge-offen{% endif %}" data-startgeld-badge="{{ teilnehmer.pk }}">
+                      <span data-startgeld-text="{{ teilnehmer.pk }}">{{ teilnehmer.startgeld_bezahlt|yesno:"bezahlt,offen" }}</span>
+                    </span>
+                  </label>
+                </td>
+                <td class="cell-sub nowrap">{{ teilnehmer.angemeldet_am|date:"d.m.Y" }}</td>
+                <td class="right">
+                  <form method="post" action="{% url 'tournaments:participant_delete' teilnehmer.pk %}">
+                    {% csrf_token %}
+                    <button class="btn small ghost" type="submit" data-optimistic="remove-row"
+                            data-confirm="{{ teilnehmer.name }} abmelden?">Abmelden</button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="6">{% include "includes/empty_state.html" with icon="users" titel="Noch keine Anmeldungen" text="Tragen Sie Teilnehmer:innen ein oder öffnen Sie die Anmeldung auf der Vereinsseite." small=True %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Teilnehmer:in anmelden</h2></div>
+      <form class="card-body" method="post" action="{% url 'tournaments:participant_create' turnier.pk %}" data-ajax data-ajax-reset>
+        {% csrf_token %}
+        {% include "includes/form_fields.html" with form=form %}
+        <div class="form-actions">
+          <button class="btn block" type="submit"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Anmelden</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Zwischenstand</h2><span class="sub">Punkte &amp; Buchholz</span></div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>#</th><th>Name</th><th>Verein</th><th class="num">Pkt.</th><th class="num">Buch.</th></tr></thead>
+          <tbody data-stand-body>
+            {% for t in stand %}
+              <tr>
+                <td class="mono">{{ t.rang }}</td>
+                <td class="cell-main">{{ t.name }}</td>
+                <td class="cell-sub">{{ t.verein|default:"–" }}</td>
+                <td class="num mono" data-stand-punkte="{{ t.pk }}">{{ t.aktuelle_punkte|floatformat:1 }}</td>
+                <td class="num mono" data-stand-buchholz="{{ t.pk }}">{{ t.aktuelle_buchholz|floatformat:1 }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="muted">Keine Teilnehmer:innen.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

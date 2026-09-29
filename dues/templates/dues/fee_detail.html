@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Beitrag {{ fee.jahr }} · {{ fee.member }}{% endblock %}
+{% block page_title %}Beitrag {{ fee.jahr }} – {{ fee.member }}{% endblock %}
+{% block crumbs %}
+<div class="crumbs">
+  <a href="{% url 'dues:overview' %}?jahr={{ fee.jahr }}">Beiträge {{ fee.jahr }}</a> ›
+  <a href="{% url 'members:member_detail' fee.member.pk %}">{{ fee.member }}</a> › Beitragsposten
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid main-side">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Zahlungen</h2>
+        <span class="sub">Eingegangen: <strong data-payment-total>{{ fee.bezahlter_betrag|floatformat:2 }} €</strong> · Offen: <strong data-payment-open>{{ fee.offener_betrag|floatformat:2 }} €</strong></span>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Datum</th><th>Betrag</th><th>Art</th><th>Notiz</th></tr></thead>
+          <tbody data-payment-rows>
+            {% for zahlung in zahlungen %}
+              <tr>
+                <td class="nowrap">{{ zahlung.datum|date:"d.m.Y" }}</td>
+                <td class="mono">{{ zahlung.betrag|floatformat:2 }} €</td>
+                <td><span class="badge badge-{{ zahlung.art }}">{{ zahlung.get_art_display }}</span></td>
+                <td class="cell-sub">{{ zahlung.notiz|default:"–" }}{% if zahlung.erfasst_von %} · {{ zahlung.erfasst_von.get_username }}{% endif %}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="muted">Noch keine Zahlungen erfasst.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Zahlung buchen</h2><span class="sub">SEPA-Einzug erfolgt bankseitig – hier nur erfassen</span></div>
+      <form class="card-body" method="post" action="{% url 'dues:payment_create' fee.pk %}" data-ajax data-ajax-reset>
+        {% csrf_token %}
+        {% include "includes/form_fields.html" with form=form columns="cols-2" %}
+        <div class="form-actions">
+          <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-check"></use></svg> Zahlung buchen</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Mahnungen</h2><span class="sub">{{ mahnungen|length }} versandt</span></div>
+      <ul class="list">
+        {% for mahnung in mahnungen %}
+          <li>
+            <span class="badge badge-mahnung">{{ mahnung.stufe }}. Mahnung</span>
+            <span class="grow">
+              <span class="title">{{ mahnung.datum|date:"d.m.Y" }}{% if mahnung.gebuehr %} · {{ mahnung.gebuehr|floatformat:2 }} € Gebühr{% endif %}</span>
+              <span class="meta">{{ mahnung.notiz|default:"ohne Notiz" }}{% if mahnung.erstellt_von %} · {{ mahnung.erstellt_von.get_username }}{% endif %}</span>
+            </span>
+            <a class="btn small secondary" href="{% url 'dues:dunning_letter' fee.pk %}">Brief</a>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Noch keine Mahnung erstellt.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Posten</h2></div>
+      <div class="card-body">
+        <div class="flex between center mb-1">
+          <span class="muted">Status</span>
+          <span class="badge badge-{{ fee.status }}" data-fee-badge="{{ fee.pk }}"><span data-fee-status="{{ fee.pk }}">{{ fee.get_status_display }}</span></span>
+        </div>
+        <div class="flex between center mb-1"><span class="muted">Kategorie</span><strong>{{ fee.kategorie_name }}</strong></div>
+        <div class="flex between center mb-1"><span class="muted">Betrag</span><strong class="mono">{{ fee.betrag|floatformat:2 }} €</strong></div>
+        <div class="flex between center mb-1"><span class="muted">Fällig</span><strong>{{ fee.faellig_am|date:"d.m.Y" }}</strong></div>
+        <div class="flex between center mb-2"><span class="muted">Mahnstufe</span><strong data-mahnstufe="{{ fee.pk }}">{% if fee.mahnstufe %}{{ fee.mahnstufe }}. Mahnung{% else %}–{% endif %}</strong></div>
+        <div class="progress {% if fee.offener_betrag %}warn{% else %}success{% endif %}" data-progress="{{ fee.fortschritt_prozent }}"><span style="width:0"></span></div>
+        <div class="cell-sub mt-1">{{ fee.fortschritt_prozent }} % beglichen</div>
+      </div>
+    </div>
+
+    {% if fee.ist_offen %}
+      <div class="card">
+        <div class="card-head"><h2>Mahnen</h2></div>
+        <form class="card-body" method="post" action="{% url 'dues:dunning_create' fee.pk %}" data-ajax data-ajax-reset>
+          {% csrf_token %}
+          {% include "includes/form_fields.html" with form=dunning_form %}
+          <div class="form-actions">
+            <button class="btn gold" type="submit"><svg class="icon icon-sm"><use href="#i-alert"></use></svg> Mahnung erstellen</button>
+            <a class="btn ghost" href="{% url 'dues:dunning_letter' fee.pk %}" target="_blank">Brief ansehen</a>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

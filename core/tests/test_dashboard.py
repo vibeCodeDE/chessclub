@@ -1,101 +1,206 @@
+"""Dashboard: Kennzahlen, Rollen und Badges in der Navigation."""
+
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
+from dues.models import FeeCategory, MembershipFee, Payment
 from members.models import ChangeRequest, Member
+from teams.models import LeagueMatch, Team
 
 
-def make_user(username, group_name=None):
+def make_user(username, gruppe=None):
     user = User.objects.create_user(username, password="x")
-    if group_name:
-        group, _ = Group.objects.get_or_create(name=group_name)
+    if gruppe:
+        group, _ = Group.objects.get_or_create(name=gruppe)
         user.groups.add(group)
     return user
 
 
-def make_member(user=None):
-    return Member.objects.create(
-        vorname="Anna",
-        nachname="Meier",
-        eintrittsdatum=date(2020, 1, 15),
-        email="anna@example.org",
-        user=user,
-    )
-
-
-class DashboardTests(TestCase):
+class VorstandsDashboardTests(TestCase):
     def setUp(self):
-        self.admin = make_user("admin1", "admin")
-
-    def login_admin(self):
-        self.client.login(username="admin1", password="x")
-
-    def test_dashboard_requires_login(self):
-        response = self.client.get("/dashboard/")
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/anmelden/", response.url)
-        self.assertIn("next=/dashboard/", response.url)
-
-    def test_member_is_forbidden(self):
-        make_user("mitglied1", "mitglied")
-        self.client.login(username="mitglied1", password="x")
-        self.assertEqual(self.client.get("/dashboard/").status_code, 403)
-
-    def test_kapitaen_is_forbidden(self):
-        make_user("kapit1", "kapitaen")
-        self.client.login(username="kapit1", password="x")
-        self.assertEqual(self.client.get("/dashboard/").status_code, 403)
-
-    def test_admin_sees_all_tiles(self):
-        self.login_admin()
-        response = self.client.get("/dashboard/")
-        content = response.content.decode()
-        self.assertEqual(response.status_code, 200)
-        for titel in (
-            "Offene Beiträge",
-            "Anstehende Termine",
-            "Offene Änderungswünsche",
-            "Letzte Anmeldungen",
-        ):
-            self.assertIn(titel, content)
-
-    def test_fee_tile_is_placeholder_until_beitragslauf(self):
-        self.login_admin()
-        response = self.client.get("/dashboard/")
-        self.assertContains(response, "Verfügbar nach dem Beitragslauf.")
-
-    def test_change_request_tile_shows_open_count(self):
-        member = make_member()
-        ChangeRequest.objects.create(member=member, feld="telefon", wunschwert="1")
-        ChangeRequest.objects.create(
-            member=member,
-            feld="plz",
-            wunschwert="2",
-            status=ChangeRequest.Status.FREIGEGEBEN,
+        self.admin = make_user("vorstand", "admin")
+        self.client.force_login(self.admin)
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene", betrag=Decimal("90.00"))
+        self.member = Member.objects.create(
+            vorname="Anna", nachname="Meier", eintrittsdatum=date(2026, 1, 8),
+            beitragskategorie=self.kategorie,
         )
-        self.login_admin()
+        self.fee = MembershipFee.objects.create(
+            member=self.member, jahr=date.today().year, kategorie_name="Erwachsene",
+            betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31),
+        )
 
-        response = self.client.get("/dashboard/")
-
-        tile = next(t for t in response.context["tiles"] if t["key"] == "wuensche")
-        self.assertEqual(tile["wert"], 1)
-        self.assertFalse(tile["placeholder"])
-
-    def test_zero_open_requests_is_shown_without_error(self):
-        self.login_admin()
+    def test_kennzahlen_im_kontext(self):
         response = self.client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
-        tile = next(t for t in response.context["tiles"] if t["key"] == "wuensche")
-        self.assertEqual(tile["wert"], 0)
+        uebersicht = response.context["uebersicht"]
+        self.assertEqual(uebersicht["soll"], Decimal("90.00"))
+        self.assertEqual(uebersicht["offen"], Decimal("90.00"))
+        self.assertEqual(uebersicht["offene_anzahl"], 1)
 
-    def test_admin_nav_contains_dashboard_link(self):
-        self.login_admin()
-        content = self.client.get("/").content.decode()
-        self.assertIn("Dashboard", content)
+    def test_offene_posten_werden_aufgelistet(self):
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "Offene Beiträge")
+        self.assertContains(response, "Anna")
+        self.assertContains(response, "90,00 €")
 
-    def test_member_nav_has_no_dashboard_link(self):
-        make_user("mitglied2", "mitglied")
-        self.client.login(username="mitglied2", password="x")
-        content = self.client.get("/").content.decode()
-        self.assertNotIn("Dashboard", content)
+    def test_zahlung_reduziert_offenen_betrag(self):
+        from dues.services import zahlung_erfassen
+
+        zahlung_erfassen(self.fee, betrag=Decimal("90.00"), benutzer=self.admin)
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.context["uebersicht"]["offen"], Decimal("0.00"))
+        self.assertContains(response, "Alle Beiträge bezahlt")
+
+    def test_offene_wuensche_und_badges(self):
+        ChangeRequest.objects.create(
+            member=self.member, feld="telefon", wunschwert="030 123", eingereicht_von=self.admin
+        )
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "Zu erledigen")
+        self.assertContains(response, "030 123")
+        badges = {
+            link["label"]: link["badge"]
+            for sektion in response.context["nav_sektionen"]
+            for link in sektion["links"]
+        }
+        self.assertEqual(badges["Änderungswünsche"], 1)
+        self.assertEqual(badges["Beiträge"], 1)
+
+    def test_kommende_termine_erscheinen(self):
+        team = Team.objects.create(name="1. Mannschaft", liga="Kreisliga", brettanzahl=4)
+        LeagueMatch.objects.create(
+            team=team, datum=date.today(), gegner="SV Test"
+        )
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "SV Test")
+
+
+class KapitaenDashboardTests(TestCase):
+    """PRD §3.8: Beiträge, Zahlungen, Mahnungen, Kasse und Audit-Log sind
+    Vorstandssache. Der Kapitän sieht Spielbetrieb – und keinen Cent."""
+
+    def setUp(self):
+        self.admin = make_user("vorstand", "admin")
+        self.kapitaen = make_user("kapit1", "kapitaen")
+        self.client.force_login(self.kapitaen)
+        self.kategorie = FeeCategory.objects.create(
+            name="Erwachsene", betrag=Decimal("90.00")
+        )
+        self.member = Member.objects.create(
+            vorname="Anna", nachname="Meier",
+            eintrittsdatum=date(2020, 1, 15), beitragskategorie=self.kategorie,
+        )
+        self.fee = MembershipFee.objects.create(
+            member=self.member, jahr=date.today().year, kategorie_name="Erwachsene",
+            betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31),
+        )
+        self.team = Team.objects.create(
+            name="1. Mannschaft",
+            liga="Kreisliga",
+            brettanzahl=4,
+            kapitaen=Member.objects.create(
+                vorname="Karl", nachname="Kapitän",
+                eintrittsdatum=date(2019, 5, 1), user=self.kapitaen,
+            ),
+        )
+
+    def test_keine_finanzkachel_und_kein_exportlink(self):
+        response = self.client.get("/dashboard/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Offene Beiträge")
+        self.assertNotContains(response, "Beitrags-CSV")
+        self.assertNotContains(response, "Beitragslauf")
+        self.assertNotContains(response, "Zahlungen im Monat")
+        self.assertNotContains(response, "Offene Beitragsposten")
+        self.assertNotContains(response, "Kasse")
+        self.assertNotContains(response, "/beitraege/export.csv")
+
+    def test_keine_mitgliederliste_und_kein_auditlog(self):
+        response = self.client.get("/dashboard/")
+
+        self.assertNotContains(response, self.member.nachname)
+        self.assertNotContains(response, "Letzte Aktivitäten")
+        self.assertNotContains(response, "Neue Mitglieder")
+
+    def test_keine_finanzdaten_im_kontext(self):
+        """Nicht nur nicht angezeigt – die Daten werden gar nicht geladen."""
+        response = self.client.get("/dashboard/")
+
+        for schluessel in ("uebersicht", "offene_posten", "kasse", "zahlungen_monat",
+                           "letzte_aktivitaeten", "neue_mitglieder", "offene_wuensche"):
+            self.assertNotIn(schluessel, response.context)
+
+    def test_spielbetrit_sichtbar(self):
+        LeagueMatch.objects.create(team=self.team, datum=date.today(), gegner="SV Test")
+
+        response = self.client.get("/dashboard/")
+
+        self.assertContains(response, "Meine Mannschaften")
+        self.assertContains(response, "1. Mannschaft")
+        self.assertContains(response, "SV Test")
+
+
+class MitgliedDashboardTests(TestCase):
+    def setUp(self):
+        self.user = make_user("p1", "mitglied")
+        self.client.force_login(self.user)
+        self.member = Member.objects.create(
+            vorname="Lena", nachname="Fischer", eintrittsdatum=date(2024, 3, 1), user=self.user
+        )
+
+    def test_eigene_beitraege_erscheinen(self):
+        MembershipFee.objects.create(
+            member=self.member, jahr=2026, kategorie_name="Erwachsene",
+            betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31),
+        )
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Meine Beiträge")
+        self.assertContains(response, "90,00 €")
+        self.assertContains(response, "Offener Beitrag")
+
+    def test_ohne_mitgliedsprofil_kein_fehler(self):
+        self.member.delete()
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_mitglied_sieht_keine_fremden_daten(self):
+        anderer = Member.objects.create(
+            vorname="Fremd", nachname="Person", eintrittsdatum=date(2020, 1, 1)
+        )
+        MembershipFee.objects.create(
+            member=anderer, jahr=2026, kategorie_name="Erwachsene",
+            betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31),
+        )
+        response = self.client.get("/dashboard/")
+        self.assertNotContains(response, "Fremd")
+
+
+class AuditSeitenTests(TestCase):
+    def test_audit_liste_zeigt_eintraege(self):
+        admin = make_user("vorstand", "admin")
+        member = Member.objects.create(
+            vorname="Anna", nachname="Meier", eintrittsdatum=date(2020, 1, 1)
+        )
+        member._changed_by = admin
+        member.telefon = "030 999"
+        member.save()
+        self.client.force_login(admin)
+        response = self.client.get("/audit/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Stammdaten geändert")
+        self.assertContains(response, "030 999")
+
+    def test_globale_suche_findet_treffer(self):
+        admin = make_user("vorstand", "admin")
+        Member.objects.create(vorname="Anna", nachname="Suchmeier", eintrittsdatum=date(2020, 1, 1))
+        self.client.force_login(admin)
+        response = self.client.get("/suche/", {"q": "Suchmeier"})
+        self.assertContains(response, "Suchmeier")
+        response = self.client.get("/suche/", {"q": "gibtesnicht"})
+        self.assertContains(response, "0 Treffer")

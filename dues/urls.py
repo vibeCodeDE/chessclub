@@ -5,30 +5,20 @@ from . import views
 app_name = "dues"
 
 urlpatterns = [
-    path("beitraege/", views.posten_liste, name="posten_liste"),
-    path("beitraege/lauf/", views.beitragslauf, name="beitragslauf"),
-    path("beitraege/zahlungen/", views.zahlungsliste, name="zahlungsliste"),
-    path("beitraege/zahlungen/buchen/", views.zahlung_buchen, name="zahlung_buchen"),
-    path(
-        "beitraege/zahlungen/<int:pk>/storno/",
-        views.zahlung_stornieren,
-        name="zahlung_stornieren",
-    ),
-    path("beitraege/mandate/", views.mandat_anlegen, name="mandat_anlegen"),
-    path(
-        "beitraege/mandate/<int:pk>/status/",
-        views.mandat_status,
-        name="mandat_status",
-    ),
-    path("beitraege/mahnungen/", views.mahnliste, name="mahnliste"),
-    # Platzhalter mit dem in Task 7 geplanten Pfad: Task 7 ersetzt die View
-    # und das Template, nicht die Route. Ein zweiter Pfad mit demselben Namen
-    # wäre später nur eine Reverse-Ambiguität.
-    path("beitraege/mahnungen/<int:pk>/", views.mahnbrief, name="mahnbrief"),
-    path(
-        "beitraege/mahnungen/<int:pk>/setzen/",
-        views.mahnung_setzen,
-        name="mahnung_setzen",
-    ),
-    path("beitraege/export.csv", views.beitraege_export, name="beitraege_export"),
+    path("beitraege/", views.overview, name="overview"),
+    path("beitraege/lauf/", views.run_beitragslauf, name="run_lauf"),
+    path("beitraege/export.csv", views.export, name="export"),
+    path("beitraege/kategorien/", views.category_list, name="category_list"),
+    path("beitraege/kategorien/<int:pk>/bearbeiten/", views.category_update, name="category_update"),
+    path("beitraege/kategorien/<int:pk>/status/", views.category_toggle, name="category_toggle"),
+    path("beitraege/kategorien/<int:pk>/loeschen/", views.category_delete, name="category_delete"),
+    path("beitraege/mandate/", views.mandate_list, name="mandate_list"),
+    path("beitraege/mandate/neu/", views.mandate_create, name="mandate_create"),
+    path("beitraege/mandate/<int:pk>/bearbeiten/", views.mandate_update, name="mandate_update"),
+    path("beitraege/mahnwesen/", views.dunning_list, name="dunning_list"),
+    path("beitraege/mahnwesen/<int:pk>/mahnung/", views.dunning_create, name="dunning_create"),
+    path("beitraege/mahnwesen/<int:pk>/brief/", views.dunning_letter, name="dunning_letter"),
+    path("beitraege/posten/<int:pk>/", views.fee_detail, name="fee_detail"),
+    path("beitraege/posten/<int:pk>/zahlung/", views.payment_create, name="payment_create"),
+    path("mein-beitragskonto/", views.mein_konto, name="mein_konto"),
 ]

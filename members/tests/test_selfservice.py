@@ -158,7 +158,7 @@ class ChangeRequestListAccessTests(TestCase):
     def test_admin_nav_contains_change_requests_link(self):
         make_user("vorstand", "admin")
         self.client.login(username="vorstand", password="x")
-        response = self.client.get("/")
+        response = self.client.get("/dashboard/")
         self.assertContains(response, 'href="/mitglieder/wuensche/"')
 
     def test_list_shows_pending_request_with_current_value(self):

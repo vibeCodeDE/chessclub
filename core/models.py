@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 
@@ -41,7 +40,12 @@ class AuditLog(models.Model):
         return f"{self.zeitpunkt:%Y-%m-%d %H:%M} · {self.aktion}"
 
     def anzeige_wert(self, wert=None):
-        """FK-Werte als Objekt statt roher Datenbank-ID (sonst unlesbar im Admin)."""
+        """FK-Werte als Objekt beschriften – eine Datenbank-ID ist kein Lesewert.
+
+        `kategorie_namen` setzt die Changelist des Audits einmal je Seitenaufruf
+        (siehe ``AuditLogAdmin.get_results``); ohne sie greift derEinzelfall, was
+        in der Detailansicht genau eine Abfrage ist.
+        """
         from dues.models import FeeCategory
 
         if wert is None:
@@ -49,6 +53,33 @@ class AuditLog(models.Model):
         if self.feld != "beitragskategorie" or not wert:
             return wert
         try:
-            return FeeCategory.objects.get(pk=int(wert))
-        except (ObjectDoesNotExist, ValueError):
+            schluessel = int(wert)
+        except (TypeError, ValueError):
             return wert
+        namen = getattr(self, "kategorie_namen", None)
+        if namen is None:
+            kategorien = FeeCategory.objects.all()
+            return next((k for k in kategorien if k.pk == schluessel), wert)
+        return namen.get(schluessel, wert)
+
+
+class TwoFactorDevice(models.Model):
+    """TOTP-Gerät eines Vorstands-Kontos (PRD N1.6)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Benutzer",
+        on_delete=models.CASCADE,
+        related_name="zwei_faktor",
+    )
+    secret = models.CharField("Geheime Zeichenfolge", max_length=64)
+    bestaetigt = models.BooleanField("Bestätigt", default=False)
+    erstellt_am = models.DateTimeField("Erstellt am", auto_now_add=True)
+    letzte_nutzung = models.DateTimeField("Zuletzt genutzt", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Zwei-Faktor-Gerät"
+        verbose_name_plural = "Zwei-Faktor-Geräte"
+
+    def __str__(self):
+        return f"2FA für {self.user.get_username()}"

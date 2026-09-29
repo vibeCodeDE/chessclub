@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditLog
+from .models import AuditLog, TwoFactorDevice
 
 
 @admin.register(AuditLog)
@@ -35,6 +35,20 @@ class AuditLogAdmin(admin.ModelAdmin):
     def alter_wert(self, obj):
         return obj.anzeige_wert(obj.alt_wert)
 
+    def get_results(self, request, queryset, *args, **kwargs):
+        """Lookup-Tabelle Beitragskategorien einmal je Seitenaufruf laden.
+
+        Sonst fragt die Anzeige des alten/neuen Werts je Zeile ab (N+1).
+        """
+        seite, _ = super().get_results(request, queryset, *args, **kwargs)
+        if seite is not None and any(obj.feld == "beitragskategorie" for obj in seite):
+            from dues.models import FeeCategory
+
+            namen = {k.pk: str(k) for k in FeeCategory.objects.all()}
+            for obj in seite:
+                obj.kategorie_namen = namen
+        return seite, _
+
     def has_add_permission(self, request):
         return False
 
@@ -43,3 +57,10 @@ class AuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(TwoFactorDevice)
+class TwoFactorDeviceAdmin(admin.ModelAdmin):
+    list_display = ("user", "bestaetigt", "erstellt_am", "letzte_nutzung")
+    search_fields = ("user__username",)
+    readonly_fields = ("secret", "erstellt_am", "letzte_nutzung")

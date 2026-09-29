@@ -1,0 +1,64 @@
+# Produktivbetrieb: App + PostgreSQL + nächtliches Backup (PRD N2.1/T21)
+#
+# Start:  docker compose -f docker-compose.prod.yml up -d --build
+# Wichtig: Vor dem ersten Start .env.prod anlegen (siehe docs/deployment.md).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: [.env.prod]
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-schachverein}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      POSTGRES_HOST: db
+      DJANGO_SETTINGS_MODULE: "config.production"   # erzwingt Secret-Key und echtes Mail-Backend
+      DJANGO_DEBUG: "0"
+      TWOFA_PFLICHT: "1"
+      SECURE_SSL_REDIRECT: "0"        # im Reverse Proxy auf 1 setzen, sobald TLS aktiv ist
+      SECURE_HSTS_SECONDS: "0"        # nach erfolgreichem TLS-Test z. B. auf 31536000 setzen
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60"
+    ports:
+      - "127.0.0.1:8000:8000"          # nur lokal – davor gehört der TLS-Reverse-Proxy
+    volumes:
+      - static_files:/app/staticfiles
+
+  # Nächtliches Datenbank-Backup mit 30-Tage-Aufbewahrung (PRD N2.1)
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: [.env.prod]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "while true; do
+         ts=$$(date +%Y-%m-%d_%H%M);
+         pg_dump -h db -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" | gzip > /backups/schachverein_$$ts.sql.gz &&
+         echo \"Backup $$ts erstellt\";
+         find /backups -name 'schachverein_*.sql.gz' -mtime +30 -delete;
+         sleep 86400;
+       done"
+
+volumes:
+  db_data:
+  static_files:

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Meine Einsätze{% endblock %}
+{% block page_title %}Meine Einsätze{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ eintraege|length }} Einsätze erfasst</div>{% endblock %}
+
+{% block content %}
+{% if not member %}
+  <div class="card">{% include "includes/empty_state.html" with icon="user" titel="Kein Mitgliedsprofil" text="Ihr Konto ist noch nicht mit einem Mitglied verknüpft." %}</div>
+{% else %}
+  <div class="card">
+    <div class="card-head"><h2>Aufstellungen</h2><span class="sub">Ergebnisse pflegt die Mannschaftsführung</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Datum</th><th>Begegnung</th><th>Brett</th><th>Gegner</th><th>Ergebnis</th></tr></thead>
+        <tbody>
+          {% for eintrag in eintraege %}
+            <tr>
+              <td class="nowrap">{{ eintrag.match.datum|date:"d.m.Y" }}</td>
+              <td class="cell-main">{{ eintrag.match.team.name }} {{ eintrag.match.heimspiel|yesno:"gegen,bei" }} {{ eintrag.match.gegner }}</td>
+              <td><span class="badge badge-bar">Brett {{ eintrag.brett }}</span></td>
+              <td>{{ eintrag.gegner_name|default:"–" }}</td>
+              <td><span class="badge {% if eintrag.ergebnis == '1' %}badge-sieg{% elif eintrag.ergebnis == '0' %}badge-niederlage{% elif eintrag.ergebnis == '0.5' %}badge-remis{% else %}badge-neutral{% endif %}">{{ eintrag.ergebnis_anzeige }}</span></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">{% include "includes/empty_state.html" with icon="swords" titel="Noch keine Einsätze" text="Sobald Sie aufgestellt werden, sehen Sie hier Ihre Bretter und Ergebnisse." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

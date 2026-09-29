@@ -1,0 +1,125 @@
+{% load static %}<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Vereinsverwaltung für den Schachverein: Mitglieder, Beiträge, Spielbetrieb und Turniere.">
+  <title>{% block title %}Dashboard{% endblock %} · {{ club_short }}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  <meta name="theme-color" content="#0d1526">
+  <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="{{ club_short }}">
+  <meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+{% include "includes/sprite.html" %}
+<div class="loading-bar" data-loading-bar aria-hidden="true"></div>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Hauptnavigation">
+    <a class="sidebar-brand" href="{% url 'core:dashboard' %}">
+      <span class="brand-mark" aria-hidden="true">♞</span>
+      <span class="brand-text">
+        <strong>{{ club_short }}</strong>
+        <span>Vereinsverwaltung</span>
+      </span>
+    </a>
+
+    <nav class="sidebar-nav">
+      {% for sektion in nav_sektionen %}
+        <div class="nav-section">
+          {% if sektion.titel %}<div class="nav-section-title">{{ sektion.titel }}</div>{% endif %}
+          {% for link in sektion.links %}
+            {% url link.url_name as link_url %}
+            <a class="nav-link {% if link_url and request.path == link_url %}is-active{% endif %}" href="{{ link_url }}">
+              <svg class="icon"><use href="#i-{{ link.icon }}"></use></svg>
+              <span class="label">{{ link.label }}</span>
+              {% if link.badge %}<span class="nav-badge">{{ link.badge }}</span>{% endif %}
+            </a>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </nav>
+
+    <div class="sidebar-foot">
+      <div><strong style="color:#e2e8f0">{{ club_name }}</strong></div>
+      <div class="mt-1">Angemeldet als {{ user.get_username }} · <span style="text-transform:capitalize">{{ user_role }}</span></div>
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" data-sidebar-close hidden></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" type="button" data-sidebar-toggle aria-label="Navigation öffnen">
+        <svg class="icon"><use href="#i-menu"></use></svg>
+      </button>
+      <div class="topbar-title">
+        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        {% block crumbs %}{% endblock %}
+      </div>
+      <form class="topbar-search" action="{% url 'core:suche' %}" method="get" role="search">
+        <svg class="icon icon-sm"><use href="#i-search"></use></svg>
+        <label class="visually-hidden" for="globale-suche">Suche</label>
+        <input id="globale-suche" type="search" name="q" placeholder="Suchen…" value="{{ request.GET.q|default:'' }}">
+      </form>
+      <div class="dropdown">
+        <button class="user-chip" type="button" data-dropdown-toggle aria-haspopup="true">
+          <span class="avatar" aria-hidden="true">{{ user.get_short_name|default:user.get_username|slice:":2"|upper }}</span>
+          <span class="who">
+            <strong>{{ user.get_full_name|default:user.get_username }}</strong>
+            <span>{{ user_role }}</span>
+          </span>
+          <svg class="icon icon-sm"><use href="#i-chevron-down"></use></svg>
+        </button>
+        <div class="dropdown-panel" data-dropdown-panel>
+          <a href="{% url 'core:dashboard' %}"><svg class="icon icon-sm"><use href="#i-dashboard"></use></svg> Dashboard</a>
+          <a href="{% url 'members:profil' %}"><svg class="icon icon-sm"><use href="#i-user"></use></svg> Mein Profil</a>
+          <a href="{% url 'core:home' %}"><svg class="icon icon-sm"><use href="#i-globe"></use></svg> Vereinsseite</a>
+          <div class="dropdown-divider"></div>
+          <form method="post" action="{% url 'core:logout' %}">
+            {% csrf_token %}
+            <button type="submit"><svg class="icon icon-sm"><use href="#i-logout"></use></svg> Abmelden</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      {% block page_actions %}{% endblock %}
+      {% if messages %}
+        <div data-flash-messages>
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div class="toast-stack" data-toast-stack aria-live="polite" aria-atomic="true"></div>
+
+<div class="modal-backdrop" data-modal-backdrop>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <h3 id="modal-title" data-modal-title>Bestätigen</h3>
+      <button class="icon-btn" type="button" data-modal-close aria-label="Schließen">
+        <svg class="icon"><use href="#i-x"></use></svg>
+      </button>
+    </div>
+    <div class="modal-body" data-modal-body></div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" data-modal-close>Abbrechen</button>
+      <button class="btn danger" type="button" data-modal-confirm>Löschen</button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/app.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

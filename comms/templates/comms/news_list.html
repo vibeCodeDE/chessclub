@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Ankündigungen{% endblock %}
+{% block page_title %}Ankündigungen{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ anzahl_veroeffentlicht }} veröffentlicht · <span data-entwurf-count>{{ anzahl_entwuerfe }}</span> Entwürfe</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Neuigkeiten für die Vereinsseite schreiben – Entwürfe bleiben intern, bis sie veröffentlicht werden.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'core:news_archiv' %}" target="_blank"><svg class="icon icon-sm"><use href="#i-eye"></use></svg> Öffentliche Ansicht</a>
+    <a class="btn" href="{% url 'comms:news_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ankündigung schreiben</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <form class="filters" method="get">
+    <div class="segmented">
+      <a class="{% if not status %}is-active{% endif %}" href="{% url 'comms:news_list' %}">Alle</a>
+      <a class="{% if status == 'veroeffentlicht' %}is-active{% endif %}" href="?status=veroeffentlicht">Veröffentlicht</a>
+      <a class="{% if status == 'entwurf' %}is-active{% endif %}" href="?status=entwurf">Entwürfe</a>
+    </div>
+  </form>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Titel</th><th>Kategorie</th><th>Autor</th><th>Datum</th><th>Status</th><th class="right">Aktionen</th></tr></thead>
+      <tbody>
+        {% for post in posts %}
+          <tr data-row="news-{{ post.pk }}" data-row>
+            <td>
+              <div class="cell-main">{{ post.titel }}</div>
+              <div class="cell-sub">{{ post.auszug|truncatewords:14 }}</div>
+            </td>
+            <td><span class="chip">{{ post.kategorie }}</span></td>
+            <td>{{ post.autor.get_full_name|default:post.autor.get_username|default:"–" }}</td>
+            <td class="nowrap">{{ post.veroeffentlicht_am|date:"d.m.Y H:i"|default:post.erstellt_am|date:"d.m.Y" }}</td>
+            <td>
+              <span class="badge {% if post.veroeffentlicht %}badge-veroeffentlicht{% else %}badge-entwurf{% endif %}" data-news-badge="{{ post.pk }}">
+                <span data-news-status="{{ post.pk }}">{{ post.veroeffentlicht|yesno:"Veröffentlicht,Entwurf" }}</span>
+              </span>
+            </td>
+            <td class="right">
+              <div class="table-actions">
+                <form method="post" action="{% url 'comms:news_toggle' post.pk %}" style="display:inline">
+                  {% csrf_token %}
+                  <button class="btn small {% if post.veroeffentlicht %}secondary{% else %}gold{% endif %}" type="submit"
+                          data-optimistic="none" data-url="{% url 'comms:news_toggle' post.pk %}">
+                    {% if post.veroeffentlicht %}Zurückziehen{% else %}Veröffentlichen{% endif %}
+                  </button>
+                </form>
+                <a class="btn small secondary" href="{% url 'comms:news_update' post.pk %}">Bearbeiten</a>
+                <button class="btn small ghost" type="button" data-optimistic="remove-row"
+                        data-url="{% url 'comms:news_delete' post.pk %}"
+                        data-confirm="„{{ post.titel }}“ löschen?">Löschen</button>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">{% include "includes/empty_state.html" with icon="megaphone" titel="Noch keine Ankündigungen" text="Schreiben Sie die erste Neuigkeit – z. B. den Saisonstart oder Turnierbericht." action_url="/ankuendigungen/neu/" action_label="Ankündigung schreiben" %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

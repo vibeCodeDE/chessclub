@@ -1,89 +1,120 @@
 {% extends "base.html" %}
 
-{% block title %}Mein Profil – Schachverein{% endblock %}
+{% block title %}Mein Profil{% endblock %}
+{% block page_title %}Mein Profil{% endblock %}
+{% block crumbs %}<div class="crumbs">Selbstbedienung · Änderungen werden von der Vorstandschaft geprüft</div>{% endblock %}
 
 {% block content %}
-<h1>Mein Profil</h1>
+<div class="grid main-side">
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Meine Stammdaten</h2><span class="sub">Änderungen bitte über den Wunsch-Workflow</span></div>
+      {% if member %}
+        <div class="card-body">
+          <div class="row-lead mb-2">
+            <span class="avatar" style="width:52px;height:52px;font-size:1.1rem">{{ member.nachname|slice:":1" }}{{ member.vorname|slice:":1" }}</span>
+            <span>
+              <h2 class="mb-0">{{ member.vorname }} {{ member.nachname }}</h2>
+              <span class="cell-sub">Mitglied seit {{ member.eintrittsdatum|date:"d.m.Y" }} · {{ member.get_status_display }}</span>
+            </span>
+          </div>
+          <div class="grid cols-2">
+            <dl class="list">
+              <li><span class="grow"><span class="meta">E-Mail</span><span class="title">{{ member.email|default:"–" }}</span></span></li>
+              <li><span class="grow"><span class="meta">Telefon</span><span class="title">{{ member.telefon|default:"–" }}</span></span></li>
+              <li><span class="grow"><span class="meta">Beitragskategorie</span><span class="title">{{ member.beitragskategorie.name|default:"–" }}</span></span></li>
+            </dl>
+            <dl class="list">
+              <li><span class="grow"><span class="meta">Straße</span><span class="title">{{ member.strasse|default:"–" }}</span></span></li>
+              <li><span class="grow"><span class="meta">PLZ / Ort</span><span class="title">{{ member.plz|default:"–" }} {{ member.ort|default:"" }}</span></span></li>
+              <li><span class="grow"><span class="meta">Rundbrief</span><span class="title">{{ member.email_opt_in|yesno:"erlaubt,nicht erlaubt" }}</span></span></li>
+            </dl>
+          </div>
+        </div>
+      {% else %}
+        {% include "includes/empty_state.html" with icon="user" titel="Kein Mitgliedsprofil hinterlegt" text="Ihr Konto ist noch nicht mit einem Mitglied verknüpft – es liegt noch kein Mitgliedsprofil vor. Bitte wenden Sie sich an die Vorstandschaft." %}
+      {% endif %}
+    </div>
 
-{% if not member %}
-<p>Für dieses Konto ist kein Mitgliedsprofil hinterlegt. Wende dich an die Vorstandschaft, wenn das nicht stimmt.</p>
-{% else %}
-<p><span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span></p>
+    {% if member %}
+      <div class="card">
+        <div class="card-head">
+          <h2>Mein Beitragskonto</h2>
+          <a class="link-btn" href="{% url 'dues:mein_konto' %}">Alle Zahlungen</a>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Jahr</th><th>Kategorie</th><th class="right">Betrag</th><th class="right">Offen</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for fee in posten %}
+                <tr>
+                  <td class="cell-main">{{ fee.jahr }}</td>
+                  <td>{{ fee.kategorie_name }}</td>
+                  <td class="num mono">{{ fee.betrag|floatformat:2 }} €</td>
+                  <td class="num mono">{{ fee.offener_betrag|floatformat:2 }} €</td>
+                  <td><span class="badge badge-{{ fee.status }}">{{ fee.get_status_display }}</span></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5">{% include "includes/empty_state.html" with icon="wallet" titel="Noch keine Beiträge gebucht" text="Die Kasse erzeugt Ihre Posten mit dem nächsten Beitragslauf." small=True %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if mandat %}
+          <div class="card-foot">
+            <span class="chip"><svg class="icon icon-sm"><use href="#i-card"></use></svg> SEPA-Mandat {{ mandat.referenz }} · {{ mandat.iban_kurz }} · {{ mandat.get_status_display }}</span>
+          </div>
+        {% endif %}
+      </div>
 
-<dl>
-  <dt>Name</dt>
-  <dd>{{ member.nachname }}, {{ member.vorname }}</dd>
-  <dt>Geburtsdatum</dt>
-  <dd>{{ member.geburtsdatum|date:"d.m.Y"|default:"—" }}</dd>
-  <dt>Anschrift</dt>
-  <dd>
-    {% if member.strasse %}{{ member.strasse }}, {% endif %}{{ member.plz }} {{ member.ort }}
-    {% if not member.strasse and not member.plz and not member.ort %}—{% endif %}
-  </dd>
-  <dt>E-Mail</dt>
-  <dd>{% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% else %}—{% endif %}</dd>
-  <dt>Telefon</dt>
-  <dd>{{ member.telefon|default:"—" }}</dd>
-  <dt>Eintrittsdatum</dt>
-  <dd>{{ member.eintrittsdatum|date:"d.m.Y" }}</dd>
-</dl>
+      {% if aufstellungen %}
+        <div class="card">
+          <div class="card-head"><h2>Meine Einsätze</h2></div>
+          <ul class="list">
+            {% for eintrag in aufstellungen %}
+              <li>
+                <span class="badge badge-bar">Brett {{ eintrag.brett }}</span>
+                <span class="grow">
+                  <span class="title">{{ eintrag.match.team.name }} – {{ eintrag.match.gegner }}</span>
+                  <span class="meta">{{ eintrag.match.datum|date:"d.m.Y" }} · {{ eintrag.ergebnis_anzeige }}</span>
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
 
-<h2>Änderungswunsch einreichen</h2>
-<p>Deine Stammdaten ändern wir nicht direkt. Reiche einen Wunsch ein – die Vorstandschaft prüft und gibt ihn frei.</p>
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Änderung wünschen</h2></div>
+      <form class="card-body" method="post">
+        {% csrf_token %}
+        {% include "includes/form_fields.html" with form=form %}
+        <div class="form-actions">
+          <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Wunsch einreichen</button>
+        </div>
+        <p class="help mt-1 mb-0">Wir prüfen Ihren Wunsch und übernehmen ihn nach Freigabe – so bleiben die Vereinsdaten konsistent.</p>
+      </form>
+    </div>
 
-<form method="post" action="{% url 'members:profil' %}" class="auth-form">
-  {% csrf_token %}
-  {{ form.non_field_errors }}
-  <p>
-    <label for="{{ form.feld.id_for_label }}">{{ form.feld.label }}</label>
-    {{ form.feld }}
-    {% for error in form.feld.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-  </p>
-  <p>
-    <label for="{{ form.wunschwert.id_for_label }}">{{ form.wunschwert.label }}</label>
-    {{ form.wunschwert }}
-    {% for error in form.wunschwert.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-  </p>
-  <button type="submit">Änderungswunsch einreichen</button>
-</form>
-
-<h2>Meine Änderungswünsche</h2>
-
-<div class="table-wrap">
-  <table class="data">
-    <thead>
-      <tr>
-        <th>Feld</th>
-        <th>Wunschwert</th>
-        <th>Status</th>
-        <th>Eingereicht</th>
-        <th>Entscheidung</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for change_request in change_requests %}
-        <tr>
-          <td>{{ change_request.get_feld_display }}</td>
-          <td>{{ change_request.wunschwert }}</td>
-          <td><span class="badge badge-{{ change_request.status }}">{{ change_request.get_status_display }}</span></td>
-          <td>{{ change_request.eingereicht_am|date:"d.m.Y H:i" }}</td>
-          <td>
-            {% if change_request.entschieden_am %}
-              {{ change_request.get_status_display }} am {{ change_request.entschieden_am|date:"d.m.Y H:i" }}
-              von {{ change_request.entschieden_von|default:"—" }}
-              {% if change_request.kommentar %}<br><em>{{ change_request.kommentar }}</em>{% endif %}
-            {% else %}
-              —
-            {% endif %}
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="5">Noch keine Änderungswünsche eingereicht.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <div class="card">
+      <div class="card-head"><h2>Meine Anträge</h2></div>
+      <ul class="list">
+        {% for wunsch in change_requests %}
+          <li>
+            <span class="grow">
+              <span class="title">{{ wunsch.get_feld_display }} → „{{ wunsch.wunschwert }}“</span>
+              <span class="meta">{{ wunsch.eingereicht_am|date:"d.m.Y" }}{% if wunsch.kommentar %} · {{ wunsch.kommentar }}{% endif %}</span>
+            </span>
+            <span class="badge badge-{{ wunsch.status }}">{{ wunsch.get_status_display }}</span>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Sie haben noch keinen Änderungswunsch eingereicht.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
 </div>
-{% endif %}
 {% endblock %}

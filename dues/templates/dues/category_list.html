@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Beitragskategorien{% endblock %}
+{% block page_title %}Beitragskategorien{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ kategorien|length }} Sätze · {{ aktive_mitglieder }} aktive Mitglieder</div>{% endblock %}
+
+{% block content %}
+<div class="grid main-side">
+  <div class="card">
+    <div class="card-head"><h2>Beitragssätze</h2><span class="sub">Beträge gelten für neue Beitragsläufe</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Kategorie</th><th>Beschreibung</th><th class="right">Beitrag</th><th>Mitglieder</th><th>Aktiv</th><th class="right">Aktionen</th></tr></thead>
+        <tbody>
+          {% for kategorie in kategorien %}
+            <tr data-row="kategorie-{{ kategorie.pk }}" data-row>
+              <td class="cell-main">{{ kategorie.name }}</td>
+              <td class="cell-sub">{{ kategorie.beschreibung|default:"–" }}</td>
+              <td class="num mono">{{ kategorie.betrag|floatformat:2 }} €</td>
+              <td>{{ kategorie.mitglieder_anzahl }}</td>
+              <td>
+                <label class="check" style="display:flex;align-items:center;gap:.5rem">
+                  <input type="checkbox" {% if kategorie.aktiv %}checked{% endif %}
+                         data-toggle-url="{% url 'dues:category_toggle' kategorie.pk %}"
+                         aria-label="Kategorie {{ kategorie.name }} aktiv">
+                  <span class="badge {% if kategorie.aktiv %}badge-aktiv{% else %}badge-neutral{% endif %}" data-kategorie-badge="{{ kategorie.pk }}">
+                    <span data-kategorie-status="{{ kategorie.pk }}">{{ kategorie.aktiv|yesno:"Aktiv,Inaktiv" }}</span>
+                  </span>
+                </label>
+              </td>
+              <td class="right">
+                <div class="table-actions">
+                  <a class="btn small secondary" href="{% url 'dues:category_update' kategorie.pk %}">Bearbeiten</a>
+                  <form method="post" action="{% url 'dues:category_delete' kategorie.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <button class="btn small ghost" type="submit" data-optimistic="remove-row"
+                            data-confirm="Kategorie „{{ kategorie.name }}“ löschen?">Löschen</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">{% include "includes/empty_state.html" with icon="tag" titel="Noch keine Beitragskategorien" text="Legen Sie rechts die erste Kategorie an, z. B. Erwachsene oder Jugendliche." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Neue Kategorie</h2></div>
+    <form class="card-body" method="post" data-ajax data-ajax-reset>
+      {% csrf_token %}
+      {% include "includes/form_fields.html" with form=form %}
+      <div class="form-actions">
+        <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Anlegen</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

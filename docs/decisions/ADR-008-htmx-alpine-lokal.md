@@ -1,7 +1,7 @@
 # ADR-008: HTMX und Alpine.js (lokal) für kleine Interaktionen
 
 ## Status
-Proposed (Umsetzung nach T10, Task T10b)
+Superseded by [ADR-011](ADR-011-eigenes-javascript-statt-htmx.md) (2026-09-29) — die Interaktionen sind mit eigenem JavaScript umgesetzt, ohne HTMX und Alpine.js
 
 ## Date
 2026-09-29

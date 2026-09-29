@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Beiträge {{ jahr }}{% endblock %}
+{% block page_title %}Beiträge {{ jahr }}{% endblock %}
+{% block crumbs %}<div class="crumbs">Beitragslauf, Zahlungen und offene Posten · {{ anzahl_aktive }} aktive Mitglieder</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Beitragslauf ist idempotent: ein zweiter Lauf für dasselbe Jahr legt nichts doppelt an.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'dues:export' %}?jahr={{ jahr }}">
+      <svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV {{ jahr }}
+    </a>
+    <a class="btn secondary" href="{% url 'dues:dunning_list' %}">
+      <svg class="icon icon-sm"><use href="#i-alert"></use></svg> Mahnwesen
+    </a>
+    <button class="btn" type="button" data-dialog-open="#lauf-dialog">
+      <svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Beitragslauf starten
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-4">
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Soll {{ jahr }}</span><span class="stat-icon"><svg class="icon"><use href="#i-euro"></use></svg></span></div>
+    <div class="stat-value">{{ uebersicht.soll|floatformat:2 }} €</div>
+    <div class="stat-foot">{{ uebersicht.anzahl }} Beitragsposten</div>
+  </div>
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Eingegangen</span><span class="stat-icon"><svg class="icon"><use href="#i-check"></use></svg></span></div>
+    <div class="stat-value">{{ uebersicht.bezahlt|floatformat:2 }} €</div>
+    <div class="progress success mt-1" data-progress="{% widthratio uebersicht.bezahlt uebersicht.soll 100 %}"><span style="width:0"></span></div>
+  </div>
+  <div class="stat {% if uebersicht.offen %}accent-warn{% else %}accent-success{% endif %}">
+    <div class="stat-head"><span class="stat-label">Offen</span><span class="stat-icon"><svg class="icon"><use href="#i-wallet"></use></svg></span></div>
+    <div class="stat-value">{{ uebersicht.offen|floatformat:2 }} €</div>
+    <div class="stat-foot">{{ uebersicht.offene_anzahl }} Posten offen</div>
+  </div>
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Mahnungen</span><span class="stat-icon"><svg class="icon"><use href="#i-alert"></use></svg></span></div>
+    <div class="stat-value" data-dunning-count>{{ uebersicht.offene_anzahl }}</div>
+    <div class="stat-foot">{{ anzahl_ohne_kategorie }} aktive ohne Kategorie</div>
+  </div>
+</div>
+
+{% if anzahl_ohne_kategorie %}
+  <div class="alert alert-warning mt-2">
+    <strong>{{ anzahl_ohne_kategorie }} aktive Mitglieder</strong> haben noch keine Beitragskategorie – sie werden beim Beitragslauf übersprungen.
+    <a href="{% url 'members:member_list' %}?status=aktiv">Mitglieder prüfen</a>
+  </div>
+{% endif %}
+
+<div class="card mt-2">
+  <div class="card-head">
+    <h2>Beitragsposten {{ jahr }}</h2>
+    <div class="segmented">
+      {% for j in jahre %}
+        <a class="{% if j == jahr %}is-active{% endif %}" href="?jahr={{ j }}">{{ j }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  <form class="filters" method="get">
+    <input type="hidden" name="jahr" value="{{ jahr }}">
+    <input class="grow" type="search" name="q" value="{{ q }}" placeholder="Mitglied oder Kategorie suchen…">
+    <label class="visually-hidden" for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">Alle Status</option>
+      <option value="offen" {% if status == 'offen' %}selected{% endif %}>Nur offene</option>
+      <option value="bezahlt" {% if status == 'bezahlt' %}selected{% endif %}>Nur bezahlte</option>
+    </select>
+    <button class="btn small" type="submit">Filtern</button>
+  </form>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Mitglied</th><th>Kategorie</th><th class="right">Betrag</th><th class="right">Bezahlt</th><th class="right">Offen</th><th>Status</th><th class="right">Aktion</th></tr>
+      </thead>
+      <tbody>
+        {% for fee in posten %}
+          <tr data-row>
+            <td>
+              <div class="row-lead">
+                <span class="avatar-sm">{{ fee.member.nachname|slice:":1" }}</span>
+                <span>
+                  <span class="name"><a href="{% url 'members:member_detail' fee.member.pk %}">{{ fee.member }}</a></span>
+                  <span class="cell-sub">fällig {{ fee.faellig_am|date:"d.m.Y" }}{% if fee.mahnstufe %} · <span class="badge badge-mahnung">{{ fee.mahnstufe }}. Mahnung</span>{% endif %}</span>
+                </span>
+              </div>
+            </td>
+            <td>{{ fee.kategorie_name }}</td>
+            <td class="num mono">{{ fee.betrag|floatformat:2 }} €</td>
+            <td class="num mono" data-fee-paid="{{ fee.pk }}">{{ fee.bezahlter_betrag|floatformat:2 }} €</td>
+            <td class="num mono" data-fee-open="{{ fee.pk }}">{{ fee.offener_betrag|floatformat:2 }} €</td>
+            <td>
+              <span class="badge badge-{{ fee.status }}" data-fee-badge="{{ fee.pk }}">
+                <span data-fee-status="{{ fee.pk }}">{{ fee.get_status_display }}</span>
+              </span>
+            </td>
+            <td class="right">
+              <div class="table-actions">
+                {% if fee.ist_offen %}
+                  <form method="post" action="{% url 'dues:payment_create' fee.pk %}" data-ajax>
+                    {% csrf_token %}
+                    <input type="hidden" name="betrag" value="{{ fee.offener_betrag }}">
+                    <input type="hidden" name="art" value="ueberweisung">
+                    <button class="btn small" type="submit" data-optimistic="none" data-url="{% url 'dues:payment_create' fee.pk %}">
+                      Voll bezahlt
+                    </button>
+                  </form>
+                {% endif %}
+                <a class="btn small secondary" href="{% url 'dues:fee_detail' fee.pk %}">Details</a>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">
+              {% if q or status %}
+                {% include "includes/empty_state.html" with icon="search" titel="Keine Posten gefunden" text="Andere Filter oder ein anderes Jahr versuchen." %}
+              {% else %}
+                {% include "includes/empty_state.html" with icon="wallet" titel="Noch kein Beitragslauf für {{ jahr }}" text="Starten Sie den Beitragslauf – er erzeugt für alle aktiven Mitglieder mit Kategorie einen Posten." action_url="#" action_label="Beitragslauf starten" %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
+</div>
+
+<div class="dialog modal-backdrop" id="lauf-dialog" data-dialog>
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Beitragslauf starten</h3>
+      <button class="icon-btn" type="button" data-dialog-close aria-label="Schließen"><svg class="icon"><use href="#i-x"></use></svg></button>
+    </div>
+    <form method="post" action="{% url 'dues:run_lauf' %}" data-ajax>
+      {% csrf_token %}
+      <div class="modal-body">
+        <p>Für alle <strong>aktiven Mitglieder mit Beitragskategorie</strong> wird ein Posten erzeugt. Bereits vorhandene Posten bleiben unverändert.</p>
+        {% include "includes/form_fields.html" with form=lauf_form columns="cols-2" %}
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" type="button" data-dialog-close>Abbrechen</button>
+        <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Lauf starten</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

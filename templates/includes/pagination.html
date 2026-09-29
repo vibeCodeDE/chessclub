@@ -1,0 +1,12 @@
+{% comment %}Paginierung. Parameter: page_obj{% endcomment %}
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="Seiten">
+  {% if page_obj.has_previous %}
+    <a href="?{% for key, value in request.GET.items %}{% if key != 'seite' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}seite={{ page_obj.previous_page_number }}">‹ Zurück</a>
+  {% endif %}
+  <span class="info">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }} · {{ page_obj.paginator.count }} Einträge</span>
+  {% if page_obj.has_next %}
+    <a href="?{% for key, value in request.GET.items %}{% if key != 'seite' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}seite={{ page_obj.next_page_number }}">Weiter ›</a>
+  {% endif %}
+</nav>
+{% endif %}

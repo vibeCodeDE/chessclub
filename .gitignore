@@ -6,3 +6,6 @@ staticfiles/
 .pytest_cache/
 *.log
 node_modules/
+.venv/
+backups/
+.env.prod

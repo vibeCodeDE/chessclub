@@ -1,0 +1,11 @@
+{% comment %}Wiederverwendbarer Leerzustand. Parameter: icon, titel, text, action_url, action_label{% endcomment %}
+<div class="empty-state {% if small %}small{% endif %}">
+  <div class="empty-icon"><svg class="icon icon-lg"><use href="#i-{{ icon|default:'sparkle' }}"></use></svg></div>
+  <h3>{{ titel|default:"Noch nichts vorhanden" }}</h3>
+  {% if text %}<p>{{ text }}</p>{% endif %}
+  {% if action_url %}
+    <a class="btn" href="{{ action_url }}">
+      <svg class="icon icon-sm"><use href="#i-plus"></use></svg> {{ action_label|default:"Neu anlegen" }}
+    </a>
+  {% endif %}
+</div>

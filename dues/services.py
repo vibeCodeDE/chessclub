@@ -1,286 +1,117 @@
-"""Fachlogik der Beitragsverwaltung (PRD M2.2, M2.3, M2.4).
+"""Fachlogik Beitragswesen: Beitragslauf, Zahlungen, Mahnwesen (PRD M2)."""
 
-Der Beitragslauf ist bewusst als Service und nicht als View-Logik umgesetzt:
-Planung (:func:`plan_lauf`) und Ausführung (:func:`fuehre_lauf`) brauchen
-dieselbe Regelbasis, und die Ausführung muss auch aus Tests und späteren
-Tasks (Export T10, Kassenbericht T11b) ohne HTTP-Kontext nutzbar sein.
-
-Dasselbe gilt für den Zahlungsstand: :func:`bezahlte_summe`, :func:`offen` und
-:func:`posten_mit_status` sind die einzige Quelle für „was ist noch offen“ —
-Postenliste, Zahlungsliste, Mahnwesen und Kassenbericht lesen dieselben Zahlen.
-"""
-
-from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
-from django.db import models, transaction
-from django.db.models import Sum, Value
-from django.db.models.functions import Coalesce
+from django.db import transaction
+from django.utils import timezone
 
-from core.models import AuditLog
-from members.models import Member
+from cashbook.models import CashEntry
 
-from .models import FeeAmount, FeePost, Payment, SepaMandate
+from .models import DunningLetter, MembershipFee, Payment
 
-
-@dataclass
-class BeitragslaufPlan:
-    """Ergebnis einer Laufplanung — schreibt nichts, bucht nichts."""
-
-    jahr: int
-    passiv_einbezogen: bool = False
-    # Ungespeicherte FeePost-Objekte: so sähen die neuen Posten aus.
-    posten: list = field(default_factory=list)
-    uebersprungen: list = field(default_factory=list)
-    # Nur gefüllt, wenn passiv_einbezogen=False ist: sonst wäre im Lauf-Ergebnis
-    # nicht sichtbar, dass diese Mitglieder gar nicht zur Wahl standen.
-    passiv_ausgenommen: list = field(default_factory=list)
-    fehlende_saetze: list = field(default_factory=list)
-    anzahl_vorhanden: int = 0
-    summe_neu: Decimal = Decimal("0.00")
-    summe_gesamt: Decimal = Decimal("0.00")
-
-    @property
-    def anzahl_neu(self):
-        return len(self.posten)
-
-    @property
-    def lauf_moeglich(self):
-        """Ein Lauf ist blockiert, wenn eine Kategorie keinen Satz für das Jahr hat."""
-        return not self.fehlende_saetze
+STANDARD_FAELLIGKEIT = date(2000, 1, 31)  # Platzhalter; Jahr wird ersetzt
 
 
-def eur(betrag):
-    """Deutsches Zahlenformat — die App ist durchgängig deutschsprachig."""
-    return f"{betrag:.2f}".replace(".", ",") + " €"
+def _faelligkeit(jahr):
+    return date(jahr, 1, 31)
 
 
-def _statuse(passiv_einbezogen):
-    statuse = [Member.Status.AKTIV]
-    if passiv_einbezogen:
-        # „passiv" ist im PRD nicht als beitragspflichtig definiert (M1.3/M1.6),
-        # deshalb entscheidet der Lauf-Dialog darüber — Default: nicht buchen.
-        statuse.append(Member.Status.PASSIV)
-    return statuse
+@transaction.atomic
+def beitragslauf(jahr, faellig_am=None, benutzer=None):
+    """Erzeugt Beitragsposten für alle aktiven Mitglieder mit Kategorie (M2.2).
 
+    Idempotent: ein zweiter Lauf für dasselbe Jahr legt nichts doppelt an.
+    """
+    from members.models import Member
 
-def _mitglieder(statuse):
-    return (
-        Member.objects.filter(status__in=statuse)
+    faellig_am = faellig_am or _faelligkeit(jahr)
+    angelegt = []
+    uebersprungen = 0
+    mitglieder = (
+        Member.objects.filter(status=Member.Status.AKTIV, beitragskategorie__isnull=False)
         .select_related("beitragskategorie")
         .order_by("nachname", "vorname")
     )
-
-
-def plan_lauf(jahr, passiv_einbezogen=False):
-    """Berechnet, was ein Beitragslauf für ``jahr`` erzeugen würde.
-
-    Idempotenz-Zentrale: Mitglieder, die für ``jahr`` bereits einen Posten
-    haben, tauchen nicht in :attr:`BeitragslaufPlan.posten` auf. Ein zweiter
-    Lauf ergänzt daher nur, was fehlt (z. B. ein im Jahresverlauf
-    beigetretenes Mitglied) und erzeugt keine Dubletten.
-    """
-    statuse = _statuse(passiv_einbezogen)
-    saetze = {
-        satz.kategorie_id: satz.betrag
-        for satz in FeeAmount.objects.filter(jahr=jahr)
-    }
-    vorhandene = list(
-        FeePost.objects.filter(jahr=jahr).values_list("member_id", "betrag")
+    vorhandene = set(
+        MembershipFee.objects.filter(jahr=jahr).values_list("member_id", flat=True)
     )
-    vorhandene_ids = {member_id for member_id, _ in vorhandene}
-
-    posten, fehlende_saetze, uebersprungen = [], [], []
-    for member in _mitglieder(statuse):
+    ohne_kategorie = Member.objects.filter(
+        status=Member.Status.AKTIV, beitragskategorie__isnull=True
+    ).count()
+    for member in mitglieder:
+        if member.pk in vorhandene:
+            uebersprungen += 1
+            continue
         kategorie = member.beitragskategorie
-        if kategorie is None:
-            # Ohne Kategorie wird übersprungen — nie mit 0 € gebucht.
-            uebersprungen.append(member)
-            continue
-        if member.pk in vorhandene_ids:
-            continue
-        betrag = saetze.get(kategorie.pk)
-        if betrag is None:
-            if kategorie not in fehlende_saetze:
-                fehlende_saetze.append(kategorie)
-            continue
-        posten.append(
-            FeePost(member=member, jahr=jahr, kategorie=kategorie, betrag=betrag)
-        )
-
-    passiv_ausgenommen = []
-    if not passiv_einbezogen:
-        passiv_ausgenommen = list(
-            Member.objects.filter(status=Member.Status.PASSIV)
-            .order_by("nachname", "vorname")
-        )
-
-    fehlende_saetze.sort(key=lambda kategorie: kategorie.bezeichnung)
-    return BeitragslaufPlan(
-        jahr=jahr,
-        passiv_einbezogen=passiv_einbezogen,
-        posten=posten,
-        uebersprungen=uebersprungen,
-        passiv_ausgenommen=passiv_ausgenommen,
-        fehlende_saetze=fehlende_saetze,
-        anzahl_vorhanden=len(vorhandene_ids),
-        summe_neu=sum((posten_.betrag for posten_ in posten), Decimal("0.00")),
-        summe_gesamt=sum((betrag for _, betrag in vorhandene), Decimal("0.00"))
-        + sum((posten_.betrag for posten_ in posten), Decimal("0.00")),
-    )
-
-
-def _fehlermeldung(plan):
-    return ValidationError(
-        [
-            f"Für die Kategorie „{kategorie.bezeichnung}“ fehlt der Beitragssatz "
-            f"für {plan.jahr}. Der Lauf wurde abgebrochen, damit keine 0-€-Posten "
-            "entstehen — bitte den Satz im Django-Admin nachtragen."
-            for kategorie in plan.fehlende_saetze
-        ]
-    )
-
-
-def fuehre_lauf(jahr, benutzer=None, passiv_einbezogen=False):
-    """Legt je Mitglied einen Beitragsposten für ``jahr`` an (PRD M2.2).
-
-    Bricht mit :class:`~django.core.exceptions.ValidationError` ab, wenn eine
-    beteiligte Kategorie keinen Satz für ``jahr`` hat. In dem Fall wird
-    **nichts** gebucht — auch nicht teilweise.
-    """
-    with transaction.atomic():
-        plan = plan_lauf(jahr, passiv_einbezogen=passiv_einbezogen)
-        if not plan.lauf_moeglich:
-            raise _fehlermeldung(plan)
-
-        erzeugte = [
-            FeePost.objects.create(
-                member=posten_.member,
+        angelegt.append(
+            MembershipFee(
+                member=member,
                 jahr=jahr,
-                kategorie=posten_.kategorie,
-                betrag=posten_.betrag,
+                kategorie_name=kategorie.name,
+                betrag=kategorie.betrag,
+                faellig_am=faellig_am,
             )
-            for posten_ in plan.posten
-        ]
-        plan.posten = erzeugte
-
-        if erzeugte:
-            # Sammelaktion: eine Zeile im Audit-Log statt einer je Mitglied
-            # (vgl. „Stammdaten geändert" in core/signals.py).
-            AuditLog.objects.create(
-                benutzer=benutzer,
-                aktion="Beitragslauf ausgeführt",
-                text=(
-                    f"Jahr {jahr}: {len(erzeugte)} Posten über "
-                    f"{eur(plan.summe_neu)} erzeugt, "
-                    f"{len(plan.uebersprungen)} übersprungen (ohne Kategorie), "
-                    f"{len(plan.passiv_ausgenommen)} passiv nicht einbezogen, "
-                    f"{plan.anzahl_vorhanden} bereits vorhanden."
-                ),
-            )
-    return plan
+        )
+    MembershipFee.objects.bulk_create(angelegt)
+    return {
+        "angelegt": len(angelegt),
+        "uebersprungen": uebersprungen,
+        "ohne_kategorie": ohne_kategorie,
+        "summe": sum((fee.betrag for fee in angelegt), Decimal("0.00")),
+        "jahr": jahr,
+    }
 
 
-class PostenStatus(models.TextChoices):
-    """Zahlungsstand eines Postens — abgeleitet, nie gespeichert."""
-
-    UNBEZAHLT = "unbezahlt", "Unbezahlt"
-    TEILBEZAHLT = "teilbezahlt", "Teilbezahlt"
-    BEZAHLT = "bezahlt", "Bezahlt"
-    GUTSCHRIFT = "gutschrift", "Gutschrift"
-
-
-_BADGE = {
-    PostenStatus.UNBEZAHLT: "badge-unbezahlt",
-    PostenStatus.TEILBEZAHLT: "badge-offen",
-    PostenStatus.BEZAHLT: "badge-bezahlt",
-    PostenStatus.GUTSCHRIFT: "badge-gutschrift",
-}
-
-# Für Coalesce/Annotationen: ein Summenfeld über Zahlungen braucht einen Typ.
-_BETRAG = models.DecimalField(max_digits=12, decimal_places=2)
-
-# Name der Annotation — die Listen lesen damit die gezahlte Summe, ohne
-# je Posten nachzufragen.
-SUMME = "bezahlt_summe"
-
-
-def hat_sepa_mandat(member):
-    """Hat das Mitglied ein Mandat, das einen Einzug trägt (PRD M2.3)?"""
-    return SepaMandate.objects.filter(
-        member=member, status=SepaMandate.Status.AKTIV
-    ).exists()
+@transaction.atomic
+def zahlung_erfassen(fee, betrag, datum=None, art=Payment.Art.UEBERWEISUNG, notiz="", benutzer=None):
+    """Bucht eine Zahlung und gleicht Status + Kassenbuch ab (M2.3b/M2.5)."""
+    betrag = Decimal(str(betrag)).quantize(Decimal("0.01"))
+    zahlung = Payment.objects.create(
+        fee=fee,
+        betrag=betrag,
+        datum=datum or timezone.localdate(),
+        art=art,
+        notiz=notiz,
+        erfasst_von=benutzer,
+    )
+    fee.status_aktualisieren()
+    CashEntry.objects.create(
+        art=CashEntry.Art.EINNAHME,
+        kategorie=CashEntry.Kategorie.BEITRAEGE,
+        betrag=betrag,
+        datum=zahlung.datum,
+        beschreibung=f"Beitrag {fee.jahr} – {fee.member}",
+        belegnummer=f"BEITRAG-{fee.jahr}-{fee.member_id}",
+        erfasst_von=benutzer,
+    )
+    return zahlung
 
 
-def bezahlte_summe(posten):
-    """Summe aller Zahlungen des Postens inklusive Stornos.
+@transaction.atomic
+def mahnung_erstellen(fee, gebuehr=Decimal("0.00"), notiz="", benutzer=None):
+    """Erhöht die Mahnstufe (max. 2) und protokolliert die Mahnung (M2.4)."""
+    stufe = min(fee.mahnstufe + 1, 2)
+    fee.mahnstufe = stufe
+    fee.letzte_mahnung_am = timezone.localdate()
+    fee.save(update_fields=["mahnstufe", "letzte_mahnung_am"])
+    return DunningLetter.objects.create(
+        fee=fee,
+        stufe=stufe,
+        gebuehr=Decimal(str(gebuehr or "0.00")),
+        notiz=notiz,
+        erstellt_von=benutzer,
+    )
 
-    Nutzt eine vorhandene Annotation, damit Listen ohne N+1 auskommen; sonst
-    wird einmal nachsummiert (Weg aus Tests und Spät-Auswertungen).
-    """
-    vorberechnet = getattr(posten, SUMME, None)
-    if vorberechnet is not None:
-        return vorberechnet
+
+def mahntext(dunning):
+    """Textbausteine für den Mahnbrief – abhängig von der Mahnstufe."""
+    if dunning.stufe >= 2:
+        return (
+            "trotz unserer ersten Mahnung konnten wir keinen Zahlungseingang "
+            "feststellen. Wir bitten Sie letztmalig, den offenen Betrag zu begleichen."
+        )
     return (
-        Payment.objects.filter(post=posten).aggregate(s=Sum("betrag"))["s"]
-        or Decimal("0.00")
+        "sicherlich haben Sie unsere Zahlungsbitte übersehen. Wir bitten Sie "
+        "freundlich, den offenen Betrag innerhalb von 14 Tagen zu überweisen."
     )
-
-
-def offen(posten):
-    """Offener Betrag des Postens; negativ = Gutschrift.
-
-    Eine Überzahlung wird bewusst **nicht** gekappt: der überschießende Betrag
-    bleibt als offene Gutschrift sichtbar (T9-Acceptance).
-    """
-    return posten.betrag - bezahlte_summe(posten)
-
-
-def posten_status(posten):
-    """Zahlungsstatus aus Postenbetrag und gezahlter Summe."""
-    summe = bezahlte_summe(posten)
-    if summe > posten.betrag:
-        return PostenStatus.GUTSCHRIFT
-    if summe == posten.betrag:
-        return PostenStatus.BEZAHLT
-    if summe == 0:
-        return PostenStatus.UNBEZAHLT
-    return PostenStatus.TEILBEZAHLT
-
-
-def posten_mit_status(jahr):
-    """Posten eines Jahres mit Zahlungsstand — eine Abfrage, keine N+1.
-
-    Liefert Dicts, damit die Templates ohne weitere Logik auskommen.
-    """
-    posten = (
-        FeePost.objects.filter(jahr=jahr)
-        .select_related("member", "kategorie")
-        .annotate(
-            **{
-                SUMME: Coalesce(
-                    Sum("zahlungen__betrag"), Value(Decimal("0.00")), output_field=_BETRAG
-                )
-            }
-        )
-        .order_by("member__nachname", "member__vorname")
-    )
-    zeilen = []
-    for post in posten:
-        status = posten_status(post)
-        zeilen.append(
-            {
-                "post": post,
-                "member": post.member,
-                "kategorie": post.kategorie,
-                "jahr": post.jahr,
-                "betrag": post.betrag,
-                "bezahlt": post.bezahlt_summe,
-                "offen": post.betrag - post.bezahlt_summe,
-                "status": status,
-                "status_label": PostenStatus(status).label,
-                "status_klasse": _BADGE[status],
-            }
-        )
-    return zeilen
