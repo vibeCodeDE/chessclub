@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titel }}{% endblock %}
+{% block page_title %}{{ titel }}{% endblock %}
+{% block crumbs %}
+<div class="crumbs">
+  <a href="{% url 'members:member_list' %}">Mitglieder</a>
+  {% if member %} › <a href="{% url 'members:member_detail' member.pk %}">{{ member }}</a>{% endif %} › bearbeiten
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>Stammdaten</h2>
+    <span class="sub">Pflichtfelder sind mit * markiert</span>
+  </div>
+  <form class="card-body" method="post" data-ajax data-ajax-reset>
+    {% csrf_token %}
+    {% include "includes/form_fields.html" with form=form columns="cols-2" %}
+    <div class="form-actions">
+      <button class="btn" type="submit">
+        <svg class="icon icon-sm"><use href="#i-check"></use></svg> Speichern
+      </button>
+      <a class="btn ghost" href="{% if member %}{% url 'members:member_detail' member.pk %}{% else %}{% url 'members:member_list' %}{% endif %}">Abbrechen</a>
+    </div>
+  </form>
+</div>
+
+{% if member %}
+  <div class="card">
+    <div class="card-head"><h2>Status &amp; Historie</h2></div>
+    <ul class="list">
+      {% for wechsel in status_history %}
+        <li>
+          <span class="badge badge-{{ wechsel.nach }}">{{ wechsel.get_nach_display }}</span>
+          <span class="grow"><span class="meta">geändert am {{ wechsel.zeitpunkt|date:"d.m.Y H:i" }}{% if wechsel.geaendert_von %} von {{ wechsel.geaendert_von.get_username }}{% endif %}</span></span>
+          <span class="cell-sub">vorher: {{ wechsel.get_von_display }}</span>
+        </li>
+      {% empty %}
+        <li class="muted" style="padding:1rem">Noch keine Statuswechsel protokolliert.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Suche{% endblock %}
+{% block page_title %}Suche{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ treffer }} Treffer für „{{ begriff }}“</div>{% endblock %}
+
+{% block content %}
+<form class="card card-body" method="get" style="margin-bottom:1rem">
+  <div class="flex gap-1 wrap">
+    <input class="input grow" type="search" name="q" value="{{ begriff }}" placeholder="Mitglieder, Turniere, Ankündigungen…" autofocus>
+    <button class="btn" type="submit">Suchen</button>
+  </div>
+</form>
+
+{% if begriff %}
+  <div class="grid main-side">
+    <div>
+      <div class="card">
+        <div class="card-head"><h2>Mitglieder</h2><span class="sub">{{ ergebnisse.mitglieder|length }}</span></div>
+        <ul class="list">
+          {% for member in ergebnisse.mitglieder %}
+            <li>
+              <span class="avatar-sm">{{ member.nachname|slice:":1" }}</span>
+              <span class="grow"><span class="title"><a href="{% url 'members:member_detail' member.pk %}">{{ member }}</a></span>
+              <span class="meta">{{ member.email|default:"keine E-Mail" }} · {{ member.get_status_display }}</span></span>
+            </li>
+          {% empty %}
+            <li class="muted" style="padding:1rem">Keine Mitglieder gefunden.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Turniere</h2><span class="sub">{{ ergebnisse.turniere|length }}</span></div>
+        <ul class="list">
+          {% for turnier in ergebnisse.turniere %}
+            <li>
+              <span class="grow"><span class="title">{{ turnier.name }}</span>
+              <span class="meta">{{ turnier.datum|date:"d.m.Y" }} · {{ turnier.get_status_display }}</span></span>
+              <a class="btn small secondary" href="{% url 'tournaments:manage_detail' turnier.pk %}">Öffnen</a>
+            </li>
+          {% empty %}
+            <li class="muted" style="padding:1rem">Keine Turniere gefunden.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Ankündigungen</h2><span class="sub">{{ ergebnisse.news|length }}</span></div>
+      <ul class="list">
+        {% for post in ergebnisse.news %}
+          <li>
+            <span class="grow"><span class="title">{{ post.titel }}</span>
+            <span class="meta">{{ post.veroeffentlicht|yesno:"veröffentlicht,Entwurf" }}</span></span>
+            <span class="badge {% if post.veroeffentlicht %}badge-veroeffentlicht{% else %}badge-entwurf{% endif %}">{{ post.veroeffentlicht|yesno:"live,Entwurf" }}</span>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Keine Ankündigungen gefunden.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% else %}
+  <div class="card">{% include "includes/empty_state.html" with icon="search" titel="Wonach suchen Sie?" text="Geben Sie einen Namen, Turniertitel oder Begriff ein." %}</div>
+{% endif %}
+{% endblock %}

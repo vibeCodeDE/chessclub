@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Ligatabellen{% endblock %}
+{% block page_title %}Ligatabellen{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ anzahl_ligen }} Ligen · berechnet aus allen gespielten Begegnungen</div>{% endblock %}
+
+{% block content %}
+{% for liga, zeilen in ligen.items %}
+  <div class="card">
+    <div class="card-head"><h2>{{ liga }}</h2><span class="sub">{{ zeilen|length }} Mannschaften</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Platz</th><th>Mannschaft</th><th class="num">Spiele</th><th class="num">Mannschaftspunkte</th><th class="num">Brettpunkte</th><th class="num">Diff.</th></tr></thead>
+        <tbody>
+          {% for zeile in zeilen %}
+            <tr class="{% if zeile.eigene_mannschaft %}row-warn{% endif %}">
+              <td class="mono">{{ zeile.platz }}</td>
+              <td class="cell-main">{{ zeile.name }}{% if zeile.eigene_mannschaft %} <span class="badge badge-bar">wir</span>{% endif %}</td>
+              <td class="num mono">{{ zeile.spiele }}</td>
+              <td class="num mono">{{ zeile.mannschaftspunkte }}</td>
+              <td class="num mono">{{ zeile.brettpunkte|floatformat:1 }}</td>
+              <td class="num mono">{{ zeile.brettdifferenz|floatformat:1 }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">{% include "includes/empty_state.html" with icon="table" titel="Noch keine Ergebnisse" text="Sobald Ergebnisse erfasst sind, berechnet sich die Tabelle automatisch." small=True %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% empty %}
+  <div class="card">{% include "includes/empty_state.html" with icon="table" titel="Keine Ligen vorhanden" text="Ordnen Sie Ihren Mannschaften Ligen zu – danach werden Tabellen automatisch berechnet." action_url="/mannschaften/neu/" action_label="Mannschaft anlegen" %}</div>
+{% endfor %}
+{% endblock %}

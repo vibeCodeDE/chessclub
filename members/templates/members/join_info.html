@@ -1,0 +1,69 @@
+{% extends "public_base.html" %}
+
+{% block title %}Mitglied werden – {{ club_short }}{% endblock %}
+
+{% block content %}
+<div class="public-hero" style="padding:2rem 0 2.2rem">
+  <div class="public-wrap">
+    <h1>Mitglied werden</h1>
+    <p>Ob Einsteiger:in oder Turnierspieler:in – beim {{ club_name }} findest du Gleichgesinnte, Training und Mannschaftsspielbetrieb.</p>
+  </div>
+</div>
+
+<div class="public-wrap" style="padding-top:1.6rem">
+  <div class="grid main-side">
+    <div>
+      <div class="card">
+        <div class="card-head"><h2>Beitragssätze</h2><span class="sub">{{ aktive_mitglieder }} aktive Mitglieder</span></div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Kategorie</th><th>Beschreibung</th><th class="right">Beitrag / Jahr</th></tr></thead>
+            <tbody>
+              {% for kategorie in kategorien %}
+                <tr>
+                  <td class="cell-main">{{ kategorie.name }}</td>
+                  <td class="cell-sub">{{ kategorie.beschreibung|default:"–" }}</td>
+                  <td class="right mono">{{ kategorie.betrag|floatformat:2 }} €</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3">{% include "includes/empty_state.html" with icon="tag" titel="Beitragssätze in Vorbereitung" text="Die Beitragsordnung wird gerade aktualisiert – bitte direkt bei der Vorstandschaft nachfragen." small=True %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot">Der Beitrag wird per SEPA-Lastschrift oder Überweisung eingezogen. Familien und Jugendliche erhalten Ermäßigungen.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>So läuft der Einstieg</h2></div>
+        <div class="card-body">
+          <ul class="timeline">
+            <li><div><strong>Vorbeikommen &amp; Probespiel</strong></div><div class="cell-sub">Donnerstags ab 19:00 Uhr im Vereinsheim – ohne Anmeldung.</div></li>
+            <li><div><strong>Aufnahmeantrag ausfüllen</strong></div><div class="cell-sub">Am Vereinsabend oder per E-Mail an {{ club_contact }}.</div></li>
+            <li><div><strong>Beitragszuordnung</strong></div><div class="cell-sub">Die Vorstandschaft legt Kategorie und Zahlungsweg fest.</div></li>
+            <li><div><strong>Mitspielen</strong></div><div class="cell-sub">Training, Mannschaftskämpfe und Vereinsturniere.</div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-head"><h2>Kontakt &amp; Zeiten</h2></div>
+        <div class="card-body">
+          <p><strong>Vereinsabend</strong><br>jeden Donnerstag, 19:00–23:00 Uhr</p>
+          <p><strong>Jugendtraining</strong><br>freitags, 17:30–19:00 Uhr</p>
+          <p class="mb-0"><strong>Kontakt</strong><br><a href="mailto:{{ club_contact }}">{{ club_contact }}</a></p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Schon Mitglied?</h2></div>
+        <div class="card-body">
+          <p>Im internen Bereich siehst du deinen Beitragsstand, deine Einsätze und kannst Änderungen beantragen.</p>
+          <a class="btn block" href="{% url 'core:login' %}">Anmelden</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

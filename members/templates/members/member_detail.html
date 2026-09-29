@@ -1,60 +1,201 @@
 {% extends "base.html" %}
 
-{% block title %}{{ member.nachname }}, {{ member.vorname }} – Schachverein{% endblock %}
+{% block title %}{{ member }}{% endblock %}
+{% block page_title %}{{ member }}{% endblock %}
+{% block crumbs %}
+<div class="crumbs"><a href="{% url 'members:member_list' %}">Mitglieder</a> › {{ member.nachname }}, {{ member.vorname }}</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Mitglied seit {{ member.eintrittsdatum|date:"d.m.Y" }}{% if member.beitragskategorie %} · {{ member.beitragskategorie.name }}{% endif %}</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'core:dsgvo_auskunft' member.pk %}">
+      <svg class="icon icon-sm"><use href="#i-shield"></use></svg> Datenauskunft (DSGVO)
+    </a>
+    <a class="btn secondary" href="{% url 'core:dsgvo_pdf' member.pk %}">
+      <svg class="icon icon-sm"><use href="#i-download"></use></svg> PDF
+    </a>
+    <a class="btn secondary" href="{% url 'members:member_update' member.pk %}">
+      <svg class="icon icon-sm"><use href="#i-edit"></use></svg> Bearbeiten
+    </a>
+    {% if member.status != 'ausgetreten' %}
+      <form method="post" action="{% url 'members:member_delete' member.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button class="btn danger" type="submit"
+                data-confirm="Das Mitglied wird auf „ausgetreten“ gesetzt. Die Daten bleiben für Aufbewahrungsfristen erhalten. Fortfahren?"
+                data-confirm-title="Austritt erfassen"
+                data-confirm-button="Austritt erfassen">Austritt erfassen</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
 
 {% block content %}
-<p><a href="{% url 'members:member_list' %}">← Zur Mitgliederliste</a></p>
-
-<h1>{{ member.vorname }} {{ member.nachname }}</h1>
-
-<p><span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span></p>
-
-<dl>
-  <dt>Geburtsdatum</dt>
-  <dd>{{ member.geburtsdatum|date:"d.m.Y"|default:"—" }}</dd>
-  <dt>Anschrift</dt>
-  <dd>
-    {% if member.strasse %}{{ member.strasse }}, {% endif %}{{ member.plz }} {{ member.ort }}
-    {% if not member.strasse and not member.plz and not member.ort %}—{% endif %}
-  </dd>
-  <dt>E-Mail</dt>
-  <dd>{% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% else %}—{% endif %}</dd>
-  <dt>Telefon</dt>
-  <dd>{{ member.telefon|default:"—" }}</dd>
-  <dt>Eintrittsdatum</dt>
-  <dd>{{ member.eintrittsdatum|date:"d.m.Y" }}</dd>
-  <dt>Austrittsdatum</dt>
-  <dd>{{ member.austrittsdatum|date:"d.m.Y"|default:"—" }}</dd>
-  <dt>Benutzerkonto</dt>
-  <dd>{{ member.user|default:"—" }}</dd>
-</dl>
-
-<h2>Statusverlauf</h2>
-
-<div class="table-wrap">
-  <table class="data">
-    <thead>
-      <tr>
-        <th>Wann</th>
-        <th>Von</th>
-        <th>Nach</th>
-        <th>Geändert von</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for change in status_history %}
-        <tr>
-          <td>{{ change.zeitpunkt|date:"d.m.Y H:i" }}</td>
-          <td>{{ change.get_von_display }}</td>
-          <td>{{ change.get_nach_display }}</td>
-          <td>{{ change.geaendert_von|default:"—" }}</td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="4">Noch keine Statusänderungen.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="grid cols-4">
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Status</span><span class="stat-icon"><svg class="icon"><use href="#i-user"></use></svg></span></div>
+    <div class="stat-value" style="font-size:1.15rem"><span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span></div>
+    <div class="stat-foot">E-Mail-Rundbrief: {{ member.email_opt_in|yesno:"erlaubt,abgelehnt" }}</div>
+  </div>
+  <div class="stat {% if offene_posten %}accent-warn{% else %}accent-success{% endif %}">
+    <div class="stat-head"><span class="stat-label">Offen</span><span class="stat-icon"><svg class="icon"><use href="#i-wallet"></use></svg></span></div>
+    <div class="stat-value">{% for fee in offene_posten %}{{ fee.offener_betrag|floatformat:2 }} €{% if not forloop.last %} + {% endif %}{% empty %}0,00 €{% endfor %}</div>
+    <div class="stat-foot">{{ posten|length }} Beitragsposten erfasst</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">SEPA-Mandat</span><span class="stat-icon"><svg class="icon"><use href="#i-card"></use></svg></span></div>
+    <div class="stat-value" style="font-size:1.15rem">
+      {% if mandat %}<span class="badge badge-{{ mandat.status }}">{{ mandat.get_status_display }}</span>{% else %}<span class="badge badge-neutral">keins</span>{% endif %}
+    </div>
+    <div class="stat-foot">{% if mandat %}{{ mandat.iban_kurz }}{% else %}Überweisung/Barzahlung{% endif %}</div>
+  </div>
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Einsätze</span><span class="stat-icon"><svg class="icon"><use href="#i-swords"></use></svg></span></div>
+    <div class="stat-value">{{ aufstellungen|length }}</div>
+    <div class="stat-foot">{{ turniere|length }} Turnierteilnahmen</div>
+  </div>
 </div>
+
+<div class="card mt-2">
+  <div class="tabs">
+    <a class="is-active" href="#stammdaten">Stammdaten</a>
+    <a href="#beitraege">Beiträge</a>
+    <a href="#spielbetrieb">Spielbetrieb</a>
+    <a href="#verlauf">Statusverlauf &amp; Protokoll</a>
+  </div>
+
+  <div class="card-body" id="stammdaten">
+    <h2>Stammdaten</h2>
+    <div class="grid cols-2">
+      <dl class="list">
+        <li><span class="grow"><span class="meta">E-Mail</span><span class="title">{% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% else %}–{% endif %}</span></span></li>
+        <li><span class="grow"><span class="meta">Telefon</span><span class="title">{{ member.telefon|default:"–" }}</span></span></li>
+        <li><span class="grow"><span class="meta">Geburtsdatum</span><span class="title">{{ member.geburtsdatum|date:"d.m.Y"|default:"–" }}</span></span></li>
+      </dl>
+      <dl class="list">
+        <li><span class="grow"><span class="meta">Anschrift</span><span class="title">{% if member.strasse %}{{ member.strasse }}, {% endif %}{{ member.plz }} {{ member.ort|default:"–" }}</span></span></li>
+        <li><span class="grow"><span class="meta">Beitragskategorie</span><span class="title">{{ member.beitragskategorie.name|default:"nicht zugeordnet" }}</span></span></li>
+        <li><span class="grow"><span class="meta">Austrittsdatum</span><span class="title">{{ member.austrittsdatum|date:"d.m.Y"|default:"–" }}</span></span></li>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="beitraege">
+  <div class="card-head">
+    <h2>Beiträge</h2>
+    <a class="link-btn" href="{% url 'dues:overview' %}?q={{ member.nachname }}">In der Beitragsübersicht öffnen</a>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Jahr</th><th>Kategorie</th><th class="right">Betrag</th><th class="right">Bezahlt</th><th>Status</th><th>Zahlungen</th></tr></thead>
+      <tbody>
+        {% for fee in posten %}
+          <tr>
+            <td class="cell-main">{{ fee.jahr }}</td>
+            <td>{{ fee.kategorie_name }}</td>
+            <td class="num mono">{{ fee.betrag|floatformat:2 }} €</td>
+            <td class="num mono">{{ fee.bezahlter_betrag|floatformat:2 }} €</td>
+            <td><span class="badge badge-{{ fee.status }}">{{ fee.get_status_display }}</span></td>
+            <td class="cell-sub">
+              {% for zahlung in fee.zahlungen.all %}
+                {{ zahlung.datum|date:"d.m.Y" }} · {{ zahlung.betrag|floatformat:2 }} € ({{ zahlung.get_art_display }}){% if not forloop.last %}<br>{% endif %}
+              {% empty %}–{% endfor %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">{% include "includes/empty_state.html" with icon="wallet" titel="Keine Beitragsposten" text="Starten Sie den Beitragslauf, um für alle aktiven Mitglieder Posten zu erzeugen." small=True %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" id="spielbetrieb">
+  <div class="card-head"><h2>Spielbetrieb</h2><span class="sub">Aufstellungen und Turnierteilnahmen</span></div>
+  <div class="grid cols-2">
+    <div>
+      <ul class="list">
+        {% for eintrag in aufstellungen %}
+          <li>
+            <span class="badge badge-bar">Brett {{ eintrag.brett }}</span>
+            <span class="grow">
+              <span class="title">{{ eintrag.match.team.name }} – {{ eintrag.match.gegner }}</span>
+              <span class="meta">{{ eintrag.match.datum|date:"d.m.Y" }} · {{ eintrag.ergebnis_anzeige }}</span>
+            </span>
+            <a class="btn small ghost" href="{% url 'teams:match_detail' eintrag.match.pk %}">Spiel</a>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Bisher keine Aufstellungen.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <ul class="list">
+        {% for teilnahme in turniere %}
+          <li>
+            <span class="grow">
+              <span class="title">{{ teilnahme.tournament.name }}</span>
+              <span class="meta">{{ teilnahme.tournament.datum|date:"d.m.Y" }} · {{ teilnahme.punkte }} Punkte{% if teilnahme.twz %} · DWZ {{ teilnahme.twz }}{% endif %}</span>
+            </span>
+            <span class="badge {% if teilnahme.startgeld_bezahlt %}badge-bezahlt{% else %}badge-offen{% endif %}">{{ teilnahme.startgeld_bezahlt|yesno:"Startgeld ok,Startgeld offen" }}</span>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Keine Turnierteilnahmen erfasst.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="verlauf">
+  <div class="card-head"><h2>Statusverlauf &amp; Protokoll</h2><span class="sub">{{ protokoll|length }} Einträge</span></div>
+  <div class="grid cols-2">
+    <div class="card-body">
+      <h3>Statusverlauf</h3>
+      <ul class="timeline">
+        {% for wechsel in status_history %}
+          <li>
+            <div class="when">{{ wechsel.zeitpunkt|date:"d.m.Y H:i" }}{% if wechsel.geaendert_von %} · {{ wechsel.geaendert_von.get_username }}{% endif %}</div>
+            <div>{{ wechsel.get_von_display }} → <strong>{{ wechsel.get_nach_display }}</strong></div>
+          </li>
+        {% empty %}
+          <li><div class="muted">Noch kein Statuswechsel.</div></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card-body">
+      <h3>Änderungsprotokoll</h3>
+      <ul class="timeline">
+        {% for eintrag in protokoll %}
+          <li>
+            <div class="when">{{ eintrag.zeitpunkt|date:"d.m.Y H:i" }} · {{ eintrag.benutzer.get_username|default:"System" }}</div>
+            <div>{{ eintrag.aktion }}{% if eintrag.feld %}: {{ eintrag.feld }} „{{ eintrag.alt_wert }}“ → „{{ eintrag.neu_wert }}“{% elif eintrag.text %}: {{ eintrag.text }}{% endif %}</div>
+          </li>
+        {% empty %}
+          <li><div class="muted">Keine Protokolleinträge.</div></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% if wuensche %}
+  <div class="card">
+    <div class="card-head"><h2>Änderungswünsche</h2><a class="link-btn" href="{% url 'members:change_request_list' %}">Zur Prüfliste</a></div>
+    <ul class="list">
+      {% for wunsch in wuensche %}
+        <li>
+          <span class="grow">
+            <span class="title">{{ wunsch.get_feld_display }} → „{{ wunsch.wunschwert }}“</span>
+            <span class="meta">eingereicht {{ wunsch.eingereicht_am|date:"d.m.Y" }}</span>
+          </span>
+          <span class="badge badge-{{ wunsch.status }}">{{ wunsch.get_status_display }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
 {% endblock %}

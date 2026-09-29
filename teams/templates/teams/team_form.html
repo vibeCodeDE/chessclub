@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{% if team %}{{ team.name }} bearbeiten{% else %}Mannschaft anlegen{% endif %}{% endblock %}
+{% block page_title %}{% if team %}{{ team.name }} bearbeiten{% else %}Neue Mannschaft{% endif %}{% endblock %}
+{% block crumbs %}<div class="crumbs"><a href="{% url 'teams:team_list' %}">Mannschaften</a> › {% if team %}bearbeiten{% else %}neu{% endif %}</div>{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+  <form class="card-body" method="post">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" with form=form columns="cols-2" %}
+    <div class="form-actions">
+      <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-check"></use></svg> Speichern</button>
+      <a class="btn ghost" href="{% if team %}{% url 'teams:team_detail' team.pk %}{% else %}{% url 'teams:team_list' %}{% endif %}">Abbrechen</a>
+      {% if team %}
+        <span class="grow"></span>
+        <button class="btn ghost" type="button" style="color:var(--danger)"
+                data-confirm="Mannschaft „{{ team.name }}“ löschen?" data-confirm-title="Mannschaft löschen"
+                onclick="fetch('{% url 'teams:team_delete' team.pk %}', {method:'POST', headers:{'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}, credentials:'same-origin'}).then(r=>r.json()).then(d=>{App.toast(d.message||'Gelöscht', d.ok?'success':'error'); if(d.ok) window.location='{% url 'teams:team_list' %}';})">
+          Löschen
+        </button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

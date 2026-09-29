@@ -1,8 +1,134 @@
-{% extends "base.html" %}
+{% extends "public_base.html" %}
 
-{% block title %}Startseite – Schachverein{% endblock %}
+{% block title %}Schachverein {{ club_short }} – Startseite{% endblock %}
 
 {% block content %}
-<h1>Willkommen</h1>
-<p>Diese Seite wird mit News und Terminen befüllt (Phase 5).</p>
+<section class="public-hero">
+  <div class="public-wrap">
+    <span class="chip" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#e8eefc">
+      <svg class="icon icon-sm"><use href="#i-sparkle"></use></svg> Saison 2026/27 läuft
+    </span>
+    <h1 class="mt-2">Willkommen beim {{ club_name }}</h1>
+    <p>Ergebnisse, Termine und Neuigkeiten aus dem Verein – und für die Vorstandschaft die komplette Vereinsorganisation an einem Ort.</p>
+    <div class="flex wrap gap-1 mt-2">
+      {% if naechstes_turnier %}
+        <a class="btn gold" href="{% url 'tournaments:public_detail' naechstes_turnier.pk %}">
+          <svg class="icon icon-sm"><use href="#i-trophy"></use></svg> {{ naechstes_turnier.name }} · {{ naechstes_turnier.datum|date:"d.m.Y" }}
+        </a>
+      {% endif %}
+      <a class="btn secondary" href="{% url 'members:join_info' %}">Mitglied werden</a>
+      {% if user.is_authenticated %}
+        <a class="btn secondary" href="{% url 'core:dashboard' %}">Zum Dashboard</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="public-wrap" style="padding-top:1.6rem">
+  <div class="grid cols-4">
+    <div class="stat accent-gold">
+      <div class="stat-head">
+        <span class="stat-label">Aktive Mitglieder</span>
+        <span class="stat-icon"><svg class="icon"><use href="#i-users"></use></svg></span>
+      </div>
+      <div class="stat-value">{{ mitglieder_aktiv }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-head">
+        <span class="stat-label">Mannschaften</span>
+        <span class="stat-icon"><svg class="icon"><use href="#i-flag"></use></svg></span>
+      </div>
+      <div class="stat-value">{{ mannschaften }}</div>
+    </div>
+    <div class="stat accent-success">
+      <div class="stat-head">
+        <span class="stat-label">Turniere geplant</span>
+        <span class="stat-icon"><svg class="icon"><use href="#i-trophy"></use></svg></span>
+      </div>
+      <div class="stat-value">{{ turniere|length }}</div>
+    </div>
+    <div class="stat accent-warn">
+      <div class="stat-head">
+        <span class="stat-label">Nächste Ligaspiele</span>
+        <span class="stat-icon"><svg class="icon"><use href="#i-calendar"></use></svg></span>
+      </div>
+      <div class="stat-value">{{ spiele|length }}</div>
+    </div>
+  </div>
+
+  <div class="grid main-side mt-2">
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Neues aus dem Verein</h2>
+          <a class="link-btn" href="{% url 'core:news_archiv' %}">Alle Ankündigungen {% include "includes/icon.html" with name="arrow-right" %}</a>
+        </div>
+        {% for post in news %}
+          <article class="news-card" style="border-bottom:1px solid var(--line)">
+            <span class="date">{{ post.veroeffentlicht_am|date:"d.m.Y" }} · {{ post.kategorie }}</span>
+            <h3><a href="{% url 'core:news_detail' post.pk %}">{{ post.titel }}</a></h3>
+            <p class="mb-0 muted">{{ post.auszug }}</p>
+          </article>
+        {% empty %}
+          {% include "includes/empty_state.html" with icon="megaphone" titel="Noch keine Ankündigungen" text="Sobald der Vorstand Neuigkeiten veröffentlicht, erscheinen sie hier." %}
+        {% endfor %}
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Turnierkalender</h2>
+          <a class="link-btn" href="{% url 'tournaments:public_list' %}">Alle Turniere</a>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Termin</th><th>Turnier</th><th>Ort</th><th>Format</th><th class="right">Anmeldung</th></tr></thead>
+            <tbody>
+              {% for turnier in turniere %}
+                <tr>
+                  <td class="nowrap">{{ turnier.datum|date:"d.m.Y" }}</td>
+                  <td class="cell-main"><a href="{% url 'tournaments:public_detail' turnier.pk %}">{{ turnier.name }}</a></td>
+                  <td>{{ turnier.ort|default:"–" }}</td>
+                  <td><span class="badge badge-neutral">{{ turnier.get_format_display }}</span></td>
+                  <td class="right">
+                    {% if turnier.anmeldung_offen %}<span class="badge badge-aktiv">offen</span>{% else %}<span class="badge badge-neutral">geschlossen</span>{% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5">{% include "includes/empty_state.html" with icon="trophy" titel="Keine Turniere geplant" text="Der nächste Turnierplan wird hier veröffentlicht." small=True %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-head"><h2>Nächste Begegnungen</h2></div>
+        <ul class="list">
+          {% for spiel in spiele %}
+            <li>
+              <span class="avatar-sm gold">{{ spiel.team.name|slice:":1" }}</span>
+              <span class="grow">
+                <span class="title">{{ spiel.team.name }} {{ spiel.heimspiel|yesno:"gegen,bei" }} {{ spiel.gegner }}</span>
+                <span class="meta">{{ spiel.datum|date:"D, d.m.Y" }}{% if spiel.uhrzeit %} · {{ spiel.uhrzeit|time:"H:i" }} Uhr{% endif %}{% if spiel.ort %} · {{ spiel.ort }}{% endif %}</span>
+              </span>
+            </li>
+          {% empty %}
+            <li>{% include "includes/empty_state.html" with icon="calendar" titel="Keine Ligaspiele" text="Sobald der Spielplan steht, finden Sie hier die Termine." small=True %}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Mitglied werden</h2></div>
+        <div class="card-body">
+          <p>Schach begeistert – ob Anfänger:in oder Turnierspieler:in. Komm einfach an einem Vereinsabend vorbei, spiele ein Probespiel und lerne uns kennen.</p>
+          <p class="mb-0"><strong>Vereinsabend:</strong> donnerstags ab 19:00 Uhr<br><strong>Kontakt:</strong> <a href="mailto:{{ club_contact }}">{{ club_contact }}</a></p>
+          <a class="btn block mt-2" href="{% url 'members:join_info' %}">Beiträge &amp; Anmeldung ansehen</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

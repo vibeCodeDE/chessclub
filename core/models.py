@@ -38,3 +38,25 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.zeitpunkt:%Y-%m-%d %H:%M} · {self.aktion}"
+
+
+class TwoFactorDevice(models.Model):
+    """TOTP-Gerät eines Vorstands-Kontos (PRD N1.6)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Benutzer",
+        on_delete=models.CASCADE,
+        related_name="zwei_faktor",
+    )
+    secret = models.CharField("Geheime Zeichenfolge", max_length=64)
+    bestaetigt = models.BooleanField("Bestätigt", default=False)
+    erstellt_am = models.DateTimeField("Erstellt am", auto_now_add=True)
+    letzte_nutzung = models.DateTimeField("Zuletzt genutzt", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Zwei-Faktor-Gerät"
+        verbose_name_plural = "Zwei-Faktor-Geräte"
+
+    def __str__(self):
+        return f"2FA für {self.user.get_username()}"

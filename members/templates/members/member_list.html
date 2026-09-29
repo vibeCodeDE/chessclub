@@ -1,49 +1,130 @@
 {% extends "base.html" %}
 
-{% block title %}Mitglieder – Schachverein{% endblock %}
+{% block title %}Mitglieder{% endblock %}
+{% block page_title %}Mitglieder{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ gesamt }} Personen im Bestand · {{ aktiv_count }} aktiv</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Stammdaten, Status und Beitragskategorie pflegen – Austritte werden historisiert, nie gelöscht.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'members:member_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+      <svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV
+    </a>
+    <a class="btn" href="{% url 'members:member_create' %}">
+      <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mitglied aufnehmen
+    </a>
+  </div>
+</div>
+{% endblock %}
 
 {% block content %}
-<h1>Mitglieder</h1>
+<div class="grid cols-4">
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Aktiv</span><span class="stat-icon"><svg class="icon"><use href="#i-users"></use></svg></span></div>
+    <div class="stat-value">{{ aktiv_count }}</div>
+  </div>
+  <div class="stat accent-warn">
+    <div class="stat-head"><span class="stat-label">Passiv</span><span class="stat-icon"><svg class="icon"><use href="#i-clock"></use></svg></span></div>
+    <div class="stat-value">{{ passiv_count }}</div>
+  </div>
+  <div class="stat accent-danger">
+    <div class="stat-head"><span class="stat-label">Ausgetreten</span><span class="stat-icon"><svg class="icon"><use href="#i-logout"></use></svg></span></div>
+    <div class="stat-value">{{ ausgetreten_count }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Gesamt</span><span class="stat-icon"><svg class="icon"><use href="#i-chart"></use></svg></span></div>
+    <div class="stat-value">{{ gesamt }}</div>
+  </div>
+</div>
 
-<form method="get" class="filter-bar">
-  <input type="text" name="q" value="{{ q }}" placeholder="Name, E-Mail, Ort" aria-label="Suche">
-  <label class="visually-hidden" for="status">Status</label>
-  <select id="status" name="status">
-    <option value="">Alle Status</option>
-    {% for value, label in status_choices %}
-      <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
-  <button type="submit">Filtern</button>
-  <a class="button-link" href="{% url 'members:member_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">CSV-Export</a>
-</form>
-
-<div class="table-wrap">
-  <table class="data">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>E-Mail</th>
-        <th>Ort</th>
-        <th>Status</th>
-        <th>Eintritt</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for member in members %}
-        <tr>
-          <td><a href="{% url 'members:member_detail' member.pk %}">{{ member.nachname }}, {{ member.vorname }}</a></td>
-          <td>{% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% endif %}</td>
-          <td>{{ member.ort }}</td>
-          <td><span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span></td>
-          <td>{{ member.eintrittsdatum|date:"d.m.Y" }}</td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="5">Keine Mitglieder gefunden.</td>
-        </tr>
+<div class="card mt-2">
+  <form class="filters" method="get">
+    <label class="visually-hidden" for="q">Suche</label>
+    <input class="grow" type="search" id="q" name="q" value="{{ q }}" placeholder="Name, E-Mail oder Ort suchen…">
+    <label class="visually-hidden" for="kategorie">Kategorie</label>
+    <select id="kategorie" name="kategorie">
+      <option value="">Alle Kategorien</option>
+      {% for k in kategorien %}
+        <option value="{{ k.pk }}" {% if kategorie == k.pk|stringformat:"s" %}selected{% endif %}>{{ k.name }}</option>
       {% endfor %}
-    </tbody>
-  </table>
+    </select>
+    <label class="visually-hidden" for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">Alle Status</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn small" type="submit">Filtern</button>
+    {% if q or status or kategorie %}<a class="btn small ghost" href="{% url 'members:member_list' %}">Zurücksetzen</a>{% endif %}
+  </form>
+
+  <div class="table-wrap">
+    <table class="data" id="mitglieder-tabelle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Kontakt</th>
+          <th>Kategorie</th>
+          <th>Status</th>
+          <th>Eintritt</th>
+          <th class="right">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in page_obj %}
+          <tr data-row>
+            <td>
+              <div class="row-lead">
+                <span class="avatar-sm {% if member.status == 'ausgetreten' %}gold{% endif %}">{{ member.nachname|slice:":1" }}{{ member.vorname|slice:":1" }}</span>
+                <span>
+                  <span class="name"><a href="{% url 'members:member_detail' member.pk %}">{{ member }}</a></span>
+                  <span class="cell-sub">{{ member.geburtsdatum|date:"d.m.Y"|default:"Geburtsdatum fehlt" }}</span>
+                </span>
+              </div>
+            </td>
+            <td>
+              {% if member.email %}<div><a href="mailto:{{ member.email }}">{{ member.email }}</a></div>{% endif %}
+              <div class="cell-sub">{{ member.telefon|default:"kein Telefon" }}{% if member.ort %} · {{ member.ort }}{% endif %}</div>
+            </td>
+            <td>
+              {% if member.beitragskategorie %}
+                <span class="chip">{{ member.beitragskategorie.name }}</span>
+              {% else %}<span class="cell-sub">nicht zugeordnet</span>{% endif %}
+            </td>
+            <td>
+              <select class="input" style="min-width:9rem" name="status" data-autosave="1"
+                      data-url="{% url 'members:member_status' member.pk %}"
+                      aria-label="Status von {{ member }}">
+                {% for value, label in status_choices %}
+                  <option value="{{ value }}" {% if value == member.status %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <div class="cell-sub mt-1"><span class="badge badge-{{ member.status }}" data-status-badge="{{ member.pk }}"><span data-status-text="{{ member.pk }}">{{ member.get_status_display }}</span></span></div>
+            </td>
+            <td class="nowrap">{{ member.eintrittsdatum|date:"d.m.Y" }}</td>
+            <td>
+              <div class="table-actions">
+                <a class="btn small secondary" href="{% url 'members:member_update' member.pk %}">Bearbeiten</a>
+                <a class="btn small ghost" href="{% url 'members:member_detail' member.pk %}">Details</a>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">
+              {% if q or status or kategorie %}
+                {% include "includes/empty_state.html" with icon="search" titel="Keine Treffer" text="Für diese Filterkombination wurde niemand gefunden." %}
+              {% else %}
+                {% include "includes/empty_state.html" with icon="users" titel="Noch keine Mitglieder" text="Legen Sie das erste Mitglied an – danach füllt sich die Liste automatisch." action_url="/mitglieder/neu/" action_label="Mitglied aufnehmen" %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
 </div>
 {% endblock %}

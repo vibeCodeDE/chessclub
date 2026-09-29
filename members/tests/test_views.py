@@ -79,14 +79,14 @@ class MemberListTests(TestCase):
         self.assertContains(response, "Meier")
 
     def test_nav_shows_members_link_for_admin(self):
-        response = self.client.get("/")
+        response = self.client.get("/dashboard/")
         self.assertContains(response, 'href="/mitglieder/"')
 
     def test_nav_hides_members_link_for_member(self):
         self.client.logout()
         make_user("p1", "mitglied")
         self.client.login(username="p1", password="x")
-        response = self.client.get("/")
+        response = self.client.get("/dashboard/")
         self.assertNotContains(response, 'href="/mitglieder/"')
 
 

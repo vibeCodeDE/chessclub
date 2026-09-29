@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}SEPA-Mandate{% endblock %}
+{% block page_title %}SEPA-Mandate{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ anzahl_aktiv }} aktive Mandate · Einzug erfolgt bankseitig manuell</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Die Software verwaltet Mandat und Zahlungsstatus – der Einzug läuft bewusst über Ihre Bank.</p>
+  <div class="page-actions">
+    <a class="btn" href="{% url 'dues:mandate_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mandat erfassen</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-3">
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Aktive Mandate</span><span class="stat-icon"><svg class="icon"><use href="#i-card"></use></svg></span></div>
+    <div class="stat-value">{{ anzahl_aktiv }}</div>
+  </div>
+  <div class="stat accent-warn">
+    <div class="stat-head"><span class="stat-label">Widerrufen</span><span class="stat-icon"><svg class="icon"><use href="#i-x"></use></svg></span></div>
+    <div class="stat-value">{{ anzahl_widerrufen }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Ohne Mandat</span><span class="stat-icon"><svg class="icon"><use href="#i-users"></use></svg></span></div>
+    <div class="stat-value">{{ ohne_mandat|length }}</div>
+    <div class="stat-foot">aktive Mitglieder, die überweisen oder bar zahlen</div>
+  </div>
+</div>
+
+<div class="grid main-side mt-2">
+  <div class="card">
+    <div class="card-head"><h2>Mandate</h2><span class="sub">IBAN nur maskiert</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Mitglied</th><th>Mandatsreferenz</th><th>IBAN</th><th>Erteilt</th><th>Status</th><th class="right"></th></tr></thead>
+        <tbody>
+          {% for mandat in mandate %}
+            <tr data-row>
+              <td class="cell-main"><a href="{% url 'members:member_detail' mandat.member.pk %}">{{ mandat.member }}</a></td>
+              <td class="mono">{{ mandat.referenz }}</td>
+              <td class="mono">{{ mandat.iban_kurz }}{% if mandat.kontoinhaber %}<div class="cell-sub">{{ mandat.kontoinhaber }}</div>{% endif %}</td>
+              <td class="nowrap">{{ mandat.erteilt_am|date:"d.m.Y" }}</td>
+              <td><span class="badge badge-{{ mandat.status }}">{{ mandat.get_status_display }}</span></td>
+              <td class="right"><a class="btn small secondary" href="{% url 'dues:mandate_update' mandat.pk %}">Bearbeiten</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">{% include "includes/empty_state.html" with icon="card" titel="Noch keine Mandate" text="Erfassen Sie das erste SEPA-Mandat, um Zahlungen zuordnen zu können." action_url="/beitraege/mandate/neu/" action_label="Mandat erfassen" %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Ohne Mandat</h2><span class="sub">Überweisung / Barzahlung</span></div>
+    <ul class="list">
+      {% for member in ohne_mandat %}
+        <li>
+          <span class="avatar-sm">{{ member.nachname|slice:":1" }}</span>
+          <span class="grow">
+            <span class="title">{{ member }}</span>
+            <span class="meta">{{ member.email|default:"keine E-Mail" }}</span>
+          </span>
+          <a class="btn small secondary" href="{% url 'dues:mandate_create' %}?member={{ member.pk }}">Mandat</a>
+        </li>
+      {% empty %}
+        <li class="muted" style="padding:1rem">Alle aktiven Mitglieder haben ein Mandat.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

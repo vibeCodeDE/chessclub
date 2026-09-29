@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ team.name }}{% endblock %}
+{% block page_title %}{{ team.name }}{% endblock %}
+{% block crumbs %}<div class="crumbs"><a href="{% url 'teams:team_list' %}">Mannschaften</a> › {{ team.get_altersklasse_display }}{% if team.liga %} · {{ team.liga }}{% endif %}</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">{% if team.kapitaen %}Mannschaftsführung: {{ team.kapitaen }}{% else %}Noch keine Mannschaftsführung benannt{% endif %}</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'teams:team_update' team.pk %}"><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Bearbeiten</a>
+    <a class="btn" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ligaspiel planen</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-4">
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Siege</span><span class="stat-icon"><svg class="icon"><use href="#i-trophy"></use></svg></span></div>
+    <div class="stat-value">{{ bilanz.siege }}</div>
+  </div>
+  <div class="stat accent-warn">
+    <div class="stat-head"><span class="stat-label">Remis</span><span class="stat-icon"><svg class="icon"><use href="#i-table"></use></svg></span></div>
+    <div class="stat-value">{{ bilanz.remis }}</div>
+  </div>
+  <div class="stat accent-danger">
+    <div class="stat-head"><span class="stat-label">Niederlagen</span><span class="stat-icon"><svg class="icon"><use href="#i-x"></use></svg></span></div>
+    <div class="stat-value">{{ bilanz.niederlagen }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Spiele</span><span class="stat-icon"><svg class="icon"><use href="#i-calendar"></use></svg></span></div>
+    <div class="stat-value">{{ bilanz.spiele }}</div>
+  </div>
+</div>
+
+<div class="grid main-side mt-2">
+  <div class="card">
+    <div class="card-head"><h2>Ligaspiele</h2><span class="sub">{{ match.count }} Begegnungen</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Datum</th><th>Gegner</th><th>H/A</th><th class="right">Ergebnis</th><th>Status</th><th class="right"></th></tr></thead>
+        <tbody>
+          {% for m in matches %}
+            <tr data-row class="{% if m.datum >= today %}row-warn{% endif %}">
+              <td class="nowrap">{{ m.datum|date:"d.m.Y" }}{% if m.uhrzeit %}<div class="cell-sub">{{ m.uhrzeit|time:"H:i" }}</div>{% endif %}</td>
+              <td class="cell-main">{{ m.gegner }}</td>
+              <td>{{ m.heimspiel|yesno:"Heim,Auswärts" }}</td>
+              <td class="num mono">{{ m.brettpunkte_anzeige }}</td>
+              <td><span class="badge badge-{{ m.status }}">{{ m.get_status_display }}</span></td>
+              <td class="right"><a class="btn small secondary" href="{% url 'teams:match_detail' m.pk %}">Aufstellen</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">{% include "includes/empty_state.html" with icon="calendar" titel="Keine Ligaspiele" text="Planen Sie das erste Ligaspiel – danach können Sie aufstellen und Ergebnisse erfassen." action_url="/spiele/neu/" action_label="Ligaspiel planen" %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    {% if tabelle %}
+      <div class="card">
+        <div class="card-head"><h2>Tabelle</h2><span class="sub">{{ team.liga }}</span></div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>#</th><th>Mannschaft</th><th class="num">MP</th><th class="num">BP</th></tr></thead>
+            <tbody>
+              {% for zeile in tabelle %}
+                <tr class="{% if zeile.eigene_mannschaft %}row-warn{% endif %}">
+                  <td class="mono">{{ zeile.platz }}</td>
+                  <td class="cell-main">{{ zeile.name }}</td>
+                  <td class="num mono">{{ zeile.mannschaftspunkte }}</td>
+                  <td class="num mono">{{ zeile.brettpunkte|floatformat:1 }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="muted">Noch keine Ergebnisse.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-head"><h2>Letzte Aufstellungen</h2></div>
+      <ul class="list">
+        {% for eintrag in aufstellungen %}
+          <li>
+            <span class="badge badge-bar">B{{ eintrag.brett }}</span>
+            <span class="grow">
+              <span class="title">{{ eintrag.spieler_name }}</span>
+              <span class="meta">{{ eintrag.match.gegner }} · {{ eintrag.match.datum|date:"d.m.Y" }} · {{ eintrag.ergebnis_anzeige }}</span>
+            </span>
+          </li>
+        {% empty %}
+          <li class="muted" style="padding:1rem">Noch keine Aufstellungen erfasst.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

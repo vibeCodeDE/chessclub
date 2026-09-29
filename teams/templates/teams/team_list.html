@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Mannschaften{% endblock %}
+{% block page_title %}Mannschaften{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ anzahl_aktiv }} aktive Mannschaften · {{ spiele_gesamt }} Ligaspiele erfasst</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Mannschaften, Aufstellungen und Ergebnisse für den Ligabetrieb pflegen.</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'teams:tabelle_list' %}"><svg class="icon icon-sm"><use href="#i-table"></use></svg> Tabellen</a>
+    <a class="btn secondary" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Ligaspiel</a>
+    <a class="btn" href="{% url 'teams:team_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mannschaft anlegen</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-3">
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Mannschaften</span><span class="stat-icon"><svg class="icon"><use href="#i-flag"></use></svg></span></div>
+    <div class="stat-value">{{ teams|length }}</div>
+    <div class="stat-foot">{{ anzahl_aktiv }} aktiv</div>
+  </div>
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Ligaspiele</span><span class="stat-icon"><svg class="icon"><use href="#i-calendar"></use></svg></span></div>
+    <div class="stat-value">{{ spiele_gesamt }}</div>
+    <div class="stat-foot">{{ naechste_woche }} in den nächsten 7 Tagen</div>
+  </div>
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Aufstellungen offen</span><span class="stat-icon"><svg class="icon"><use href="#i-edit"></use></svg></span></div>
+    <div class="stat-value">{{ naechste_spiele|length }}</div>
+    <div class="stat-foot">kommende Begegnungen</div>
+  </div>
+</div>
+
+<div class="grid main-side mt-2">
+  <div class="card">
+    <div class="card-head"><h2>Mannschaften</h2><span class="sub">Kapitän:in darf aufstellen</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Mannschaft</th><th>Liga</th><th>Kapitän:in</th><th>Bilanz</th><th class="right">Aktionen</th></tr></thead>
+        <tbody>
+          {% for team in teams %}
+            <tr data-row="team-{{ team.pk }}" data-row>
+              <td>
+                <div class="row-lead">
+                  <span class="avatar-sm gold">{{ team.name|slice:":1" }}</span>
+                  <span>
+                    <span class="name"><a href="{% url 'teams:team_detail' team.pk %}">{{ team.name }}</a></span>
+                    <span class="cell-sub">{{ team.get_altersklasse_display }} · {{ team.brettanzahl }} Bretter{% if not team.aktiv %} · inaktiv{% endif %}</span>
+                  </span>
+                </div>
+              </td>
+              <td>{{ team.liga|default:"–" }}</td>
+              <td>{% if team.kapitaen %}{{ team.kapitaen }}{% else %}<span class="cell-sub">nicht benannt</span>{% endif %}</td>
+              <td class="nowrap">
+                <span class="badge badge-sieg">{{ team.bilanz.siege }}S</span>
+                <span class="badge badge-remis">{{ team.bilanz.remis }}R</span>
+                <span class="badge badge-niederlage">{{ team.bilanz.niederlagen }}N</span>
+              </td>
+              <td class="right">
+                <div class="table-actions">
+                  <a class="btn small secondary" href="{% url 'teams:team_detail' team.pk %}">Öffnen</a>
+                  <a class="btn small ghost" href="{% url 'teams:team_update' team.pk %}">Bearbeiten</a>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">{% include "includes/empty_state.html" with icon="flag" titel="Noch keine Mannschaften" text="Legen Sie die 1. Mannschaft oder Jugendmannschaft an – danach können Sie Ligaspiele planen." action_url="/mannschaften/neu/" action_label="Mannschaft anlegen" %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Nächste Begegnungen</h2><a class="link-btn" href="{% url 'teams:match_list' %}?zeitraum=kommend">Alle</a></div>
+    <ul class="list">
+      {% for spiel in naechste_spiele %}
+        <li>
+          <span class="grow">
+            <span class="title">{{ spiel.team.name }} {{ spiel.heimspiel|yesno:"gegen,bei" }} {{ spiel.gegner }}</span>
+            <span class="meta">{{ spiel.datum|date:"D, d.m.Y" }}{% if spiel.uhrzeit %} · {{ spiel.uhrzeit|time:"H:i" }}{% endif %}</span>
+          </span>
+          <a class="btn small secondary" href="{% url 'teams:match_detail' spiel.pk %}">Aufstellen</a>
+        </li>
+      {% empty %}
+        <li>{% include "includes/empty_state.html" with icon="calendar" titel="Keine Spiele geplant" text="Neue Ligaspiele erscheinen hier." small=True %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

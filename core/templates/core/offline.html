@@ -1,0 +1,18 @@
+{% extends "public_base.html" %}
+
+{% block title %}Offline · {{ club_short }}{% endblock %}
+{% block description %}Offline-Ansicht der Vereinsseite{% endblock %}
+
+{% block content %}
+<div class="public-wrap" style="padding:3rem 1rem">
+  <div class="card">
+    <div class="card-body center">
+      <span class="brand-mark" aria-hidden="true" style="margin:0 auto .6rem">♞</span>
+      <h1>Zurzeit offline</h1>
+      <p class="lede">Die Verbindung zum Vereinsserver fehlt gerade. Sobald wieder Netz da ist, laden die Seiten automatisch neu.</p>
+      <p class="muted">Bereits besuchte Seiten und die Startseite bleiben aus dem lokalen Cache sichtbar.</p>
+      <a class="btn mt-2" href="/">Neu laden</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

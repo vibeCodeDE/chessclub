@@ -1,0 +1,27 @@
+{% extends "public_base.html" %}
+
+{% block title %}Aktuelles – {{ club_short }}{% endblock %}
+
+{% block content %}
+<div class="public-wrap" style="padding-top:1.8rem">
+  <h1>Aktuelles aus dem Verein</h1>
+  <p class="muted">Berichte, Termine und Ankündigungen der Vorstandschaft.</p>
+
+  <div class="grid cols-3 mt-2">
+    {% for post in news %}
+      <article class="card">
+        <div class="card-body news-card">
+          <span class="date">{{ post.veroeffentlicht_am|date:"d.m.Y" }} · {{ post.kategorie }}</span>
+          <h3><a href="{% url 'core:news_detail' post.pk %}">{{ post.titel }}</a></h3>
+          <p class="muted mb-0">{{ post.auszug }}</p>
+          <a class="link-btn mt-1" href="{% url 'core:news_detail' post.pk %}">Weiterlesen →</a>
+        </div>
+      </article>
+    {% empty %}
+      <div class="card" style="grid-column:1/-1">
+        {% include "includes/empty_state.html" with icon="megaphone" titel="Noch keine Veröffentlichungen" text="Der Vorstand veröffentlicht hier in Kürze die ersten Neuigkeiten." %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
