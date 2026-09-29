@@ -469,6 +469,8 @@ def mahnbrief(request, pk):
 
     * der Link auf der Mahnliste (``{% url 'dues:mahnbrief' pk=… %}``) zeigt auf
       genau diese Route und existiert bereits,
+    * die Route ``beitraege/mahnungen/<int:pk>/`` steht mit dem in Task 7
+      geplanten Pfad — Task 7 ersetzt View und Template, nicht die URL,
     * fehlend sind die Vereinsdaten, die Postentabelle über
       :func:`dues.mahnung.posten_fuer_brief` und die 404-Logik für inzwischen
       bezahlte Posten.

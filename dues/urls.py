@@ -21,11 +21,10 @@ urlpatterns = [
         name="mandat_status",
     ),
     path("beitraege/mahnungen/", views.mahnliste, name="mahnliste"),
-    path(
-        "beitraege/mahnungen/<int:pk>/brief/",
-        views.mahnbrief,
-        name="mahnbrief",
-    ),
+    # Platzhalter mit dem in Task 7 geplanten Pfad: Task 7 ersetzt die View
+    # und das Template, nicht die Route. Ein zweiter Pfad mit demselben Namen
+    # wäre später nur eine Reverse-Ambiguität.
+    path("beitraege/mahnungen/<int:pk>/", views.mahnbrief, name="mahnbrief"),
     path(
         "beitraege/mahnungen/<int:pk>/setzen/",
         views.mahnung_setzen,
