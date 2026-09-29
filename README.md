@@ -43,7 +43,7 @@ enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest          # 252 Tests, 1 Skip (nur mit PostgreSQL)
+.venv/bin/python -m pytest          # 296 Tests, 1 Skip (nur mit PostgreSQL)
 .venv/bin/python manage.py check
 ```
 
@@ -56,6 +56,9 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Betrieb, Backup und Wiederherstellung: `docs/deployment.md`.
 Wartung für die Vorstandschaft: `docs/wartung.md`.
+
+Für Demos und Vorschauen läuft die App auch auf Vercel (PostgreSQL über `DATABASE_URL`,
+Migrationen im Build): `docs/deployment.md`, Abschnitt 8.
 
 ## Aufbau
 
@@ -78,7 +81,7 @@ die Django-Administration (`/admin/`) als Rückfallebene für den Vorstand.
 | --- | --- |
 | `docs/prd.md` | Anforderungen und Erfolgskriterien (Ausgangsbasis) |
 | `docs/abnahme.md` | Abnahme-Checkliste: Erfolgskriterien, Meilensteine, DSGVO |
-| `docs/deployment.md` | Installation, TLS, Backup, Restore, Updates |
+| `docs/deployment.md` | Installation, TLS, Backup, Restore, Updates, Vercel-Demo |
 | `docs/wartung.md` | Kurzanleitung für wiederkehrende Aufgaben |
 | `tasks/plan.md`, `tasks/todo.md` | Arbeitspakete und Umsetzungsstand |
 

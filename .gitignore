@@ -8,3 +8,5 @@ staticfiles/
 .venv/
 backups/
 .env.prod
+.env.local
+.vercel/
