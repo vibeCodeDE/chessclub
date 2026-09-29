@@ -34,7 +34,7 @@
               <div class="cell-sub">{{ post.auszug|truncatewords:14 }}</div>
             </td>
             <td><span class="chip">{{ post.kategorie }}</span></td>
-            <td>{{ post.autor.get_full_name|default:post.autor.get_username|default:"–" }}</td>
+            <td>{% if post.autor %}{{ post.autor.get_full_name|default:post.autor.get_username }}{% else %}–{% endif %}</td>
             <td class="nowrap">{{ post.veroeffentlicht_am|date:"d.m.Y H:i"|default:post.erstellt_am|date:"d.m.Y" }}</td>
             <td>
               <span class="badge {% if post.veroeffentlicht %}badge-veroeffentlicht{% else %}badge-entwurf{% endif %}" data-news-badge="{{ post.pk }}">

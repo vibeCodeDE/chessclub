@@ -83,3 +83,47 @@ class NewsWorkflowTests(TestCase):
         user.groups.add(group)
         self.client.force_login(user)
         self.assertEqual(self.client.get("/ankuendigungen/").status_code, 403)
+
+    def test_liste_filter_bearbeiten_und_fehlerpfade(self):
+        entwurf = NewsPost.objects.create(titel="Entwurf 1", text="x", veroeffentlicht=False)
+        oeffentlich = NewsPost.objects.create(titel="Live 1", text="y", veroeffentlicht=True)
+
+        r_entwurf = self.client.get("/ankuendigungen/?status=entwurf")
+        self.assertContains(r_entwurf, "Entwurf 1")
+        self.assertNotContains(r_entwurf, "Live 1")
+
+        r_live = self.client.get("/ankuendigungen/?status=veroeffentlicht")
+        self.assertContains(r_live, "Live 1")
+        self.assertNotContains(r_live, "Entwurf 1")
+
+        # Formular GET + AJAX-Fehler bei leerem Titel
+        self.assertEqual(self.client.get("/ankuendigungen/neu/").status_code, 200)
+        err_create = self.client.post(
+            "/ankuendigungen/neu/", {"titel": "", "text": ""}, HTTP_ACCEPT="application/json"
+        )
+        self.assertFalse(json.loads(err_create.content)["ok"])
+
+        # Bearbeiten GET + POST (regulär und AJAX) + AJAX-Fehler
+        self.assertEqual(self.client.get(f"/ankuendigungen/{entwurf.pk}/bearbeiten/").status_code, 200)
+        upd_html = self.client.post(
+            f"/ankuendigungen/{entwurf.pk}/bearbeiten/",
+            {"titel": "Jetzt veröffentlicht", "kategorie": "Verein", "text": "Inhalt", "veroeffentlicht": "on"},
+        )
+        self.assertRedirects(upd_html, "/ankuendigungen/")
+        entwurf.refresh_from_db()
+        self.assertTrue(entwurf.veroeffentlicht)
+        self.assertIsNotNone(entwurf.veroeffentlicht_am)
+
+        upd_ajax = self.client.post(
+            f"/ankuendigungen/{oeffentlich.pk}/bearbeiten/",
+            {"titel": "Live aktualisiert", "kategorie": "Verein", "text": "Neu"},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertTrue(json.loads(upd_ajax.content)["ok"])
+
+        err_upd = self.client.post(
+            f"/ankuendigungen/{oeffentlich.pk}/bearbeiten/",
+            {"titel": "", "text": ""},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertFalse(json.loads(err_upd.content)["ok"])

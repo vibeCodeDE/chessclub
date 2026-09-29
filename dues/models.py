@@ -143,6 +143,8 @@ class MembershipFee(models.Model):
 
     @property
     def bezahlter_betrag(self):
+        if "_prefetched_objects_cache" in self.__dict__ and "zahlungen" in self._prefetched_objects_cache:
+            return sum((Decimal(str(z.betrag)) for z in self.zahlungen.all()), Decimal("0.00"))
         return self.zahlungen.aggregate(s=Sum("betrag"))["s"] or Decimal("0.00")
 
     @property
@@ -159,7 +161,7 @@ class MembershipFee(models.Model):
     def fortschritt_prozent(self):
         if self.betrag <= 0:
             return 100
-        return min(int(round(float(self.bezahlter_betrag) / float(self.betrag) * 100)), 100)
+        return max(0, min(int(round(float(self.bezahlter_betrag) / float(self.betrag) * 100)), 100))
 
     def status_aktualisieren(self, commit=True):
         bezahlt = self.bezahlter_betrag
@@ -195,6 +197,22 @@ class Payment(models.Model):
     datum = models.DateField("Zahlungsdatum", default=timezone.localdate)
     art = models.CharField("Zahlungsart", max_length=20, choices=Art.choices, default=Art.UEBERWEISUNG)
     notiz = models.CharField("Notiz", max_length=200, blank=True)
+    storno_von = models.OneToOneField(
+        "self",
+        verbose_name="Storno von",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="storno_buchung",
+    )
+    kassenbuchung = models.OneToOneField(
+        "cashbook.CashEntry",
+        verbose_name="Kassenbuchung",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="beitrags_zahlung",
+    )
     erfasst_von = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="Erfasst von",
@@ -213,10 +231,22 @@ class Payment(models.Model):
     def __str__(self):
         return f"{self.betrag} € · {self.fee.member} ({self.get_art_display()})"
 
+    @property
+    def ist_storno(self):
+        return self.storno_von_id is not None
+
+    @property
+    def ist_storniert(self):
+        return Payment.objects.filter(storno_von_id=self.pk).exists() if self.pk else False
+
     def clean(self):
         super().clean()
-        if self.betrag is not None and self.betrag <= 0:
-            raise ValidationError({"betrag": "Der Betrag muss größer als 0 sein."})
+        if self.storno_von_id:
+            if self.betrag is not None and self.betrag >= 0:
+                raise ValidationError({"betrag": "Eine Storno-Gegenbuchung muss einen negativen Betrag haben."})
+        else:
+            if self.betrag is not None and self.betrag <= 0:
+                raise ValidationError({"betrag": "Der Betrag muss größer als 0 sein."})
 
 
 class DunningLetter(models.Model):

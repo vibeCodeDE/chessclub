@@ -5,6 +5,7 @@ from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,7 +19,7 @@ from members.models import Member
 
 from .forms import BeitragslaufForm, DunningForm, FeeCategoryForm, PaymentForm, SepaMandateForm
 from .models import DunningLetter, FeeCategory, MembershipFee, Payment, SepaMandate, jahres_uebersicht
-from .services import beitragslauf, mahntext, mahnung_erstellen, zahlung_erfassen
+from .services import beitragslauf, mahntext, mahnung_erstellen, zahlung_erfassen, zahlung_stornieren
 
 
 def _jahr_aus_request(request):
@@ -116,6 +117,51 @@ def payment_create(request, pk):
     ) or "<tr><td colspan='4' class='muted'>Noch keine Zahlungen erfasst.</td></tr>"
     return ok(
         message=f"Zahlung über {zahlung.betrag:.2f} € gebucht.",
+        patch={
+            f"[data-fee-status='{fee.pk}']": fee.get_status_display(),
+            f"[data-fee-open='{fee.pk}']": f"{fee.offener_betrag:.2f} €",
+            f"[data-fee-paid='{fee.pk}']": f"{fee.bezahlter_betrag:.2f} €",
+            "[data-payment-total]": f"{fee.bezahlter_betrag:.2f} €",
+            "[data-payment-open]": f"{fee.offener_betrag:.2f} €",
+        },
+        html={"[data-payment-rows]": zeilen_html},
+        classes={
+            f"[data-fee-badge='{fee.pk}']": {
+                "add": [f"badge-{fee.status}"],
+                "remove": [f"badge-{wert}" for wert in MembershipFee.Status.values],
+            }
+        },
+    )
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def payment_storno(request, pk):
+    """Storniert eine Beitragszahlung per Gegenbuchung inkl. Kassenbuch und Statusabgleich."""
+    zahlung = get_object_or_404(Payment.objects.select_related("fee", "fee__member"), pk=pk)
+    fee = zahlung.fee
+    grund = request.POST.get("grund", "").strip()
+    try:
+        zahlung_stornieren(zahlung, grund=grund, benutzer=request.user)
+    except ValidationError as exc:
+        hinweis = " ".join(exc.messages)
+        if is_ajax(request):
+            return fehler(hinweis)
+        messages.error(request, hinweis)
+        return redirect("dues:fee_detail", pk=fee.pk)
+
+    fee.refresh_from_db()
+    nachricht = f"Zahlung über {zahlung.betrag:.2f} € wurde per Gegenbuchung storniert."
+    if not is_ajax(request):
+        messages.success(request, nachricht)
+        return redirect("dues:fee_detail", pk=fee.pk)
+    zeilen_html = "".join(
+        f"<tr><td class='nowrap'>{z.datum:%d.%m.%Y}</td><td class='mono'>{z.betrag:.2f} €</td>"
+        f"<td>{z.get_art_display()}</td><td class='cell-sub'>{z.notiz or '–'}</td></tr>"
+        for z in fee.zahlungen.all()
+    ) or "<tr><td colspan='4' class='muted'>Noch keine Zahlungen erfasst.</td></tr>"
+    return ok(
+        message=nachricht,
         patch={
             f"[data-fee-status='{fee.pk}']": fee.get_status_display(),
             f"[data-fee-open='{fee.pk}']": f"{fee.offener_betrag:.2f} €",

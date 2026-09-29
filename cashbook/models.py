@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -33,6 +33,14 @@ class CashEntry(models.Model):
     datum = models.DateField("Buchungsdatum", default=timezone.localdate)
     beschreibung = models.CharField("Beschreibung", max_length=250)
     belegnummer = models.CharField("Beleg-Nr.", max_length=60, blank=True)
+    storno_von = models.OneToOneField(
+        "self",
+        verbose_name="Storno von",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="storno_buchung",
+    )
     erfasst_von = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="Erfasst von",
@@ -53,8 +61,12 @@ class CashEntry(models.Model):
 
     def clean(self):
         super().clean()
-        if self.betrag is not None and self.betrag <= 0:
-            raise ValidationError({"betrag": "Der Betrag muss größer als 0 sein."})
+        if self.storno_von_id:
+            if self.betrag is not None and self.betrag >= 0:
+                raise ValidationError({"betrag": "Eine Storno-Gegenbuchung muss einen negativen Betrag haben."})
+        else:
+            if self.betrag is not None and self.betrag <= 0:
+                raise ValidationError({"betrag": "Der Betrag muss größer als 0 sein."})
 
     @property
     def vorzeichen_betrag(self):
@@ -65,8 +77,48 @@ class CashEntry(models.Model):
         return self.art == self.Art.EINNAHME
 
     @property
+    def ist_storno(self):
+        return self.storno_von_id is not None
+
+    @property
+    def ist_storniert(self):
+        return CashEntry.objects.filter(storno_von_id=self.pk).exists() if self.pk else False
+
+    @property
     def kategorie_label(self):
         return self.get_kategorie_display()
+
+
+@transaction.atomic
+def storniere_kassenbuchung(buchung, *, benutzer=None, grund="", datum=None):
+    """Erzeugt eine Storno-Gegenbuchung statt hartem Löschen (GoBD-konform)."""
+    from core.models import AuditLog
+
+    if buchung.ist_storno:
+        raise ValidationError("Eine Storno-Gegenbuchung kann nicht erneut storniert werden.")
+    if buchung.ist_storniert:
+        raise ValidationError("Diese Kassenbuchung wurde bereits storniert.")
+
+    betrag = Decimal(str(buchung.betrag)).quantize(Decimal("0.01"))
+    zusatz = f" ({grund})" if grund else ""
+    beschreibung = f"Storno zu #{buchung.pk}: {buchung.beschreibung}{zusatz}"[:250]
+    beleg = f"STORNO-{buchung.belegnummer or buchung.pk}"[:60]
+    gegenbuchung = CashEntry.objects.create(
+        art=buchung.art,
+        kategorie=buchung.kategorie,
+        betrag=-betrag,
+        datum=datum or buchung.datum,
+        beschreibung=beschreibung,
+        belegnummer=beleg,
+        storno_von=buchung,
+        erfasst_von=benutzer,
+    )
+    AuditLog.objects.create(
+        benutzer=benutzer,
+        aktion="Kassenbuchung storniert",
+        text=f"Storno zu Buchung #{buchung.pk}: {buchung.beschreibung} ({betrag:.2f} €){zusatz}",
+    )
+    return gegenbuchung
 
 
 def jahresabschluss(jahr):

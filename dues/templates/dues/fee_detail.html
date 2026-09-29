@@ -19,7 +19,7 @@
       </div>
       <div class="table-wrap">
         <table class="data">
-          <thead><tr><th>Datum</th><th>Betrag</th><th>Art</th><th>Notiz</th></tr></thead>
+          <thead><tr><th>Datum</th><th>Betrag</th><th>Art</th><th>Notiz</th><th class="right"></th></tr></thead>
           <tbody data-payment-rows>
             {% for zahlung in zahlungen %}
               <tr>
@@ -27,9 +27,22 @@
                 <td class="mono">{{ zahlung.betrag|floatformat:2 }} €</td>
                 <td><span class="badge badge-{{ zahlung.art }}">{{ zahlung.get_art_display }}</span></td>
                 <td class="cell-sub">{{ zahlung.notiz|default:"–" }}{% if zahlung.erfasst_von %} · {{ zahlung.erfasst_von.get_username }}{% endif %}</td>
+                <td class="right">
+                  {% if zahlung.ist_storno %}
+                    <span class="badge badge-neutral">Gegenbuchung</span>
+                  {% elif zahlung.ist_storniert %}
+                    <span class="badge badge-neutral">Storniert</span>
+                  {% else %}
+                    <form method="post" action="{% url 'dues:payment_storno' zahlung.pk %}" data-ajax>
+                      {% csrf_token %}
+                      <button class="btn small ghost" type="submit"
+                              data-confirm="Zahlung über {{ zahlung.betrag|floatformat:2 }} € per Gegenbuchung stornieren?">Stornieren</button>
+                    </form>
+                  {% endif %}
+                </td>
               </tr>
             {% empty %}
-              <tr><td colspan="4" class="muted">Noch keine Zahlungen erfasst.</td></tr>
+              <tr><td colspan="5" class="muted">Noch keine Zahlungen erfasst.</td></tr>
             {% endfor %}
           </tbody>
         </table>

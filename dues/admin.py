@@ -20,7 +20,9 @@ class SepaMandateAdmin(admin.ModelAdmin):
 class PaymentInline(admin.TabularInline):
     model = Payment
     extra = 0
-    fields = ("betrag", "datum", "art", "notiz")
+    can_delete = False
+    fields = ("betrag", "datum", "art", "notiz", "storno_von")
+    readonly_fields = ("storno_von",)
 
 
 @admin.register(MembershipFee)
@@ -30,8 +32,27 @@ class MembershipFeeAdmin(admin.ModelAdmin):
     search_fields = ("member__nachname", "member__vorname")
     inlines = [PaymentInline]
 
+    def has_delete_permission(self, request, obj=None):
+        # Finanzdaten werden nie gelöscht.
+        return False
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ("datum", "fee", "betrag", "art", "notiz", "storno_von", "erfasst_von")
+    list_filter = ("art", "datum")
+    search_fields = ("fee__member__nachname", "fee__member__vorname", "notiz")
+    readonly_fields = ("storno_von", "kassenbuchung", "erfasst_von", "erstellt_am")
+
+    def has_delete_permission(self, request, obj=None):
+        # Zahlungen werden nie gelöscht – Korrektur erfolgt per Storno-Gegenbuchung.
+        return False
+
 
 @admin.register(DunningLetter)
 class DunningLetterAdmin(admin.ModelAdmin):
     list_display = ("fee", "stufe", "datum", "gebuehr")
     list_filter = ("stufe",)
+
+    def has_delete_permission(self, request, obj=None):
+        return False

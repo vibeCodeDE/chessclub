@@ -93,6 +93,28 @@ class DatenauskunftTests(TestCase):
         self.assertEqual(daten["daten"]["stammdaten"]["email"], "anna@example.org")
         self.assertEqual(len(daten["daten"]["beitraege"]), 1)
         self.assertEqual(daten["daten"]["sepa_mandat"]["referenz"], "SCKS-2026-001")
+        eintrag = AuditLog.objects.filter(aktion="Datenauskunft erstellt", member=self.member).first()
+        self.assertIsNotNone(eintrag, "JSON-Datenauskunft muss im Audit-Log protokolliert werden")
+        self.assertEqual(eintrag.benutzer, self.admin)
+        self.assertIn("JSON", eintrag.text)
+
+    def test_mitgliedsakte_und_csv_export_werden_protokolliert(self):
+        """PRD N1.5: Zugriffe auf Personendaten und Exporte werden protokolliert."""
+        detail_resp = self.client.get(f"/mitglieder/{self.member.pk}/")
+        self.assertEqual(detail_resp.status_code, 200)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                aktion="Mitgliedsakte eingesehen", member=self.member, benutzer=self.admin
+            ).exists()
+        )
+
+        export_resp = self.client.get("/mitglieder/export.csv")
+        self.assertEqual(export_resp.status_code, 200)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                aktion="Mitgliederliste exportiert", benutzer=self.admin
+            ).exists()
+        )
 
     def test_verzeichnis_csv_listet_datenkategorien(self):
         response = self.client.get("/datenschutz/verzeichnis.csv")

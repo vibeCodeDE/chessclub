@@ -20,5 +20,6 @@ urlpatterns = [
     path("beitraege/mahnwesen/<int:pk>/brief/", views.dunning_letter, name="dunning_letter"),
     path("beitraege/posten/<int:pk>/", views.fee_detail, name="fee_detail"),
     path("beitraege/posten/<int:pk>/zahlung/", views.payment_create, name="payment_create"),
+    path("beitraege/zahlung/<int:pk>/storno/", views.payment_storno, name="payment_storno"),
     path("mein-beitragskonto/", views.mein_konto, name="mein_konto"),
 ]
