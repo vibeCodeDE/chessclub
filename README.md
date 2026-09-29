@@ -43,7 +43,7 @@ enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest          # 289 Tests, 1 Skip (nur mit PostgreSQL)
+.venv/bin/python -m pytest          # 296 Tests, 1 Skip (nur mit PostgreSQL)
 .venv/bin/python manage.py check
 ```
 
