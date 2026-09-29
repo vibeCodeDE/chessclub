@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('cashbook', '0002_cashentry_storno_von'),
-        ('dues', '0001_initial'),
+        ('dues', '0002_iban_verschluesselt'),
     ]
 
     operations = [
