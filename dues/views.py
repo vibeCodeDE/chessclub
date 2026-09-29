@@ -367,7 +367,7 @@ def export(request):
                 f"{fee.bezahlter_betrag:.2f}".replace(".", ","),
                 f"{fee.offener_betrag:.2f}".replace(".", ","),
                 fee.get_status_display(),
-                fee.faellig_am.isoformat(),
+                fee.faellig_am.strftime("%d.%m.%Y"),
                 fee.mahnstufe,
             ]
         )

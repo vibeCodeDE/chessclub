@@ -7,7 +7,7 @@ class AuditLog(models.Model):
 
     T4 schreibt den Eintrag bei der Freigabe eines Änderungswunschs;
     T5 ergänzt Signale für Stammdaten-Änderungen (Wer, Was, Wann, Alt/Neu
-    in ``feld``/``alt_wert``/``neu_wert``) und Login-Ereignisse.
+    in ``feld``/``alt_wert``/``neu_wert``) und Anmelde-Ereignisse.
     """
 
     zeitpunkt = models.DateTimeField("Zeitpunkt", auto_now_add=True)

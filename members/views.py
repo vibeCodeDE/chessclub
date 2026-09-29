@@ -238,7 +238,7 @@ def member_export(request):
             [
                 member.nachname,
                 member.vorname,
-                member.geburtsdatum.isoformat() if member.geburtsdatum else "",
+                member.geburtsdatum.strftime("%d.%m.%Y") if member.geburtsdatum else "",
                 member.email,
                 member.telefon,
                 member.strasse,
@@ -246,8 +246,8 @@ def member_export(request):
                 member.ort,
                 member.get_status_display(),
                 member.beitragskategorie.name if member.beitragskategorie else "",
-                member.eintrittsdatum.isoformat(),
-                member.austrittsdatum.isoformat() if member.austrittsdatum else "",
+                member.eintrittsdatum.strftime("%d.%m.%Y"),
+                member.austrittsdatum.strftime("%d.%m.%Y") if member.austrittsdatum else "",
             ]
         )
     return response
