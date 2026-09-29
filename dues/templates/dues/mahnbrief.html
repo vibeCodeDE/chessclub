@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Mahnbrief – Schachverein{% endblock %}
+
+{% block content %}
+<h1>Mahnbrief {{ post.jahr }}</h1>
+
+{% comment %}
+Platzhalter für Task 7: hier kommen Vereinsdaten, die Postentabelle über
+posten_fuer_brief und der Brieftext. Bis dahin zeigt die Seite nur den Posten.
+{% endcomment %}
+
+<p class="tile-hinweis">
+  <a href="{% url 'dues:mahnliste' %}?jahr={{ post.jahr }}">Zurück zur Mahnliste {{ post.jahr }}</a>
+</p>
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Mitglied</th>
+        <th>Kategorie</th>
+        <th>Beitrag</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <a href="{% url 'members:member_detail' post.member.pk %}">{{ post.member }}</a>
+        </td>
+        <td>{{ post.kategorie }}</td>
+        <td>{{ post.betrag }}&nbsp;€</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

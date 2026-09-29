@@ -440,8 +440,17 @@ def beitraege_export(request):
 
     Kein Audit-Eintrag: der Export ist eine Leseaktion. Protokolliert wird er
     laut PRD mit dem Auskunfts-Export in T23, dort mit Person und Zweck.
+
+    Ein unlesbares ``?jahr=`` wird umgeleitet statt geraten — dasselbe Verhalten
+    wie :func:`posten_liste` und :func:`mahnliste`. Geraten dürfte hier am
+    wenigsten sein: die Datei landet danach in der Buchhaltung.
     """
-    jahr = _parse_jahr(request.GET.get("jahr")) or _aktives_jahr()
+    jahr = _parse_jahr(request.GET.get("jahr"))
+    if jahr is None:
+        if request.GET.get("jahr") is not None:
+            return redirect("dues:mahnliste")
+        jahr = _aktives_jahr()
+
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="beitraege_{jahr}.csv"'
     response.write("\ufeff")  # BOM für Excel
@@ -449,3 +458,27 @@ def beitraege_export(request):
     for zeile in beitragszeilen(jahr):
         writer.writerow(zeile)
     return response
+
+
+@role_required(ADMIN_GROUP)
+def mahnbrief(request, pk):
+    """Platzhalter für den Mahnbrief — **Task 7 vervollständigt diese View**.
+
+    Bewusst minimal: sie holt den Beitragsposten und rendert
+    ``dues/mahnbrief.html``. Was Task 7 vorfindet und ersetzt:
+
+    * der Link auf der Mahnliste (``{% url 'dues:mahnbrief' pk=… %}``) zeigt auf
+      genau diese Route und existiert bereits,
+    * fehlend sind die Vereinsdaten, die Postentabelle über
+      :func:`dues.mahnung.posten_fuer_brief` und die 404-Logik für inzwischen
+      bezahlte Posten.
+
+    Bis dahin zeigt die Seite den Posten ohne Brieftext. Sie existiert, damit
+    ``{% url %}`` nicht ins Leere greift — mit ``DJANGO_DEBUG=1`` würde ein
+    nicht auflösbares ``{% url %}`` die ganze Mahnliste abschießen.
+    """
+    post = get_object_or_404(
+        FeePost.objects.select_related("member", "kategorie"), pk=pk
+    )
+    return render(request, "dues/mahnbrief.html", {"post": post})
+

@@ -240,7 +240,10 @@ body {
   margin: 0.25rem 0;
 }
 
-.inline-form input[type="text"] {
+/* Auch die Datumsfelder des Mahnformulars: input[type="date"] wird von der
+   Text-Regel nicht erfasst und rendert sonst in Browser-Standardoptik. */
+.inline-form input[type="text"],
+.inline-form input[type="date"] {
   padding: 0.35rem 0.5rem;
   font: inherit;
   border: 1px solid #bbb;

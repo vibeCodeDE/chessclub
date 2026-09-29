@@ -22,6 +22,11 @@ urlpatterns = [
     ),
     path("beitraege/mahnungen/", views.mahnliste, name="mahnliste"),
     path(
+        "beitraege/mahnungen/<int:pk>/brief/",
+        views.mahnbrief,
+        name="mahnbrief",
+    ),
+    path(
         "beitraege/mahnungen/<int:pk>/setzen/",
         views.mahnung_setzen,
         name="mahnung_setzen",

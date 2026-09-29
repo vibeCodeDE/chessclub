@@ -53,6 +53,7 @@
             {% endfor %}
           </td>
           <td>
+            <a class="button-link" href="{% url 'dues:mahnbrief' pk=zeile.post.pk %}">Mahnbrief</a>
             {% if zeile.stufe %}
               <form class="inline-form" method="post" action="{% url 'dues:mahnung_setzen' pk=zeile.post.pk %}">
                 {% csrf_token %}
