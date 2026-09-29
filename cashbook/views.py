@@ -4,6 +4,7 @@ import csv
 from decimal import Decimal
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -14,7 +15,7 @@ from core.roles import ADMIN_GROUP, role_required
 from core.ui import fehler, is_ajax, ok, paginate
 
 from .forms import CashEntryForm
-from .models import CashEntry, jahresabschluss
+from .models import CashEntry, jahresabschluss, storniere_kassenbuchung
 
 
 def _jahr(request):
@@ -71,12 +72,20 @@ def entry_create(request):
 @role_required(ADMIN_GROUP)
 def entry_update(request, pk):
     buchung = get_object_or_404(CashEntry, pk=pk)
+    if buchung.ist_storniert or buchung.ist_storno:
+        hinweis = "Stornierte Buchungen und Gegenbuchungen können nicht bearbeitet werden."
+        if is_ajax(request):
+            return fehler(hinweis)
+        messages.error(request, hinweis)
+        return redirect("cashbook:entry_list")
     if request.method == "POST":
         form = CashEntryForm(request.POST, instance=buchung)
         if form.is_valid():
             form.save()
             messages.success(request, "Buchung aktualisiert.")
             return redirect("cashbook:entry_list")
+        if is_ajax(request):
+            return fehler("Bitte Eingaben prüfen.", errors=form.errors)
     else:
         form = CashEntryForm(instance=buchung)
     return render(request, "cashbook/entry_form.html", {"form": form, "buchung": buchung})
@@ -84,11 +93,30 @@ def entry_update(request, pk):
 
 @role_required(ADMIN_GROUP)
 @require_POST
-def entry_delete(request, pk):
+def entry_storno(request, pk):
+    """Storniert eine Kassenbuchung per Gegenbuchung – kein Hard-Delete von Finanzdaten."""
     buchung = get_object_or_404(CashEntry, pk=pk)
-    beschreibung = buchung.beschreibung
-    buchung.delete()
-    return ok(message=f"„{beschreibung}“ gelöscht.", remove_selector=f"[data-row='buchung-{pk}']")
+    grund = request.POST.get("grund", "").strip()
+    try:
+        gegenbuchung = storniere_kassenbuchung(buchung, benutzer=request.user, grund=grund)
+    except ValidationError as exc:
+        hinweis = " ".join(exc.messages)
+        if is_ajax(request):
+            return fehler(hinweis)
+        messages.error(request, hinweis)
+        return redirect("cashbook:entry_list")
+    nachricht = f"Buchung „{buchung.beschreibung}“ wurde per Gegenbuchung (#{gegenbuchung.pk}) storniert."
+    if is_ajax(request):
+        return ok(message=nachricht, reload=True)
+    messages.success(request, nachricht)
+    return redirect("cashbook:entry_list")
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def entry_delete(request, pk):
+    """Rückwärtskompatibler Alias: Kassenbuchungen werden storniert statt hart gelöscht."""
+    return entry_storno(request, pk)
 
 
 @role_required(ADMIN_GROUP)
@@ -116,13 +144,13 @@ def export(request):
     for buchung in CashEntry.objects.filter(datum__year=jahr).order_by("datum"):
         writer.writerow(
             [
-                buchung.datum.isoformat(),
+                buchung.datum.strftime("%d.%m.%Y"),
                 buchung.get_art_display(),
                 buchung.get_kategorie_display(),
                 f"{buchung.betrag:.2f}".replace(".", ","),
                 buchung.beschreibung,
                 buchung.belegnummer,
-                buchung.erfasst_von.get_username if buchung.erfasst_von else "",
+                buchung.erfasst_von.get_username() if buchung.erfasst_von else "",
             ]
         )
     abschluss = jahresabschluss(jahr)

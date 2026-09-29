@@ -98,7 +98,7 @@ class LoginAuditTests(TestCase):
     def test_login_wird_protokolliert(self):
         self.assertTrue(self.client.login(username="l1", password="x"))
 
-        eintrag = AuditLog.objects.get(aktion="Login")
+        eintrag = AuditLog.objects.get(aktion="Anmeldung")
         self.assertEqual(eintrag.benutzer, self.user)
         self.assertIn("IP:", eintrag.text)
 
@@ -108,13 +108,13 @@ class LoginAuditTests(TestCase):
         response = self.client.post("/abmelden/")
 
         self.assertRedirects(response, "/")
-        eintrag = AuditLog.objects.get(aktion="Logout")
+        eintrag = AuditLog.objects.get(aktion="Abmeldung")
         self.assertEqual(eintrag.benutzer, self.user)
 
     def test_abgelehnter_login_wird_protokolliert(self):
         self.assertFalse(self.client.login(username="l1", password="falsch"))
 
-        eintrag = AuditLog.objects.get(aktion="Login abgelehnt")
+        eintrag = AuditLog.objects.get(aktion="Anmeldung abgelehnt")
         self.assertIsNone(eintrag.benutzer)
         self.assertIn("l1", eintrag.text)
 
@@ -125,7 +125,7 @@ class AuditLogAdminTests(TestCase):
         self.member = make_member()
         self.eintrag = AuditLog.objects.create(
             benutzer=self.admin,
-            aktion="Login",
+            aktion="Anmeldung",
             text="IP: 127.0.0.1",
             member=self.member,
         )
@@ -136,7 +136,7 @@ class AuditLogAdminTests(TestCase):
         response = self.client.get("/admin/core/auditlog/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Login")
+        self.assertContains(response, "Anmeldung")
         self.assertContains(response, "Meier")
 
     def test_eintraege_sind_nicht_bearbeitbar(self):

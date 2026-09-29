@@ -70,6 +70,12 @@ def member_detail(request, pk):
     member = get_object_or_404(
         Member.objects.select_related("beitragskategorie"), pk=pk
     )
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="Mitgliedsakte eingesehen",
+        text=f"Stammdaten und Akte von {member} aufgerufen.",
+        member=member,
+    )
     posten = (
         MembershipFee.objects.filter(member=member)
         .prefetch_related("zahlungen")
@@ -213,6 +219,11 @@ def member_status(request, pk):
 def member_export(request):
     query, status, kategorie = _parse_filters(request)
     members = _filtered_members(query, status, kategorie)
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="Mitgliederliste exportiert",
+        text=f"CSV-Export der Mitgliederliste ({members.count()} Einträge).",
+    )
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="mitglieder.csv"'
     response.write("\ufeff")  # BOM für Excel
@@ -238,7 +249,7 @@ def member_export(request):
             [
                 member.nachname,
                 member.vorname,
-                member.geburtsdatum.isoformat() if member.geburtsdatum else "",
+                member.geburtsdatum.strftime("%d.%m.%Y") if member.geburtsdatum else "",
                 member.email,
                 member.telefon,
                 member.strasse,
@@ -246,8 +257,8 @@ def member_export(request):
                 member.ort,
                 member.get_status_display(),
                 member.beitragskategorie.name if member.beitragskategorie else "",
-                member.eintrittsdatum.isoformat(),
-                member.austrittsdatum.isoformat() if member.austrittsdatum else "",
+                member.eintrittsdatum.strftime("%d.%m.%Y"),
+                member.austrittsdatum.strftime("%d.%m.%Y") if member.austrittsdatum else "",
             ]
         )
     return response

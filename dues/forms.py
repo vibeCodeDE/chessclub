@@ -53,7 +53,9 @@ class PaymentForm(StyledFormMixin, forms.Form):
 
 
 class DunningForm(StyledFormMixin, forms.Form):
-    gebuehr = forms.DecimalField(label="Mahngebühr (€)", max_digits=6, decimal_places=2, required=False, initial=0)
+    gebuehr = forms.DecimalField(
+        label="Mahngebühr (€)", max_digits=6, decimal_places=2, min_value=0, required=False, initial=0
+    )
     notiz = forms.CharField(label="Notiz", max_length=200, required=False)
 
     def __init__(self, *args, **kwargs):

@@ -1,0 +1,244 @@
+{% load static %}<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ product_name }} – Vereinsverwaltung für Schachvereine</title>
+  <meta name="description" content="{{ product_name }}: Mitglieder, Beiträge, Turniere, Spielbetrieb und Kassenbuch in einer Software. Für Schachvereine, datenschutzkonform, Hosting in Deutschland.">
+  <meta property="og:title" content="{{ product_name }} – Vereinsverwaltung für Schachvereine">
+  <meta property="og:description" content="Schluss mit Excel-Listen: Mitglieder, Beiträge, Turniere und Kasse an einem Ort. Hosting in Deutschland.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0d1526">
+  <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+</head>
+<body class="lp">
+{% include "includes/sprite.html" %}
+
+<a class="lp-skip" href="#inhalt">Zum Inhalt springen</a>
+
+<header class="lp-header">
+  <div class="lp-wrap lp-header-row">
+    <a class="lp-brand" href="{% url 'core:produkt' %}">
+      <span class="lp-brand-mark" aria-hidden="true">♞</span>
+      <span>{{ product_name }}</span>
+    </a>
+    <nav class="lp-nav" aria-label="Hauptnavigation">
+      <a href="#funktionen">Funktionen</a>
+      <a href="#datenschutz">Datenschutz</a>
+      <a href="#preise">Preise</a>
+      <a href="#faq">Fragen</a>
+    </nav>
+    <div class="lp-header-cta">
+      <a class="lp-link" href="{% url 'core:login' %}">Anmelden</a>
+      <a class="btn small" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">Demo anfragen</a>
+    </div>
+  </div>
+</header>
+
+<main id="inhalt">
+  <section class="lp-hero">
+    <div class="lp-wrap lp-hero-grid">
+      <div>
+        <span class="lp-eyebrow">Für Schachvereine in Deutschland</span>
+        <h1>Vereinsverwaltung, die Ihr Vorstand gerne benutzt.</h1>
+        <p class="lp-lede">Mitglieder, Beiträge, Turniere, Mannschaften und Kassenbuch in einer Software. Ohne Excel-Listen, ohne Zettelwirtschaft und mit Datenhaltung in Deutschland.</p>
+        <div class="lp-actions">
+          <a class="btn gold lp-btn-lg" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
+            Kostenlose Demo anfragen {% include "includes/icon.html" with name="arrow-right" size="sm" %}
+          </a>
+          <a class="btn secondary lp-btn-lg" href="#funktionen">Funktionen ansehen</a>
+        </div>
+        <ul class="lp-checks">
+          <li>{% include "includes/icon.html" with name="check" size="sm" %} Monatlich kündbar</li>
+          <li>{% include "includes/icon.html" with name="check" size="sm" %} Einrichtung inklusive</li>
+          <li>{% include "includes/icon.html" with name="check" size="sm" %} DSGVO-konform</li>
+        </ul>
+      </div>
+
+      <div class="lp-mock" role="img" aria-label="Vorschau des Dashboards mit offenen Beiträgen, Mitgliederzahl und nächsten Terminen">
+        <div class="lp-mock-bar"><i></i><i></i><i></i><span>Dashboard</span></div>
+        <div class="lp-mock-body">
+          <div class="lp-mock-stats">
+            <div><small>Aktive Mitglieder</small><strong>87</strong></div>
+            <div class="is-warn"><small>Offene Beiträge</small><strong>1.240 €</strong></div>
+            <div class="is-ok"><small>Turnieranmeldungen</small><strong>24</strong></div>
+          </div>
+          <div class="lp-mock-list">
+            <div><span class="lp-dot gold"></span><b>Vereinsmeisterschaft</b><small>Sa, 18.10. · Schweizer System</small></div>
+            <div><span class="lp-dot"></span><b>SC Musterstadt I gegen SV Nachbarort</b><small>So, 26.10. · 10:00 Uhr</small></div>
+            <div><span class="lp-dot warn"></span><b>3 Mahnungen vorbereitet</b><small>Zur Prüfung durch den Kassenwart</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-strip" aria-label="Kennzahlen">
+    <div class="lp-wrap lp-strip-row">
+      <div><strong>6 Bereiche</strong><span>in einer Anwendung</span></div>
+      <div><strong>100 % Deutschland</strong><span>Hosting und Datenhaltung</span></div>
+      <div><strong>0 Tracker</strong><span>keine externen Dienste</span></div>
+      <div><strong>Mobil</strong><span>auch als App installierbar</span></div>
+    </div>
+  </section>
+
+  <section class="lp-section" id="problem">
+    <div class="lp-wrap lp-two">
+      <div>
+        <h2 class="lp-h2">Vereinsarbeit ist Ehrenamt. Sie sollte sich nicht nach Buchhaltung anfühlen.</h2>
+        <p class="lp-muted">In vielen Vereinen liegen Mitgliederliste, Beitragsübersicht und Turnierergebnisse in drei verschiedenen Dateien, manchmal bei drei verschiedenen Personen. Jeder Wechsel im Vorstand wird dann zum Risiko.</p>
+      </div>
+      <ul class="lp-pains">
+        <li><span>Vorher</span> Adressen in Excel, Zahlungen im Kopf der Kassenwartin</li>
+        <li><span>Vorher</span> Turnierergebnisse per Hand in Tabellen getippt und per Mail verschickt</li>
+        <li><span>Vorher</span> Datenschutz-Anfragen, bei denen niemand weiß, wo welche Daten liegen</li>
+        <li class="is-after"><span>Mit uns</span> Eine Software, klare Rollen, alles nachvollziehbar protokolliert</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="lp-section lp-alt" id="funktionen">
+    <div class="lp-wrap">
+      <div class="lp-head">
+        <span class="lp-eyebrow dark">Funktionen</span>
+        <h2 class="lp-h2">Alles, was ein Schachverein braucht</h2>
+        <p class="lp-muted">Gebaut für Vereine bis etwa 200 Mitglieder. Jede Rolle sieht nur das, was sie braucht.</p>
+      </div>
+      <div class="lp-cards">
+        {% for f in funktionen %}
+          <article class="lp-card">
+            <span class="lp-icon">{% include "includes/icon.html" with name=f.icon %}</span>
+            <h3>{{ f.titel }}</h3>
+            <p>{{ f.text }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section" id="rollen">
+    <div class="lp-wrap">
+      <div class="lp-head">
+        <span class="lp-eyebrow dark">Für alle im Verein</span>
+        <h2 class="lp-h2">Jeder bekommt seinen Bereich</h2>
+      </div>
+      <div class="lp-roles">
+        <div>
+          <h3>Vorstand</h3>
+          <p>Volle Übersicht über Mitglieder, Beiträge, Kasse und Turniere. Änderungswünsche von Mitgliedern prüfen und freigeben.</p>
+        </div>
+        <div>
+          <h3>Mannschaftsführer</h3>
+          <p>Aufstellungen melden, Ergebnisse erfassen und Termine im Blick behalten, ohne Zugriff auf Finanzdaten.</p>
+        </div>
+        <div>
+          <h3>Mitglieder</h3>
+          <p>Eigenes Profil, Beitragskonto und Turnieranmeldung. Änderungen der Stammdaten lassen sich direkt beantragen.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section lp-dark" id="datenschutz">
+    <div class="lp-wrap lp-two">
+      <div>
+        <span class="lp-eyebrow">Datenschutz</span>
+        <h2 class="lp-h2">Mitgliederdaten gehören in gute Hände</h2>
+        <p class="lp-lede">Vereine verarbeiten personenbezogene Daten, auch von Kindern und Jugendlichen. Die Software ist deshalb von Anfang an auf die DSGVO ausgelegt.</p>
+      </div>
+      <ul class="lp-list-check">
+        {% for punkt in datenschutz_punkte %}
+          <li>{% include "includes/icon.html" with name="shield" %} <span>{{ punkt }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="lp-section" id="ablauf">
+    <div class="lp-wrap">
+      <div class="lp-head">
+        <span class="lp-eyebrow dark">So starten Sie</span>
+        <h2 class="lp-h2">In drei Schritten einsatzbereit</h2>
+      </div>
+      <ol class="lp-steps">
+        {% for titel, text in schritte %}
+          <li>
+            <span class="lp-step-no">{{ forloop.counter }}</span>
+            <h3>{{ titel }}</h3>
+            <p>{{ text }}</p>
+          </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+
+  <section class="lp-section lp-alt" id="preise">
+    <div class="lp-wrap">
+      <div class="lp-head">
+        <span class="lp-eyebrow dark">Preise</span>
+        <h2 class="lp-h2">Einfach und fair für Vereinskassen</h2>
+        <p class="lp-muted">Monatliche Zahlung, keine Mindestlaufzeit. Preise zzgl. gesetzlicher Umsatzsteuer.</p>
+      </div>
+      <div class="lp-plans">
+        {% for stufe in preisstufen %}
+          <article class="lp-plan{% if stufe.hervorgehoben %} is-featured{% endif %}">
+            {% if stufe.hervorgehoben %}<span class="lp-badge">Beliebt</span>{% endif %}
+            <h3>{{ stufe.name }}</h3>
+            <p class="lp-plan-for">{{ stufe.fuer }}</p>
+            <p class="lp-price"><strong>{{ stufe.preis }} €</strong> <span>pro Monat</span></p>
+            <ul>
+              {% for punkt in stufe.punkte %}
+                <li>{% include "includes/icon.html" with name="check" size="sm" %} {{ punkt }}</li>
+              {% endfor %}
+            </ul>
+            <a class="btn {% if not stufe.hervorgehoben %}secondary {% endif %}block" href="mailto:{{ product_contact }}?subject=Demo%20anfragen%20({{ stufe.name|urlencode }})">Demo anfragen</a>
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section" id="faq">
+    <div class="lp-wrap lp-faq-wrap">
+      <div class="lp-head">
+        <span class="lp-eyebrow dark">Häufige Fragen</span>
+        <h2 class="lp-h2">Gut zu wissen</h2>
+      </div>
+      <div class="lp-faq">
+        {% for frage, antwort in faq %}
+          <details>
+            <summary>{{ frage }}</summary>
+            <p>{{ antwort }}</p>
+          </details>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-cta">
+    <div class="lp-wrap">
+      <h2>Bereit, die Vereinsverwaltung zu vereinfachen?</h2>
+      <p>Wir zeigen Ihnen die Software mit Beispieldaten, kostenlos und unverbindlich.</p>
+      <a class="btn gold lp-btn-lg" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
+        Demo anfragen {% include "includes/icon.html" with name="arrow-right" size="sm" %}
+      </a>
+      <p class="lp-cta-mail"><a href="mailto:{{ product_contact }}">{{ product_contact }}</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="lp-footer">
+  <div class="lp-wrap lp-footer-row">
+    <span>© {% now "Y" %} {{ product_name }}</span>
+    <nav aria-label="Rechtliches">
+      <a href="{% url 'core:impressum' %}">Impressum</a>
+      <a href="{% url 'core:datenschutz' %}">Datenschutz</a>
+      <a href="{% url 'core:login' %}">Anmelden</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

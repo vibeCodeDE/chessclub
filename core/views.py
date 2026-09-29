@@ -15,6 +15,7 @@ from django.utils import timezone
 from cashbook.models import CashEntry, jahresabschluss
 from comms.models import NewsPost
 from core.dsgvo import datenauskunft, verarbeitungstaetigkeiten
+from core import produkt
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_of, role_required
 from dues.models import MembershipFee, Payment, jahres_uebersicht
@@ -67,6 +68,12 @@ def dsgvo_export(request, pk):
     """Maschinenlesbare Auskunft (JSON) zum Herunterladen (PRD N1.2/N1.4)."""
     member = get_object_or_404(Member, pk=pk)
     daten = datenauskunft(member)
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="Datenauskunft erstellt",
+        text=f"Datenauskunft als JSON (Art. 15 DSGVO) für Mitglied {member.pk}.",
+        member=member,
+    )
     inhalt = json.dumps(
         {"mitglied_id": member.pk, "erstellt_am": timezone.now().isoformat(), "daten": daten},
         ensure_ascii=False,
@@ -138,6 +145,35 @@ def home(request):
         "naechstes_turnier": turniere[0] if turniere else None,
     }
     return render(request, "core/home.html", kontext)
+
+
+def produkt_seite(request):
+    """Marketing-Landingpage für den Verkauf der Software an andere Vereine."""
+    kontext = {
+        "product_name": settings.PRODUCT_NAME,
+        "product_contact": settings.PRODUCT_CONTACT,
+        "preisstufen": produkt.PREISSTUFEN,
+        "funktionen": produkt.FUNKTIONEN,
+        "datenschutz_punkte": produkt.DATENSCHUTZ_PUNKTE,
+        "schritte": produkt.SCHRITTE,
+        "faq": produkt.FAQ,
+    }
+    return render(request, "core/produkt.html", kontext)
+
+
+def rechtliches(request, seite):
+    """Platzhalter für Impressum und Datenschutzerklärung der Produktseite."""
+    titel = {"impressum": "Impressum", "datenschutz": "Datenschutzerklärung"}[seite]
+    return render(
+        request,
+        "core/rechtliches.html",
+        {
+            "product_name": settings.PRODUCT_NAME,
+            "product_contact": settings.PRODUCT_CONTACT,
+            "seite": seite,
+            "titel": titel,
+        },
+    )
 
 
 def news_archiv(request):

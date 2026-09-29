@@ -83,7 +83,7 @@ class ChangeRequestForm(forms.Form):
     """Einreichung eines Änderungswunschs durch das Mitglied selbst."""
 
     feld = forms.ChoiceField(label="Feld", choices=list(EDITABLE_FIELDS.items()))
-    wunschwert = forms.CharField(label="Neuer Wert", max_length=200)
+    wunschwert = forms.CharField(label="Wunschwert", max_length=200)
 
     def __init__(self, *args, member=None, **kwargs):
         super().__init__(*args, **kwargs)

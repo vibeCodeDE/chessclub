@@ -3,10 +3,11 @@
 from datetime import date
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from cashbook.models import CashEntry
+from cashbook.models import CashEntry, storniere_kassenbuchung
 
 from .models import DunningLetter, MembershipFee, Payment
 
@@ -67,25 +68,82 @@ def beitragslauf(jahr, faellig_am=None, benutzer=None):
 def zahlung_erfassen(fee, betrag, datum=None, art=Payment.Art.UEBERWEISUNG, notiz="", benutzer=None):
     """Bucht eine Zahlung und gleicht Status + Kassenbuch ab (M2.3b/M2.5)."""
     betrag = Decimal(str(betrag)).quantize(Decimal("0.01"))
-    zahlung = Payment.objects.create(
-        fee=fee,
-        betrag=betrag,
-        datum=datum or timezone.localdate(),
-        art=art,
-        notiz=notiz,
-        erfasst_von=benutzer,
-    )
-    fee.status_aktualisieren()
-    CashEntry.objects.create(
+    zahlungsdatum = datum or timezone.localdate()
+    kassenbuchung = CashEntry.objects.create(
         art=CashEntry.Art.EINNAHME,
         kategorie=CashEntry.Kategorie.BEITRAEGE,
         betrag=betrag,
-        datum=zahlung.datum,
+        datum=zahlungsdatum,
         beschreibung=f"Beitrag {fee.jahr} – {fee.member}",
         belegnummer=f"BEITRAG-{fee.jahr}-{fee.member_id}",
         erfasst_von=benutzer,
     )
+    zahlung = Payment.objects.create(
+        fee=fee,
+        betrag=betrag,
+        datum=zahlungsdatum,
+        art=art,
+        notiz=notiz,
+        kassenbuchung=kassenbuchung,
+        erfasst_von=benutzer,
+    )
+    fee.status_aktualisieren()
     return zahlung
+
+
+@transaction.atomic
+def zahlung_stornieren(zahlung, *, grund="", datum=None, benutzer=None):
+    """Storniert eine Beitragszahlung per Gegenbuchung inkl. Kassenbuch und Audit-Log."""
+    from core.models import AuditLog
+
+    if zahlung.ist_storno:
+        raise ValidationError("Eine Storno-Gegenbuchung kann nicht erneut storniert werden.")
+    if zahlung.ist_storniert:
+        raise ValidationError("Diese Zahlung wurde bereits storniert.")
+
+    fee = zahlung.fee
+    storno_datum = datum or zahlung.datum
+    zusatz = f": {grund}" if grund else ""
+    notiz = f"Storno zu Zahlung #{zahlung.pk}{zusatz}"[:200]
+
+    kassen_storno = None
+    ursprungs_kasse = zahlung.kassenbuchung
+    if ursprungs_kasse is None:
+        ursprungs_kasse = (
+            CashEntry.objects.filter(
+                art=CashEntry.Art.EINNAHME,
+                kategorie=CashEntry.Kategorie.BEITRAEGE,
+                betrag=zahlung.betrag,
+                belegnummer=f"BEITRAG-{fee.jahr}-{fee.member_id}",
+                storno_von__isnull=True,
+                storno_buchung__isnull=True,
+            )
+            .order_by("-pk")
+            .first()
+        )
+    if ursprungs_kasse is not None and not ursprungs_kasse.ist_storniert:
+        kassen_storno = storniere_kassenbuchung(
+            ursprungs_kasse, benutzer=benutzer, grund=grund, datum=storno_datum
+        )
+
+    gegenbuchung = Payment.objects.create(
+        fee=fee,
+        betrag=-zahlung.betrag,
+        datum=storno_datum,
+        art=zahlung.art,
+        notiz=notiz,
+        storno_von=zahlung,
+        kassenbuchung=kassen_storno,
+        erfasst_von=benutzer,
+    )
+    fee.status_aktualisieren()
+    AuditLog.objects.create(
+        benutzer=benutzer,
+        aktion="Zahlung storniert",
+        text=f"Storno zu Zahlung #{zahlung.pk} ({zahlung.betrag:.2f} €) für {fee.member} ({fee.jahr}){zusatz}",
+        member=fee.member,
+    )
+    return gegenbuchung
 
 
 @transaction.atomic
