@@ -2086,6 +2086,7 @@ git commit -m "T10: Mahnliste, Mahnformular und CSV-Export der Beitraege"
 - Create: `dues/templates/dues/mahnbrief.html`
 - Modify: `dues/views.py` (`mahnbrief`)
 - Modify: `dues/urls.py` (Route)
+- Modify: `dues/templates/dues/mahnliste.html` (den „Mahnbrief"-Link zurückbringen — Task 6 musste ihn entfernen, weil die Route noch nicht existierte; ohne ihn ist der Brief aus der Mahnliste nicht erreichbar und das Abnahmekriterium in Task 8 Schritt 4 unerfüllbar)
 
 **Interfaces:**
 - Consumes: `dues.mahnung.posten_fuer_brief`, `dues.mahnung.naechste_stufe`, `dues.mahnung.mahnstufe_text`, `verein.models.Vereinsdaten.aktuell`
@@ -2276,6 +2277,25 @@ und `naechste_stufe`/`posten_fuer_brief` in der `dues.mahnung`-Importliste ergä
 
 ```python
     path("beitraege/mahnungen/<int:pk>/", views.mahnbrief, name="mahnbrief"),
+```
+
+- [ ] **Step 4b: Link in der Mahnliste zurückbringen**
+
+In `dues/templates/dues/mahnliste.html` in der Aktionsspalte **neben** dem Mahnformular wieder aufnehmen (Task 6 hatte ihn entfernt, weil `{% url 'dues:mahnbrief' %}` ohne die Route bei jedem Rendern `NoReverseMatch` warf):
+
+```html
+            <a class="button-link" href="{% url 'dues:mahnbrief' pk=zeile.post.pk %}">Mahnbrief</a>
+```
+
+Ergänze im selben Commit einen Test in `dues/tests/test_views_mahnung.py`, der den Link auf der Mahnliste belegt, damit er nicht wieder still verschwinden kann:
+
+```python
+    def test_mahnliste_verlinkt_auf_den_mahnbrief(self):
+        post = make_post(kategorie=self.kategorie)
+
+        response = self.client.get(MAHNLISTE)
+
+        self.assertContains(response, reverse("dues:mahnbrief", args=[post.pk]))
 ```
 
 - [ ] **Step 5: `dues/templates/dues/mahnbrief.html` schreiben**
@@ -2481,12 +2501,12 @@ In der T10-Zeile `[ ]` → `[x]` setzen. Sonst nichts an der Datei ändern — s
 In „### Phase 2: Beiträge + Dashboard" einen Eintrag **nach** T9 anhängen, im Stil der anderen:
 
 ```markdown
-- **T10: Mahnwesen + Beitrags-Export** — `Mahnung` (FK `PROTECT` auf `FeePost`, Stufe 1/2, Datum, optionale Frist, interne Notiz, `unique(post, stufe)`), `Vereinsdaten` in der neuen Mini-App `verein` (genau ein Datensatz, `aktuell()` legt ihn an). Regelbasis in `dues/mahnung.py` (`naechste_stufe`, `mahnungen_setzen`, `offene_posten`, `posten_fuer_brief`) und `dues/export.py` (`CSV_SPALTEN`, `beitragszeilen`); `services.py` bleibt unverändert. Stufen werden nicht übersprungen und nicht doppelt gesetzt, ein bezahlter Posten ist nicht mahnbar (Gutschrift ebenso), jedes Setzen schreibt eine Audit-Zeile mit `member`. Bezahlte Posten fallen automatisch aus der Übersicht — es gibt bewusst **kein** Zurückziehen und **keine** Mahngebühr. UI: `/beitraege/mahnungen/` (Jahresfilter, Summenzeile, Mahnformular je Zeile, CSV-Knopf), Mahnbrief je Posten als eigenständiges druckbares HTML mit Print-Stylesheet (PDF über den Browser — keine neue Abhängigkeit), `/beitraege/export.csv` mit BOM und `;`. *Beleg:* `pytest` → **N Tests grün** (M: 8 · Services: 32 · Export: 17 · Views: 34 · verein: 6); Negativtests: 403 für „kapitaen"/„mitglied" auf Übersicht, Brief, Export **und** POST (jeweils ohne Seiteneffekt), GET auf `mahnung_setzen` → 405, übersprungene/doppelte Stufe, bezahlter Posten, unbekannter Posten 404, Brief 404 wenn nichts offen ist; Inhaltstest: CSV enthält keine Adresse, E-Mail, Telefon oder Geburtsdatum (auch nicht die anderer Mitglieder), zwei Exporte byte-identisch, Jahressumme == im Test berechnete Modellsumme. Browser-Check am laufenden Stack: Lauf 2026 → 2 von 3 gezahlt → Mahnliste zeigt 1 offenen Posten → 1. Mahnung mit Datum → Brief gedruckt → 2. Mahnung gesetzt (Button verschwindet) → CSV geprüft; 360/1280 px ohne Overflow.
+- **T10: Mahnwesen + Beitrags-Export** — `Mahnung` (FK `PROTECT` auf `FeePost`, Stufe 1/2, Datum, optionale Frist, interne Notiz, `unique(post, stufe)`), `Vereinsdaten` in der neuen Mini-App `verein` (genau ein Datensatz, `aktuell()` legt ihn an). Regelbasis in `dues/mahnung.py` (`naechste_stufe`, `mahnungen_setzen`, `offene_posten`, `posten_fuer_brief`) und `dues/export.py` (`CSV_SPALTEN`, `beitragszeilen`); `services.py` bleibt unverändert. Stufen werden nicht übersprungen und nicht doppelt gesetzt, ein bezahlter Posten ist nicht mahnbar (Gutschrift ebenso), jedes Setzen schreibt eine Audit-Zeile mit `member`. Bezahlte Posten fallen automatisch aus der Übersicht — es gibt bewusst **kein** Zurückziehen und **keine** Mahngebühr. UI: `/beitraege/mahnungen/` (Jahresfilter, Summenzeile, Mahnformular je Zeile, CSV-Knopf), Mahnbrief je Posten als eigenständiges druckbares HTML mit Print-Stylesheet (PDF über den Browser — keine neue Abhängigkeit), `/beitraege/export.csv` mit BOM und `;`. *Beleg:* `pytest` → **N Tests grün** (M: 8 · Services: 32 · Export: 17 · Views: 26 · verein: 6); Negativtests: 403 für „kapitaen"/„mitglied" auf Übersicht, Brief, Export **und** POST (jeweils ohne Seiteneffekt), GET auf `mahnung_setzen` → 405, übersprungene/doppelte Stufe, bezahlter Posten, unbekannter Posten 404, Brief 404 wenn nichts offen ist; Inhaltstest: CSV enthält keine Adresse, E-Mail, Telefon oder Geburtsdatum (auch nicht die anderer Mitglieder), zwei Exporte byte-identisch, Jahressumme == im Test berechnete Modellsumme. Browser-Check am laufenden Stack: Lauf 2026 → 2 von 3 gezahlt → Mahnliste zeigt 1 offenen Posten → 1. Mahnung mit Datum → Brief gedruckt → 2. Mahnung gesetzt (Button verschwindet) → CSV geprüft; 360/1280 px ohne Overflow.
   - *Nebenwirkungen:* Der CSV-Export enthält **alle** Posten des Jahres (auch bezahlte), die Mahnliste nur die offenen — zwei bewusst verschiedene Mengen, beide in `dues/` dokumentiert. Die Vereinsdaten sind die Quelle für Absender und Kontakt; T14 (Gruppemail) und T17 (News) lesen denselben Datensatz. Der Export wird **nicht** protokolliert — laut PRD erst mit T23 (Auskunfts-Export, dort mit Person und Zweck).
   - *Hinweise an Folge-Tasks:* T11 (Dashboard) nimmt offene Summe und Anzahl aus `offene_posten(jahr)`; T11b (Kassenbericht) legt `dues/kassenbericht.py` neben `mahnung.py` und `export.py` an. Mahnbrief serverseitig als PDF und eine Frist ohne Mahnung bleiben bewusst offen (Browser druckt, der Vorstand legt die Frist auf Papier fest).
 ```
 
-`(N Tests grün)` sowie `M: 8 · Services: 32 · Export: 17 · Views: 34` mit den **tatsächlichen** Zahlen aus Task 8 Schritt 1 und den Testdateien ersetzen.
+`(N Tests grün)` sowie die Aufteilung `Models: 8 · Services: 36 · Export: 17 · Views: 26 · verein: 8` mit den **tatsächlichen** Zahlen aus Task 8 Schritt 1 und den Testdateien abgleichen und bei Abweichung anpassen.
 
 - [ ] **Step 7: „Nächste Schritte" in `todo.md` aktualisieren**
 
