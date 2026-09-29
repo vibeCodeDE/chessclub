@@ -41,7 +41,6 @@ die Akte des Vorstands, nicht in den Brief an das Mitglied.
     .hinweis { background: #f7f7f9; padding: 0.75rem 1rem; margin: 1.5rem 0; }
     .hinweis p { margin: 0 0 0.5rem; }
     .frist { font-weight: bold; }
-    .bezug { font-size: 0.9rem; color: #444; }
     .gruss { margin-top: 2.5rem; }
     .werkzeug { margin-bottom: 1.5rem; }
     .werkzeug button {
@@ -70,31 +69,33 @@ die Akte des Vorstands, nicht in den Brief an das Mitglied.
   </p>
 
   <p class="absender">
-    <strong>{{ verein.name }}</strong><br>
-    {% if verein.strasse %}{{ verein.strasse }}<br>{% endif %}
-    {% if verein.plz or verein.ort %}{{ verein.plz }} {{ verein.ort }}<br>{% endif %}
-    {% if verein.telefon %}Tel. {{ verein.telefon }}<br>{% endif %}
-    {% if verein.email %}{{ verein.email }}{% endif %}
+    <strong>{{ verein.name }}</strong>
+    {% if verein.strasse %}<br>{{ verein.strasse }}{% endif %}
+    {% comment %}
+    PLZ und Ort stehen in drei ausgeschriebenen Fällen statt in einem
+    `{{ plz }} {{ ort }}`: sonst bleibt bei fehlender PLZ ein führendes
+    Leerzeichen stehen. Der <br> steht jeweils *vor* der Zeile, damit am Ende
+    des Blocks keiner hängen bleibt, wenn Telefon oder E-Mail leer sind.
+    {% endcomment %}
+    {% if verein.plz and verein.ort %}<br>{{ verein.plz }} {{ verein.ort }}{% elif verein.plz %}<br>{{ verein.plz }}{% elif verein.ort %}<br>{{ verein.ort }}{% endif %}
+    {% if verein.telefon %}<br>Tel. {{ verein.telefon }}{% endif %}
+    {% if verein.email %}<br>{{ verein.email }}{% endif %}
   </p>
 
   <p class="empfaenger">
-    {{ post.member.vorname }} {{ post.member.nachname }}<br>
-    {% if post.member.strasse %}{{ post.member.strasse }}<br>{% endif %}
-    {% if post.member.plz or post.member.ort %}{{ post.member.plz }} {{ post.member.ort }}{% endif %}
+    {{ post.member.vorname }} {{ post.member.nachname }}
+    {% if post.member.strasse %}<br>{{ post.member.strasse }}{% endif %}
+    {% if post.member.plz and post.member.ort %}<br>{{ post.member.plz }} {{ post.member.ort }}{% elif post.member.plz %}<br>{{ post.member.plz }}{% elif post.member.ort %}<br>{{ post.member.ort }}{% endif %}
   </p>
 
   <p>{{ heute|date:"d.m.Y" }}</p>
 
-  <h1>{{ stufe_text }} — Beiträge {{ post.jahr }}</h1>
-
   {% comment %}
-  Bezugszeile statt Anrede-Anpassung: Member führt kein Anrede- oder
-  Geschlechtsfeld, deshalb bleibt die Anrede geschlechtsneutral („Sehr geehrte/r")
-  und die Zuordnung des Schreibens steht in dieser Zeile.
+  Ohne offene Mahnstufe bleibt die Stufe weg: „ausgeschöpft" ist ein internes
+  Steuerwort der Oberfläche und gehört nicht in ein Schreiben an das Mitglied.
+  Die View reicht `stufe_text` in diesem Fall nicht durch (dues/views.py).
   {% endcomment %}
-  <p class="bezug">
-    Ihr Mitglied: {{ post.member }} · Beitragsjahr {{ post.jahr }}
-  </p>
+  <h1>{% if stufe_text %}{{ stufe_text }} — {% endif %}Beiträge {{ post.jahr }}</h1>
 
   <p>
     Sehr geehrte/r {{ post.member.nachname }},

@@ -442,15 +442,45 @@ class MahnbriefTests(TestCase):
         response = self.client.get(self.url())
 
         self.assertEqual(response.status_code, 200)
+        # Drei getrennte Stellen, drei getrennte Nadeln: „Anna Meier" erzeugt
+        # nur der Empfängerblock, „Meier, Anna" nur der <title>, die Anrede nur
+        # der Brieftext. Keine der drei Nadeln kann eine andere verdecken, und
+        # keine von ihnen steht an einer Stelle, die ein Test erfunden hat.
+        self.assertContains(response, "Anna Meier")
         self.assertContains(response, "Meier, Anna")
+        self.assertContains(response, "Sehr geehrte/r Meier")
         self.assertContains(response, "90,00")
         self.assertEqual(response.context["summe_offen"], Decimal("90.00"))
 
     def test_brief_zeigt_die_offenen_posten(self):
+        # Teilzahlung, damit Bezahlt und Offen verschiedene Werte tragen: bei
+        # 0,00 Bezahlt wäre ein Vertauschen der beiden Spalten nicht erkennbar.
+        zahle(self.post, "40.00")
+
         response = self.client.get(self.url())
 
-        self.assertContains(response, "Erwachsene")
+        zeile = response.context["posten"][0]
         self.assertEqual(len(response.context["posten"]), 1)
+        self.assertEqual(zeile["bezahlt"], Decimal("40.00"))
+        self.assertEqual(zeile["offen"], Decimal("50.00"))
+        self.assertContains(response, "Erwachsene")
+        # Die gerenderte Zeile, nicht nur der Kontext: stehen die beiden
+        # Geldspalten im Brief falsch herum oder vertauscht, fällt es hier auf.
+        # \xa0 ist das geschützte Leerzeichen aus &nbsp; — der Brief trennt den
+        # Betrag mit ihm von der Währung, damit die Spalte nicht umbrechen kann.
+        self.assertInHTML(
+            "<tr><td>2026</td><td>Erwachsene</td>"
+            f"<td class='numerisch'>90,00\xa0€</td>"
+            f"<td class='numerisch'>40,00\xa0€</td>"
+            f"<td class='numerisch'>50,00\xa0€</td></tr>",
+            response.content.decode(),
+        )
+        # Die Summe steht zusätzlich in der Fußzeile der Tabelle.
+        self.assertInHTML(
+            "<tr><td colspan='4'>Offener Betrag</td>"
+            f"<td class='numerisch'>50,00\xa0€</td></tr>",
+            response.content.decode(),
+        )
 
     def test_brief_zeigt_die_vereinsdaten(self):
         response = self.client.get(self.url())
@@ -467,11 +497,69 @@ class MahnbriefTests(TestCase):
 
         inhalt = response.content.decode()
         # „site-header" steht in core/templates/base.html: fehlt er hier, lebt
-        # der Brief nicht im Rahmen der Oberfläche.
+        # der Brief nicht im Rahmen der Oberfläche. Das ist die Absicherung für
+        # „eigenständiges Dokument" — ein `{% extends %}`-Literal kann ein
+        # *gerendertes* Dokument ohnehin nicht enthalten.
         self.assertNotIn("site-header", inhalt)
-        self.assertNotIn("{% extends", inhalt)
         self.assertContains(response, "window.print()")
         self.assertContains(response, "@media print")
+
+    def test_ausgeschoepfte_stufe_erscheint_nicht_als_ueberschrift(self):
+        """Beide Stufen gesetzt, Teilzahlung offen — was geht an das Mitglied?
+
+        ``naechste_stufe`` liefert ``None``, sobald nichts mehr zu setzen ist,
+        und ``mahnstufe_text(None)`` sagt „ausgeschöpft". Das ist der richtige
+        Wortlaut für die Admin-Oberfläche und der falsche für ein Geschäftsbrief.
+        Der 404 greift hier nicht: ``offene_posten`` filtert nur auf
+        ``offen > 0``, und eine Teilzahlung lässt genau diesen Posten offen.
+        """
+        Mahnung.objects.create(post=self.post, stufe=1, datum=date(2026, 3, 1))
+        Mahnung.objects.create(post=self.post, stufe=2, datum=date(2026, 4, 1))
+        zahle(self.post, "40.00")
+
+        response = self.client.get(self.url())
+
+        # 200, nicht 404: sonst prüfte der Test den falschen Zweig und die
+        # Zusicherung „kein internes Steuerwort" wäre vakuos.
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["stufe"])
+        self.assertNotContains(response, "ausgeschöpft")
+        # Stufe weggelassen, nicht ersetzt: die Überschrift bleibt die
+        # Beitragsjahrzeile, die ohnehin im Brief stehen muss.
+        self.assertContains(response, "Beiträge 2026")
+        # Der Brief bleibt ein vollständiges Schreiben — der Zweig darf nicht
+        # dazu führen, dass Name, Tabelle, Summe, Zahlungsweg oder Gruß fehlen.
+        self.assertContains(response, "Anna Meier")
+        self.assertContains(response, "Erwachsene")
+        self.assertContains(response, "50,00")
+        self.assertContains(response, "Verwendungszweck")
+        self.assertContains(response, "Mit freundlichen Grüßen")
+        self.assertEqual(response.context["summe_offen"], Decimal("50.00"))
+
+    def test_absenderblock_ohne_Leerzeichen_und_ohne_haengenden_umbruch(self):
+        """Der Absenderblock ist die erste gelesene Zeile des Briefs.
+
+        Nur ``ort`` gefüllt (ohne PLZ) und keine E-Mail: der Block darf weder
+        mit einem Leerzeichen beginnen noch mit einem hängenden ``<br>`` enden.
+        """
+        verein = Vereinsdaten.aktuell()
+        verein.name = "Schachverein Example"
+        verein.strasse = ""
+        verein.plz = ""
+        verein.ort = "Musterstadt"
+        verein.telefon = "0123 456"
+        verein.email = ""
+        verein.save()
+
+        response = self.client.get(self.url())
+
+        block = response.content.decode().split('<p class="absender">')[1].split("</p>")[0]
+        self.assertIn("Musterstadt", block)
+        self.assertNotIn(" Musterstadt", block)
+        self.assertFalse(
+            block.strip().endswith("<br>"),
+            f"Absenderblock endet auf einen hängenden Umbruch: {block!r}",
+        )
 
     def test_brief_nennt_die_naechste_stufe(self):
         Mahnung.objects.create(post=self.post, stufe=1, datum=date(2026, 3, 1))

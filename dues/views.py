@@ -478,6 +478,17 @@ def mahnbrief(request, pk):
 
     Die interne Notiz einer Mahnung wird bewusst nicht in den Kontext gegeben;
     sie steht ausschließlich für die Akte des Vorstands.
+
+    ``mahnstufe_text(None)`` sagt „ausgeschöpft" — das ist der richtige Wortlaut
+    für die Admin-Oberfläche und der falsche für ein Geschäftsbrief: der
+    Vorstand darf kein internes Steuerwort an ein Mitglied schicken. Deshalb
+    bleibt ``stufe`` im Kontext (roh, für Tests und Aufrufer), ``stufe_text``
+    wird aber **nicht** durchgereicht. Der Brief lässt die Stufe dann schlicht
+    weg, statt sie zu ersetzen: „letzte Mahnung" oder „abschließende Mahnung"
+    wären Aussagen über den Zahlungseingang, die das System nicht kennt — nach
+    der zweiten Stufe kann weitergebucht werden. Erreichbar ist der Zustand
+    über eine **Teilzahlung** nach der zweiten Mahnung; ``offene_posten``
+    filtert nur auf ``offen > 0``, der 404 greift also nicht.
     """
     post = get_object_or_404(
         FeePost.objects.select_related("member", "kategorie"), pk=pk
@@ -499,7 +510,7 @@ def mahnbrief(request, pk):
             "summe_offen": summe_offen,
             "verein": Vereinsdaten.aktuell(),
             "stufe": stufe,
-            "stufe_text": mahnstufe_text(stufe),
+            "stufe_text": mahnstufe_text(stufe) if stufe is not None else None,
             "naechste_frist": letzte.frist if letzte else None,
             "heute": timezone.localdate(),
         },
