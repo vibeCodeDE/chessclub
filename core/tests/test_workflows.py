@@ -166,7 +166,11 @@ class AjaxVertragTests(TestCase):
 
         antwort = ajax_post(self.client, f"/kasse/{buchung.pk}/loeschen/")
         self.assertTrue(als_json(antwort)["ok"])
-        self.assertFalse(CashEntry.objects.filter(pk=buchung.pk).exists())
+        # Finanzdaten werden nicht hart gelöscht, sondern per Gegenbuchung storniert
+        self.assertTrue(CashEntry.objects.filter(pk=buchung.pk).exists())
+        self.assertTrue(buchung.ist_storniert)
+        gegen = CashEntry.objects.get(storno_von=buchung)
+        self.assertEqual(gegen.betrag, Decimal("-49.90"))
 
     def test_aenderungswunsch_freigeben(self):
         wunsch = ChangeRequest.objects.create(

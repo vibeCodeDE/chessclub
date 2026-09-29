@@ -67,6 +67,12 @@ def dsgvo_export(request, pk):
     """Maschinenlesbare Auskunft (JSON) zum Herunterladen (PRD N1.2/N1.4)."""
     member = get_object_or_404(Member, pk=pk)
     daten = datenauskunft(member)
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="Datenauskunft erstellt",
+        text=f"Datenauskunft als JSON (Art. 15 DSGVO) für Mitglied {member.pk}.",
+        member=member,
+    )
     inhalt = json.dumps(
         {"mitglied_id": member.pk, "erstellt_am": timezone.now().isoformat(), "daten": daten},
         ensure_ascii=False,

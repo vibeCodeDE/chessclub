@@ -112,6 +112,19 @@ class GruppenmailTests(TestCase):
         self.client.force_login(user)
         self.assertEqual(self.client.get("/ankuendigungen/mail/").status_code, 403)
 
+    def test_formular_ohne_ajax_und_fehlerpfad(self):
+        resp = self.client.post(
+            "/ankuendigungen/mail/",
+            {"betreff": "Klassisch", "zielgruppe": "aktiv", "text": "Nachricht", "test_empfaenger": ""},
+        )
+        self.assertRedirects(resp, "/ankuendigungen/mail/")
+        err = self.client.post(
+            "/ankuendigungen/mail/",
+            {"betreff": "", "zielgruppe": "aktiv", "text": ""},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertFalse(json.loads(err.content)["ok"])
+
     def test_fehlversand_zaehlt_als_fehler(self):
         with self.settings(EMAIL_BACKEND="django.core.mail.backends.dummy.EmailBackend"):
             from unittest.mock import patch

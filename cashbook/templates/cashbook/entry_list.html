@@ -72,10 +72,16 @@
             <td class="cell-sub">{{ buchung.belegnummer|default:"–" }}</td>
             <td class="right">
               <div class="table-actions">
-                <a class="btn small secondary" href="{% url 'cashbook:entry_update' buchung.pk %}">Bearbeiten</a>
-                <button class="btn small ghost" type="button" data-optimistic="remove-row"
-                        data-url="{% url 'cashbook:entry_delete' buchung.pk %}"
-                        data-confirm="Buchung „{{ buchung.beschreibung }}“ löschen?">Löschen</button>
+                {% if buchung.ist_storno %}
+                  <span class="badge badge-neutral">Gegenbuchung</span>
+                {% elif buchung.ist_storniert %}
+                  <span class="badge badge-neutral">Storniert</span>
+                {% else %}
+                  <a class="btn small secondary" href="{% url 'cashbook:entry_update' buchung.pk %}">Bearbeiten</a>
+                  <button class="btn small ghost" type="button" data-optimistic="remove-row"
+                          data-url="{% url 'cashbook:entry_storno' buchung.pk %}"
+                          data-confirm="Buchung „{{ buchung.beschreibung }}“ per Gegenbuchung stornieren?">Stornieren</button>
+                {% endif %}
               </div>
             </td>
           </tr>
