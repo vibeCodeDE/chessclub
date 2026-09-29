@@ -1,7 +1,7 @@
 """Härtung: Zwei-Faktor für den Vorstand und Sicherheits-Header (T22)."""
 
 from django.contrib.auth.models import Group, User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from core.models import TwoFactorDevice
@@ -17,6 +17,9 @@ def make_user(username, group_name=None):
     return user
 
 
+# Die 2FA-Pflicht wird im Test fest gesetzt: der Wert kommt sonst aus der
+# Umgebung, und die Entwicklungs-Compose schaltet ihn ab (README).
+@override_settings(TWOFA_PFLICHT=True)
 class ZweiFaktorTests(TestCase):
     def setUp(self):
         self.admin = make_user("vorstand", ADMIN_GROUP)
