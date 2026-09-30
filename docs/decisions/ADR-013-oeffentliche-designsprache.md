@@ -1,7 +1,7 @@
 # ADR-013: Designsprache der öffentlichen Vereinsseite
 
 **Status:** angenommen (2026-09-30)
-**Betrifft:** `core/templates/core/*`, `tournaments/templates/tournaments/public_*`, `members/templates/members/join_info.html`, `templates/public_base.html`, `templates/auth_base.html`, `static/css/site.css`
+**Betrifft:** `core/templates/core/*`, `tournaments/templates/tournaments/public_*`, `members/templates/members/join_info.html`, `templates/public_base.html`, `templates/auth_base.html`, `static/css/site.css`, `static/js/public.js`
 
 ## Kontext
 
@@ -48,6 +48,13 @@ Rahmenbedingungen aus dem PRD, die die Umsetzung einschränken:
 6. **Barrierefreiheit und Bedienbarkeit** bleiben erhalten: Skip-Link, `aria-current`
    für die aktive Seite, `aria-expanded`/`Escape` für das mobile Menü, Fokus-Ringe,
    `prefers-reduced-motion`. Formulare funktionieren ohne JavaScript.
+7. **Getrennte Skripte.** Die öffentlichen Seiten laden `static/js/public.js` mit genau
+   ihrem Bedarf (mobiles Menü, Ladebalken beim Seitenwechsel, Toasts,
+   Service-Worker-Registrierung). Das interne `static/js/app.js` bleibt dem
+   Dashboard/der Verwaltung vorbehalten; beide Dateien sind unabhängig und keine
+   öffentliche Hülle lädt `app.js`. Erzwungen durch
+   `core/tests/test_oeffentliches_design.py` (öffentliche Hüllen laden nur `public.js`,
+   `public.js` kennt keine internen Bausteine).
 
 ## Konsequenzen
 

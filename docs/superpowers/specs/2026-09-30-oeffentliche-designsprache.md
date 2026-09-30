@@ -30,7 +30,7 @@ Seiten (eigenes Design, folgt separat) und `/produkt/` (Verkaufsseite, unveränd
 | `members/templates/members/join_info.html` | Beitragssätze, Einstieg in drei Schritten, Zeiten |
 | `core/templates/registration/*.html` | Login, 2FA, Passwort-Reset (vier Schritte) |
 | `static/img/*.jpg` | Bildplätze (lokal, austauschbar) |
-| `static/js/app.js` | `initPublicNav()` – mobiles Menü (aria-expanded, Escape, Außenklick) |
+| `static/js/public.js` | Interaktionen der öffentlichen Seite: mobiles Menü (`aria-expanded`, Escape, Außenklick), Ladebalken beim Seitenwechsel, Toasts, Service-Worker-Registrierung |
 
 ## Design-Tokens
 
@@ -105,6 +105,6 @@ Bildunterschriften sind bewusst neutral gehalten.
 
 - `pytest core/tests/test_oeffentliches_design.py` – Klassendeckung, Stylesheet-Trennung,
   keine Fremd-URLs, Filterverhalten, 404, leere Vereinsdaten, Bildbestand.
-- Vollständiger Lauf: `pytest` → 331 Tests grün, 1 Skip (nur mit PostgreSQL), 160 Subtests.
+- Vollständiger Lauf: `pytest` → 334 Tests grün, 1 Skip (nur mit PostgreSQL), 172 Subtests.
 - Manueller Abgleich aller Links/Assets und der HTML-Struktur (Tag-Balance) gegen die
   laufende Instanz; Interaktionen des mobilen Menüs automatisiert geprüft (jsdom).

@@ -51,7 +51,7 @@ enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest          # 331 Tests, 1 Skip (nur mit PostgreSQL)
+.venv/bin/python -m pytest          # 334 Tests, 1 Skip (nur mit PostgreSQL)
 .venv/bin/python manage.py check
 ```
 
@@ -83,10 +83,10 @@ Oberflächen: öffentliche Vereinsseite (`/`, `/aktuelles/`, `/turniere/`, `/ver
 
 **Zwei getrennte Design-Systeme** (kein CSS-Buildschritt, keine externen Assets, PRD N1.1):
 
-| Bereich | Stylesheet | Hülle |
-| --- | --- | --- |
-| Öffentliche Vereinsseite (inkl. Anmeldung, 2FA, Passwort-Reset) | `static/css/site.css` | `templates/public_base.html`, `templates/auth_base.html` |
-| Verwaltung/Dashboard/Admin | `static/css/app.css` | `templates/base.html` |
+| Bereich | Stylesheet | Skript | Hülle |
+| --- | --- | --- | --- |
+| Öffentliche Vereinsseite (inkl. Anmeldung, 2FA, Passwort-Reset) | `static/css/site.css` | `static/js/public.js` | `templates/public_base.html`, `templates/auth_base.html` |
+| Verwaltung/Dashboard/Admin | `static/css/app.css` | `static/js/app.js` | `templates/base.html` |
 
 Der öffentliche Teil folgt der Designsprache aus
 `schachclubmanager-modern-web-design (1).zip` – Entscheidung und Details in

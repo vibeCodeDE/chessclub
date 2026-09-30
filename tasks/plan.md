@@ -250,7 +250,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   keine erfundenen Angaben. · *Files:* `static/css/site.css`, `templates/public_base.html`, `templates/auth_base.html`,
   `templates/404.html`, `templates/includes/public_field.html`, `core/templates/core/*`,
   `tournaments/templates/tournaments/public_*`, `members/templates/members/join_info.html`, `core/views.py`,
-  `core/urls.py`, `static/js/app.js`, `static/img/` · *Größe:* L · *PRD:* S9.1, S9.2, S9.3, S9.4 · *Release:* v1.1 · *Deps:* T13, T19
+  `core/urls.py`, `static/js/public.js`, `static/sw.js`, `static/img/` · *Größe:* L · *PRD:* S9.1, S9.2, S9.3, S9.4 · *Release:* v1.1 · *Deps:* T13, T19
 
 **Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T15b, T16b, T18, T22, T24b.
 

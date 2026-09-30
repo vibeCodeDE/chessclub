@@ -8,7 +8,8 @@ const VORAB_CACHE = [
   OFFLINE_URL,
   "/static/css/app.css",   /* interner Bereich */
   "/static/css/site.css",  /* öffentliche Vereinsseite */
-  "/static/js/app.js",
+  "/static/js/app.js",     /* interner Bereich */
+  "/static/js/public.js",  /* öffentliche Vereinsseite */
   "/static/icons/icon-192.png",
 ];
 

@@ -63,6 +63,28 @@ class DesignSystemTests(TestCase):
                 self.assertNotRegex(inhalt, r'<link[^>]+app\.css')
                 self.assertNotRegex(inhalt, r'<link[^>]+landing\.css')
 
+    def test_oeffentliche_huellen_laden_nur_public_js(self):
+        """Das Skript des öffentlichen Auftritts ist getrennt vom internen app.js."""
+        for pfad in ("templates/public_base.html", "templates/auth_base.html"):
+            with self.subTest(template=pfad):
+                inhalt = (settings.BASE_DIR / pfad).read_text(encoding="utf-8")
+                self.assertIn("js/public.js", inhalt)
+                self.assertNotIn("js/app.js", inhalt)
+
+    def test_public_js_bedient_die_oeffentlichen_bausteine(self):
+        """Ohne app.js müssen Navigation und Ladebalken eigenständig funktionieren."""
+        js = (settings.BASE_DIR / "static/js/public.js").read_text(encoding="utf-8")
+        for merkmal in ("data-public-nav", "data-public-nav-toggle", "data-loading-bar", "data-no-loading"):
+            with self.subTest(merkmal=merkmal):
+                self.assertIn(merkmal, js)
+
+    def test_public_js_bindet_keinen_internen_code_ein(self):
+        """Negativtest: public.js greift nicht auf interne Bausteine zurück."""
+        js = (settings.BASE_DIR / "static/js/public.js").read_text(encoding="utf-8")
+        for intern in ("data-sidebar", "data-ajax", "data-autosave", "App.post"):
+            with self.subTest(intern=intern):
+                self.assertNotIn(intern, js)
+
     def test_site_css_hat_balancierte_klammern(self):
         css = (settings.BASE_DIR / "static/css/site.css").read_text(encoding="utf-8")
         self.assertEqual(css.count("{"), css.count("}"))

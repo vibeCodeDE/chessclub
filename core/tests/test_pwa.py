@@ -56,6 +56,10 @@ class PwaTests(TestCase):
                 self.assertIn("apple-touch-icon", inhalt)
 
     def test_service_worker_wird_registriert(self):
-        inhalt = static_datei("js/app.js").read_text(encoding="utf-8")
-        self.assertIn("serviceWorker", inhalt)
-        self.assertIn('register("/sw.js"', inhalt)
+        # Der interne Bereich lädt app.js, die öffentlichen Seiten public.js –
+        # beide registrieren den Service Worker (PRD N2.7).
+        for datei in ("js/public.js", "js/app.js"):
+            with self.subTest(datei=datei):
+                inhalt = static_datei(datei).read_text(encoding="utf-8")
+                self.assertIn("serviceWorker", inhalt)
+                self.assertIn('register("/sw.js"', inhalt)
