@@ -143,8 +143,42 @@ def home(request):
         "mitglieder_aktiv": Member.objects.filter(status=Member.Status.AKTIV).count(),
         "mannschaften": Team.objects.filter(aktiv=True).count(),
         "naechstes_turnier": turniere[0] if turniere else None,
+        # Zähler für die Übersichtsleiste: alle anstehenden Termine, nicht nur
+        # die auf der Seite gezeigten fünf.
+        "turniere_anzahl": Tournament.objects.filter(oeffentlich=True, datum__gte=heute).count(),
+        "spiele_anzahl": LeagueMatch.objects.filter(
+            datum__gte=heute, status__in=["geplant", "aufgestellt"]
+        ).count(),
+        "jahre_tradition": _jahre_seit_gruendung(heute),
     }
     return render(request, "core/home.html", kontext)
+
+
+def _jahre_seit_gruendung(heute):
+    """Jahre seit der Gründung – nur wenn `CLUB_FOUNDED` gepflegt ist."""
+    gegruendet = (settings.CLUB_FOUNDED or "").strip()
+    if not gegruendet.isdigit():
+        return None
+    jahre = heute.year - int(gegruendet)
+    return jahre if jahre > 0 else None
+
+
+def verein(request):
+    """Öffentliche Vereinsseite: Selbstverständnis, Zeiten, Spielplan (PRD S2.2)."""
+    heute = timezone.localdate()
+    spiele = (
+        LeagueMatch.objects.filter(datum__gte=heute)
+        .select_related("team")
+        .order_by("datum", "uhrzeit")[:8]
+    )
+    kontext = {
+        "spiele": spiele,
+        "mannschaften": Team.objects.filter(aktiv=True).prefetch_related("matches"),
+        "mitglieder_aktiv": Member.objects.filter(status=Member.Status.AKTIV).count(),
+        "jahre_tradition": _jahre_seit_gruendung(heute),
+        "heute": heute,
+    }
+    return render(request, "core/verein.html", kontext)
 
 
 def produkt_seite(request):
@@ -177,8 +211,25 @@ def rechtliches(request, seite):
 
 
 def news_archiv(request):
+    """Öffentliches Archiv der Ankündigungen, filterbar nach Kategorie (PRD M5.1)."""
     news = NewsPost.objects.filter(veroeffentlicht=True)
-    return render(request, "core/news_archiv.html", {"news": news})
+    kategorien = list(
+        NewsPost.objects.filter(veroeffentlicht=True)
+        .exclude(kategorie="")
+        .values_list("kategorie", flat=True)
+        .distinct()
+        .order_by("kategorie")
+    )
+    aktiv = (request.GET.get("kategorie") or "").strip()
+    if aktiv and aktiv not in kategorien:
+        aktiv = ""
+    if aktiv:
+        news = news.filter(kategorie=aktiv)
+    return render(
+        request,
+        "core/news_archiv.html",
+        {"news": news, "kategorien": kategorien, "aktiv": aktiv},
+    )
 
 
 def news_detail(request, pk):

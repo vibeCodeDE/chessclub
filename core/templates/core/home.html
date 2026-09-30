@@ -1,134 +1,262 @@
 {% extends "public_base.html" %}
+{% load static %}
 
 {% block title %}Schachverein {{ club_short }} – Startseite{% endblock %}
+{% block description %}Klubabend, Mannschaften, Turniere und Neuigkeiten beim {{ club_name }}{% if club_location %} in {{ club_location }}{% endif %}.{% endblock %}
+{% block og_description %}Schach in {{ club_location|default:'unserem Verein' }} – Klubabend, Ligabetrieb und Turniere.{% endblock %}
 
 {% block content %}
-<section class="public-hero">
-  <div class="public-wrap">
-    <span class="chip" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#e8eefc">
-      <svg class="icon icon-sm"><use href="#i-sparkle"></use></svg> Saison 2026/27 läuft
-    </span>
-    <h1 class="mt-2">Willkommen beim {{ club_name }}</h1>
-    <p>Ergebnisse, Termine und Neuigkeiten aus dem Verein – und für die Vorstandschaft die komplette Vereinsorganisation an einem Ort.</p>
-    <div class="flex wrap gap-1 mt-2">
-      {% if naechstes_turnier %}
-        <a class="btn gold" href="{% url 'tournaments:public_detail' naechstes_turnier.pk %}">
-          <svg class="icon icon-sm"><use href="#i-trophy"></use></svg> {{ naechstes_turnier.name }} · {{ naechstes_turnier.datum|date:"d.m.Y" }}
+<section class="home-hero" aria-labelledby="hero-title">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <div class="eyebrow hero-eyebrow">
+        <span class="eyebrow-dot" aria-hidden="true"></span> {{ club_name|upper }}
+      </div>
+      <h1 id="hero-title">
+        Schachkultur mit <em>Herz{% if club_location %} in {{ club_location }}{% endif %}.</em>
+      </h1>
+      <p class="hero-intro">
+        Ob dein erster Bauernzug oder deine hundertste Ligapartie: Bei uns findest du
+        Turnierbretter, ehrliche Analysen und Menschen, die gern über Stellungen reden.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-dark" href="{% url 'core:verein' %}">
+          Über unseren Verein <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
         </a>
-      {% endif %}
-      <a class="btn secondary" href="{% url 'members:join_info' %}">Mitglied werden</a>
-      {% if user.is_authenticated %}
-        <a class="btn secondary" href="{% url 'core:dashboard' %}">Zum Dashboard</a>
+        <a class="underlined-link" href="{% url 'members:join_info' %}">
+          Probespiel vereinbaren <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </div>
+      <div class="hero-footnote">
+        <span class="footnote-line" aria-hidden="true"></span> Ein Brett und ein Stuhl sind immer für dich frei.
+      </div>
+    </div>
+
+    <div class="hero-media">
+      <div class="hero-image-frame">
+        <img class="cover-image hero-image" src="{% static 'img/klubabend.jpg' %}" alt="Schachpartie am Vereinsabend" width="1200" height="1500">
+        <span class="image-side-note">{{ club_short|upper }}{% if club_founded %} / {{ club_founded }}{% endif %}</span>
+      </div>
+      {% if naechstes_turnier %}
+        <a class="hero-event-card" href="{% url 'tournaments:public_detail' naechstes_turnier.pk %}">
+          <span class="event-card-top">
+            ALS NÄCHSTES IM VEREIN <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+          </span>
+          <strong>{{ naechstes_turnier.name }}</strong>
+          <span class="event-card-date">
+            {{ naechstes_turnier.datum|date:"j. F Y" }}{% if naechstes_turnier.ort %} · {{ naechstes_turnier.ort }}{% endif %}
+          </span>
+        </a>
       {% endif %}
     </div>
   </div>
 </section>
 
-<div class="public-wrap" style="padding-top:1.6rem">
-  <div class="grid cols-4">
-    <div class="stat accent-gold">
-      <div class="stat-head">
-        <span class="stat-label">Aktive Mitglieder</span>
-        <span class="stat-icon"><svg class="icon"><use href="#i-users"></use></svg></span>
+<section class="weekly-band" aria-label="Vereinsabend">
+  <div class="container weekly-inner">
+    <span class="weekly-label"><span class="status-dot" aria-hidden="true"></span> OFFEN FÜR ALLE</span>
+    <strong>Klubabend und offene Analyse.</strong>
+    {% if club_night_hours %}
+      <span class="weekly-detail">
+        <svg aria-hidden="true"><use href="#i-clock"></use></svg> {{ club_night_hours }}
+      </span>
+    {% endif %}
+    {% if club_youth_hours %}
+      <span class="weekly-detail">
+        <svg aria-hidden="true"><use href="#i-users"></use></svg> Jugend · {{ club_youth_hours }}
+      </span>
+    {% endif %}
+    {% if club_room %}
+      <span class="weekly-detail">
+        <svg aria-hidden="true"><use href="#i-pin"></use></svg> {{ club_room }}
+      </span>
+    {% endif %}
+    <a href="{% url 'core:verein' %}#training" aria-label="Mehr zum Vereinsabend">
+      <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+    </a>
+  </div>
+</section>
+
+<section class="overview-section" aria-labelledby="overview-title">
+  <div class="container">
+    <div class="section-heading-row">
+      <div>
+        <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> UNSER VEREIN</div>
+        <h2 id="overview-title" class="section-title">Auf einen <em>Blick.</em></h2>
       </div>
-      <div class="stat-value">{{ mitglieder_aktiv }}</div>
+      <p class="section-aside">
+        Zahlen aus der Vereinsverwaltung –<br>aktueller Stand dieser Seite.
+      </p>
     </div>
-    <div class="stat">
-      <div class="stat-head">
-        <span class="stat-label">Mannschaften</span>
-        <span class="stat-icon"><svg class="icon"><use href="#i-flag"></use></svg></span>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <strong>{{ mitglieder_aktiv }}</strong>
+        <span class="stat-label">{% if mitglieder_aktiv == 1 %}AKTIVES MITGLIED{% else %}AKTIVE MITGLIEDER{% endif %}</span>
+        <span class="stat-detail">im Vereinsleben gemeldet</span>
       </div>
-      <div class="stat-value">{{ mannschaften }}</div>
-    </div>
-    <div class="stat accent-success">
-      <div class="stat-head">
-        <span class="stat-label">Turniere geplant</span>
-        <span class="stat-icon"><svg class="icon"><use href="#i-trophy"></use></svg></span>
+      <div class="stat-item">
+        <strong>{{ mannschaften }}</strong>
+        <span class="stat-label">MANNSCHAFT{{ mannschaften|pluralize:"EN" }}</span>
+        <span class="stat-detail">{% if mannschaften %}für den Ligabetrieb gemeldet{% else %}Meldung läuft über den Vorstand{% endif %}</span>
       </div>
-      <div class="stat-value">{{ turniere|length }}</div>
-    </div>
-    <div class="stat accent-warn">
-      <div class="stat-head">
-        <span class="stat-label">Nächste Ligaspiele</span>
-        <span class="stat-icon"><svg class="icon"><use href="#i-calendar"></use></svg></span>
+      <div class="stat-item">
+        <strong>{{ turniere_anzahl }}</strong>
+        <span class="stat-label">TURNIER{{ turniere_anzahl|pluralize:"E" }} GEPLANT</span>
+        <span class="stat-detail">{% if turniere_anzahl %}Anmeldung online möglich{% else %}Termine folgen in Kürze{% endif %}</span>
       </div>
-      <div class="stat-value">{{ spiele|length }}</div>
+      <div class="stat-item">
+        {% if jahre_tradition %}
+          <strong>{{ jahre_tradition }}</strong>
+          <span class="stat-label">JAHRE VEREINSGESCHICHTE</span>
+          <span class="stat-detail">gegründet {{ club_founded }}</span>
+        {% else %}
+          <strong>{{ spiele_anzahl }}</strong>
+          <span class="stat-label">LIGASPIEL{{ spiele_anzahl|pluralize:"E" }} GEPLANT</span>
+          <span class="stat-detail">{% if spiele_anzahl %}nächste Begegnungen unten{% else %}Spielplan folgt{% endif %}</span>
+        {% endif %}
+      </div>
     </div>
   </div>
+</section>
 
-  <div class="grid main-side mt-2">
-    <div>
-      <div class="card">
-        <div class="card-head">
-          <h2>Neues aus dem Verein</h2>
-          <a class="link-btn" href="{% url 'core:news_archiv' %}">Alle Ankündigungen {% include "includes/icon.html" with name="arrow-right" %}</a>
-        </div>
+<section class="updates-section" aria-labelledby="updates-title">
+  <div class="container">
+    <div class="section-heading-row updates-heading">
+      <div>
+        <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> AUS DEM VEREIN</div>
+        <h2 id="updates-title" class="section-title">Neues vom <em>Brett.</em></h2>
+      </div>
+      <a class="section-more" href="{% url 'core:news_archiv' %}">
+        Alle Berichte lesen <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+      </a>
+    </div>
+
+    <div class="updates-grid">
+      <div class="news-list">
         {% for post in news %}
-          <article class="news-card" style="border-bottom:1px solid var(--line)">
-            <span class="date">{{ post.veroeffentlicht_am|date:"d.m.Y" }} · {{ post.kategorie }}</span>
-            <h3><a href="{% url 'core:news_detail' post.pk %}">{{ post.titel }}</a></h3>
-            <p class="mb-0 muted">{{ post.auszug }}</p>
-          </article>
+          <a class="news-row" href="{% url 'core:news_detail' post.pk %}">
+            <time class="news-date" datetime="{{ post.veroeffentlicht_am|date:'c' }}">
+              <strong>{{ post.veroeffentlicht_am|date:"d" }}</strong>
+              <span>{{ post.veroeffentlicht_am|date:"M"|upper }}</span>
+            </time>
+            <div class="news-content">
+              <span class="item-kicker">{{ post.kategorie|default:"Verein" }} <span>·</span> {{ post.veroeffentlicht_am|date:"j. F Y" }}</span>
+              <h3>{{ post.titel }}</h3>
+              <p>{{ post.auszug }}</p>
+            </div>
+            <svg class="news-arrow" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+          </a>
         {% empty %}
-          {% include "includes/empty_state.html" with icon="megaphone" titel="Noch keine Ankündigungen" text="Sobald der Vorstand Neuigkeiten veröffentlicht, erscheinen sie hier." %}
+          <p class="empty-message">Der Vorstand hat noch keine Ankündigung veröffentlicht. Sobald es Neuigkeiten gibt, stehen sie hier.</p>
         {% endfor %}
+        {% if news %}
+          <a class="news-bottom-link" href="{% url 'core:news_archiv' %}">
+            Weitere Berichte aus dem Archiv <svg aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          </a>
+        {% endif %}
       </div>
 
-      <div class="card">
-        <div class="card-head">
-          <h2>Turnierkalender</h2>
-          <a class="link-btn" href="{% url 'tournaments:public_list' %}">Alle Turniere</a>
+      <aside class="fixtures-panel" aria-labelledby="fixtures-title">
+        <div class="fixtures-heading">
+          <span class="eyebrow">LIGABETRIEB</span>
+          <h2 id="fixtures-title">Die nächsten <em>Begegnungen.</em></h2>
         </div>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr><th>Termin</th><th>Turnier</th><th>Ort</th><th>Format</th><th class="right">Anmeldung</th></tr></thead>
-            <tbody>
-              {% for turnier in turniere %}
-                <tr>
-                  <td class="nowrap">{{ turnier.datum|date:"d.m.Y" }}</td>
-                  <td class="cell-main"><a href="{% url 'tournaments:public_detail' turnier.pk %}">{{ turnier.name }}</a></td>
-                  <td>{{ turnier.ort|default:"–" }}</td>
-                  <td><span class="badge badge-neutral">{{ turnier.get_format_display }}</span></td>
-                  <td class="right">
-                    {% if turnier.anmeldung_offen %}<span class="badge badge-aktiv">offen</span>{% else %}<span class="badge badge-neutral">geschlossen</span>{% endif %}
-                  </td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="5">{% include "includes/empty_state.html" with icon="trophy" titel="Keine Turniere geplant" text="Der nächste Turnierplan wird hier veröffentlicht." small=True %}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="card">
-        <div class="card-head"><h2>Nächste Begegnungen</h2></div>
-        <ul class="list">
-          {% for spiel in spiele %}
-            <li>
-              <span class="avatar-sm gold">{{ spiel.team.name|slice:":1" }}</span>
-              <span class="grow">
-                <span class="title">{{ spiel.team.name }} {{ spiel.heimspiel|yesno:"gegen,bei" }} {{ spiel.gegner }}</span>
-                <span class="meta">{{ spiel.datum|date:"D, d.m.Y" }}{% if spiel.uhrzeit %} · {{ spiel.uhrzeit|time:"H:i" }} Uhr{% endif %}{% if spiel.ort %} · {{ spiel.ort }}{% endif %}</span>
-              </span>
-            </li>
+        <div class="fixture-list">
+          {% for spiel in spiele|slice:":3" %}
+            <div class="fixture-item">
+              <time class="fixture-date" datetime="{{ spiel.datum|date:'c' }}">
+                <strong>{{ spiel.datum|date:"d" }}</strong>
+                <span>{{ spiel.datum|date:"M"|upper }}</span>
+              </time>
+              <div>
+                <span class="fixture-team">{{ spiel.team.name }}</span>
+                <strong class="fixture-opponent">{{ spiel.heimspiel|yesno:"gegen,bei" }} {{ spiel.gegner }}</strong>
+                <span class="fixture-meta">
+                  {% if spiel.uhrzeit %}{{ spiel.uhrzeit|time:"H:i" }} Uhr · {% endif %}{{ spiel.heimspiel|yesno:"Heimspiel,Auswärts" }}{% if spiel.ort %} · {{ spiel.ort }}{% endif %}
+                </span>
+              </div>
+            </div>
           {% empty %}
-            <li>{% include "includes/empty_state.html" with icon="calendar" titel="Keine Ligaspiele" text="Sobald der Spielplan steht, finden Sie hier die Termine." small=True %}</li>
+            <p class="empty-message empty-message-panel">
+              Sobald die Staffeleinteilung steht, findest du hier die nächsten Begegnungen.
+            </p>
           {% endfor %}
-        </ul>
-      </div>
-
-      <div class="card">
-        <div class="card-head"><h2>Mitglied werden</h2></div>
-        <div class="card-body">
-          <p>Schach begeistert – ob Anfänger:in oder Turnierspieler:in. Komm einfach an einem Vereinsabend vorbei, spiele ein Probespiel und lerne uns kennen.</p>
-          <p class="mb-0"><strong>Vereinsabend:</strong> donnerstags ab 19:00 Uhr<br><strong>Kontakt:</strong> <a href="mailto:{{ club_contact }}">{{ club_contact }}</a></p>
-          <a class="btn block mt-2" href="{% url 'members:join_info' %}">Beiträge &amp; Anmeldung ansehen</a>
         </div>
-      </div>
+        <a class="fixtures-link" href="{% url 'core:verein' %}#spielplan">
+          Kompletten Spielplan ansehen <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </aside>
     </div>
   </div>
-</div>
+</section>
+
+{% if naechstes_turnier %}
+  <section class="featured-section" aria-labelledby="featured-title">
+    <div class="container feature-grid">
+      <div class="feature-copy">
+        <div class="eyebrow feature-eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span> NÄCHSTES TURNIER · {{ naechstes_turnier.datum|date:"j. F Y"|upper }}
+        </div>
+        <h2 id="featured-title">
+          {{ naechstes_turnier.name }}.<br>
+          <em>Bereit für den Zug?</em>
+        </h2>
+        <p>{{ naechstes_turnier.beschreibung|default:"Die Ausschreibung steht in Kürze bereit – Anmeldungen sind schon jetzt möglich."|truncatewords:42 }}</p>
+        <div class="feature-facts">
+          <span>{{ naechstes_turnier.get_format_display }}</span>
+          <span>{{ naechstes_turnier.runden_anzahl }} Runden</span>
+          {% if naechstes_turnier.startgeld %}<span>Startgeld {{ naechstes_turnier.startgeld|floatformat:2 }} €</span>{% endif %}
+          <span>Offen für Mitglieder &amp; Gäste</span>
+        </div>
+        <a class="button button-lime" href="{% url 'tournaments:public_detail' naechstes_turnier.pk %}">
+          Zum Turnier &amp; Platz reservieren <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </div>
+      <div class="feature-photo">
+        <img class="cover-image" src="{% static 'img/turnier-bretter.jpg' %}" alt="Schachbretter und Figuren vor dem Turnierbeginn" loading="lazy" width="1200" height="1200">
+        <span class="photo-caption">TURNIERBETRIEB IM VEREIN</span>
+      </div>
+    </div>
+  </section>
+{% endif %}
+
+<section class="join-section" aria-labelledby="join-title">
+  <div class="container join-grid">
+    <div class="join-photo">
+      <img class="cover-image" src="{% static 'img/gemeinschaft.jpg' %}" alt="Gemeinsame Partie und Analyse im Vereinsheim" loading="lazy" width="1200" height="1400">
+    </div>
+    <div class="join-copy">
+      <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> EINFACH MITMACHEN</div>
+      <h2 id="join-title">
+        Komm vorbei.<br>
+        <em>Spiel mit uns.</em>
+      </h2>
+      <p>
+        Du brauchst keine Turniererfahrung und keine Vereinsvorkenntnisse. Komm einfach
+        an einem Vereinsabend vorbei, schnapp dir ein Getränk und spiel eine Partie mit.
+      </p>
+      {% if club_night_hours %}
+        <div class="join-time">
+          <span>KLUBABEND</span>
+          <strong>{{ club_night_hours }}</strong>
+        </div>
+      {% endif %}
+      {% if club_youth_hours %}
+        <div class="join-time">
+          <span>JUGENDTRAINING</span>
+          <strong>{{ club_youth_hours }}</strong>
+        </div>
+      {% endif %}
+      {% if club_room %}
+        <div class="join-time">
+          <span>TREFFPUNKT</span>
+          <strong>{{ club_room }}</strong>
+        </div>
+      {% endif %}
+      <a class="button button-dark" href="{% url 'members:join_info' %}">
+        Beiträge ansehen &amp; anmelden <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+      </a>
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -1,0 +1,19 @@
+{% comment %}
+Ein einzelnes Formularfeld in der Designsprache der öffentlichen Seite.
+Parameter: field (BoundField). Wird von public_form_fields.html eingebunden.
+{% endcomment %}
+<div class="form-field{% if field.errors %} has-error{% endif %}" data-field="{{ field.name }}">
+  {% if field.field.widget.input_type == "checkbox" %}
+    <label class="checkbox-field" for="{{ field.id_for_label }}">
+      {{ field }}
+      <span><strong>{{ field.label }}</strong>{% if field.help_text %}<br>{{ field.help_text }}{% endif %}</span>
+    </label>
+  {% else %}
+    <label for="{{ field.id_for_label }}">
+      {{ field.label }}{% if field.field.required %} <span class="required-mark" aria-hidden="true">*</span>{% elif "optional" not in field.label|lower %} <span class="optional">(optional)</span>{% endif %}
+    </label>
+    {{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+  {% endif %}
+  {{ field.errors }}
+</div>

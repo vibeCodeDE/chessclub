@@ -1,26 +1,36 @@
 {% load static %}<!DOCTYPE html>
+{% comment %}
+Öffentlicher Einstieg in die Vereinsverwaltung: Anmeldung, Zwei-Faktor und
+Passwort-Reset. Nutzt dieselbe Designsprache wie die Vereinsseite (site.css),
+damit der Weg in den internen Bereich durchgängig wirkt.
+{% endcomment %}
 <html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ club_name }}{% endblock %}</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
-  <meta name="theme-color" content="#0d1526">
+  <meta name="theme-color" content="#192f27">
   <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="{{ club_short }}">
   <meta name="mobile-web-app-capable" content="yes">
 </head>
-<body class="auth-body">
+<body class="auth-page">
 {% include "includes/sprite.html" %}
 <div class="loading-bar" data-loading-bar aria-hidden="true"></div>
 
 <div class="auth-shell">
   <div class="auth-card">
     {% block card %}{% endblock %}
+    <p class="auth-back">
+      <a href="{% url 'core:home' %}">
+        <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Zur Vereinsseite
+      </a>
+    </p>
   </div>
 </div>
 

@@ -233,12 +233,31 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* „Zum Homescreen hinzufügen" auf Android + „Zum Bildschirm hinzufügen" auf iOS funktioniert; App öffnet sich ohne Browser-UI; Startseite lädt offline aus dem Cache; Update invalidiert den alten Cache.
   *Verify:* `pytest core/tests/test_pwa.py` + manuell Chrome DevTools → Application → Add to home screen — **Negativtest:** offline erscheint nur die Offline-Seite, **keine** angeforderten Seiten werden mit veralteten Daten aus dem Cache bedient. · *Files:* `core/views.py`, `static/manifest.webmanifest`, `static/sw.js`, `tools/generate_icons.py` · *Größe:* M · *PRD:* N2.7 · *Release:* v1 · *Deps:* T25
 
+- [x] **T28: Öffentliche Designsprache (Referenz-ZIP)**
+  Der öffentliche Teil der App folgt der Designsprache aus `schachclubmanager-modern-web-design (1).zip`:
+  eigenes Stylesheet `static/css/site.css`, Hüllen `public_base.html`/`auth_base.html`, Startseite, Aktuelles
+  (Liste mit Kategoriefilter + Detail), Turniere (Liste + Detail mit Anmeldung), Mitglied werden, neue Seite
+  `/verein/` (Selbstverständnis, Zeiten, Ligaspielplan) sowie 404, Offline und der Anmeldeeinstieg.
+  Alle Inhalte kommen aus den vorhandenen Modellen; das Vereinsprofil aus den Settings.
+  Siehe [ADR-013](../docs/decisions/ADR-013-oeffentliche-designsprache.md) und
+  [Spec](../docs/superpowers/specs/2026-09-30-oeffentliche-designsprache.md). Der interne Bereich bleibt unverändert.
+  *Acceptance:* Alle öffentlichen Seiten laden ohne Templatfehler; jede im öffentlichen Bereich verwendete Klasse ist in
+  `site.css` definiert; öffentliche Templates laden weder `app.css` noch `landing.css`; kein externes Asset
+  (N1.1); Kategoriefilter und Turnieranmeldung funktionieren; Navigation markiert die aktive Seite.
+  *Verify:* `pytest core/tests/test_oeffentliches_design.py` — **Negativtest:** eine unbekannte Kategorie im Filter
+  zeigt weiterhin alle Beiträge (nichts wird versteckt), Entwürfe bleiben verborgen, ein nicht öffentliches Turnier
+  bleibt 404, ein Storno der offenen Anmeldung zeigt kein Formular, und ohne gepflegte Vereinsdaten erscheinen
+  keine erfundenen Angaben. · *Files:* `static/css/site.css`, `templates/public_base.html`, `templates/auth_base.html`,
+  `templates/404.html`, `templates/includes/public_field.html`, `core/templates/core/*`,
+  `tournaments/templates/tournaments/public_*`, `members/templates/members/join_info.html`, `core/views.py`,
+  `core/urls.py`, `static/js/app.js`, `static/img/` · *Größe:* L · *PRD:* S9.1, S9.2, S9.3, S9.4 · *Release:* v1.1 · *Deps:* T13, T19
+
 **Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T15b, T16b, T18, T22, T24b.
 
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T28 öffentliche Designsprache
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
 - **Out of scope (K):** DSB-Meldeformate (K3.6), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
@@ -263,6 +282,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | N2.8 | T24b *(v1.1 — im PRD als S geführt)* |
 | N2.5 | T25 |
 | N2.6 / N2.7 | T1 / T27 |
+| S9.1–S9.4 | T28 *(v1.1)* |
 
 ## Risks and Mitigations
 

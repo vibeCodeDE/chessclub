@@ -1,0 +1,23 @@
+{% extends "public_base.html" %}
+
+{% block title %}Seite nicht gefunden – {{ club_short }}{% endblock %}
+{% block description %}Diese Seite gibt es nicht (mehr).{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="not-found-page">
+    <div class="not-found-inner">
+      <span class="eyebrow"><span class="small-rule" aria-hidden="true"></span> 404 / SEITE NICHT GEFUNDEN</span>
+      <span class="not-found-symbol" aria-hidden="true">♞</span>
+      <h1>Dieser Zug ging <em>ins Leere.</em></h1>
+      <p>
+        Die gesuchte Seite gibt es nicht (mehr). Auf der Startseite findest du bestimmt
+        den richtigen Weg – oder schau direkt in den Turnierkalender.
+      </p>
+      <a class="button button-dark" href="{% url 'core:home' %}">
+        <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Zur Startseite
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

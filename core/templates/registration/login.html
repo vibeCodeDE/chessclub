@@ -10,24 +10,28 @@
 <form method="post" novalidate>
   {% csrf_token %}
   {% if form.non_field_errors %}
-    <div class="alert error"><svg class="icon icon-sm"><use href="#i-alert"></use></svg>
-      <div>Benutzername oder Passwort ist nicht korrekt.</div></div>
+    <div class="public-alert error" role="alert">
+      <svg aria-hidden="true"><use href="#i-alert"></use></svg>
+      <div>Benutzername oder Passwort ist nicht korrekt.</div>
+    </div>
   {% endif %}
-  <div class="field">
-    <label for="id_username">Benutzername</label>
+  <div class="form-field">
+    <label for="id_username">Benutzername <span class="required-mark" aria-hidden="true">*</span></label>
     <input class="input" type="text" id="id_username" name="username" autofocus autocomplete="username"
            required value="{{ form.username.value|default:'' }}">
   </div>
-  <div class="field">
-    <label for="id_password">Passwort</label>
+  <div class="form-field">
+    <label for="id_password">Passwort <span class="required-mark" aria-hidden="true">*</span></label>
     <input class="input" type="password" id="id_password" name="password" autocomplete="current-password" required>
   </div>
   {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-  <button class="btn block" type="submit"><svg class="icon icon-sm"><use href="#i-lock"></use></svg> Anmelden</button>
+  <button class="form-submit" type="submit">
+    Anmelden <svg aria-hidden="true"><use href="#i-lock"></use></svg>
+  </button>
 </form>
 
-<p class="center mt-2 mb-0"><a href="{% url 'core:password_reset' %}">Passwort vergessen?</a></p>
-<p class="center mt-2 mb-0 muted" style="font-size:.82rem">
+<div class="auth-foot">
+  <a href="{% url 'core:password_reset' %}">Passwort vergessen?</a><br>
   Vorstandskonten sind zusätzlich durch einen Code aus der Authenticator-App geschützt.
-</p>
+</div>
 {% endblock %}

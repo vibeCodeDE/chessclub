@@ -136,6 +136,37 @@
     });
   }
 
+  /* ------------------------------------------- Öffentliche Hauptnavigation */
+  function initPublicNav() {
+    const nav = $("[data-public-nav]");
+    const toggle = $("[data-public-nav-toggle]");
+    if (!nav || !toggle) return;
+    const icon = $("use", toggle);
+    const open = () => {
+      nav.classList.add("is-open");
+      toggle.setAttribute("aria-expanded", "true");
+      toggle.setAttribute("aria-label", "Menü schließen");
+      if (icon) icon.setAttribute("href", "#i-x");
+    };
+    const close = () => {
+      nav.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-label", "Menü öffnen");
+      if (icon) icon.setAttribute("href", "#i-menu");
+    };
+    toggle.addEventListener("click", () => {
+      nav.classList.contains("is-open") ? close() : open();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+    });
+    document.addEventListener("click", (event) => {
+      if (!nav.classList.contains("is-open")) return;
+      if (nav.contains(event.target) || toggle.contains(event.target)) return;
+      close();
+    });
+  }
+
   /* -------------------------------------------------------------- Dropdowns */
   function initDropdowns() {
     $$("[data-dropdown-toggle]").forEach((toggle) => {
@@ -522,6 +553,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     adoptFlashMessages();
     initSidebar();
+    initPublicNav();
     initDropdowns();
     initConfirm();
     initAjaxForms();

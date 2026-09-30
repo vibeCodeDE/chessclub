@@ -1,69 +1,122 @@
 {% extends "public_base.html" %}
 
 {% block title %}Mitglied werden – {{ club_short }}{% endblock %}
+{% block description %}Mitglied werden beim {{ club_name }}: Beitragssätze, Ablauf und Trainingszeiten auf einen Blick.{% endblock %}
 
 {% block content %}
-<div class="public-hero" style="padding:2rem 0 2.2rem">
-  <div class="public-wrap">
-    <h1>Mitglied werden</h1>
-    <p>Ob Einsteiger:in oder Turnierspieler:in – beim {{ club_name }} findest du Gleichgesinnte, Training und Mannschaftsspielbetrieb.</p>
-  </div>
-</div>
+<div class="inner-page membership-page">
+  <section class="page-intro container">
+    <a class="back-link" href="{% url 'core:home' %}">
+      <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Startseite
+    </a>
+    <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> DER SCHRITT ZU UNS</div>
+    <h1>Dein Platz am Brett{% if club_location %} in <em>{{ club_location }}.</em>{% else %}.{% endif %}</h1>
+    <p>
+      Ob du nach Jahren wieder einsteigst, gerade deine erste Eröffnung lernst oder eine
+      Mannschaft suchst: Beim {{ club_name }} bist du willkommen.
+    </p>
+  </section>
 
-<div class="public-wrap" style="padding-top:1.6rem">
-  <div class="grid main-side">
-    <div>
-      <div class="card">
-        <div class="card-head"><h2>Beitragssätze</h2><span class="sub">{{ aktive_mitglieder }} aktive Mitglieder</span></div>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr><th>Kategorie</th><th>Beschreibung</th><th class="right">Beitrag / Jahr</th></tr></thead>
-            <tbody>
-              {% for kategorie in kategorien %}
-                <tr>
-                  <td class="cell-main">{{ kategorie.name }}</td>
-                  <td class="cell-sub">{{ kategorie.beschreibung|default:"–" }}</td>
-                  <td class="right mono">{{ kategorie.betrag|floatformat:2 }} €</td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="3">{% include "includes/empty_state.html" with icon="tag" titel="Beitragssätze in Vorbereitung" text="Die Beitragsordnung wird gerade aktualisiert – bitte direkt bei der Vorstandschaft nachfragen." small=True %}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  <section class="container membership-layout" aria-labelledby="membership-heading">
+    <div class="membership-info">
+      <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> SO EINFACH GEHT'S</div>
+      <h2 id="membership-heading">In drei Schritten <em>im Verein.</em></h2>
+
+      <div class="step-list">
+        <div class="step-item">
+          <span aria-hidden="true">01</span>
+          <div>
+            <h3>Vorbeikommen &amp; Probespiel</h3>
+            <p>
+              Schau einfach an einem Vereinsabend vorbei{% if club_room %} im {{ club_room }}{% endif %}
+              und spiel eine Partie mit – ohne Anmeldung, ohne Verpflichtung.
+            </p>
+          </div>
         </div>
-        <div class="card-foot">Der Beitrag wird per SEPA-Lastschrift oder Überweisung eingezogen. Familien und Jugendliche erhalten Ermäßigungen.</div>
+        <div class="step-item">
+          <span aria-hidden="true">02</span>
+          <div>
+            <h3>Aufnahme &amp; Beitragszuordnung</h3>
+            <p>
+              Wenn es dir gefällt, füllst du den Aufnahmeantrag aus. Der Vorstand legt
+              Beitragskategorie und Zahlungsweg fest und meldet dich für den Spielbetrieb an.
+            </p>
+          </div>
+        </div>
+        <div class="step-item">
+          <span aria-hidden="true">03</span>
+          <div>
+            <h3>Mitspielen</h3>
+            <p>
+              Training, Vereinsabend, Mannschaftskämpfe und Vereinsturniere: Danach kannst du
+              überall mitmachen – und wenn du möchtest, eine DWZ erspielen.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="card-head"><h2>So läuft der Einstieg</h2></div>
-        <div class="card-body">
-          <ul class="timeline">
-            <li><div><strong>Vorbeikommen &amp; Probespiel</strong></div><div class="cell-sub">Donnerstags ab 19:00 Uhr im Vereinsheim – ohne Anmeldung.</div></li>
-            <li><div><strong>Aufnahmeantrag ausfüllen</strong></div><div class="cell-sub">Am Vereinsabend oder per E-Mail an {{ club_contact }}.</div></li>
-            <li><div><strong>Beitragszuordnung</strong></div><div class="cell-sub">Die Vorstandschaft legt Kategorie und Zahlungsweg fest.</div></li>
-            <li><div><strong>Mitspielen</strong></div><div class="cell-sub">Training, Mannschaftskämpfe und Vereinsturniere.</div></li>
-          </ul>
-        </div>
+      <div class="membership-visit">
+        <span class="eyebrow">ZEITEN &amp; TREFFPUNKT</span>
+        {% if club_night_hours %}
+          <p><svg aria-hidden="true"><use href="#i-clock"></use></svg> Klubabend · {{ club_night_hours }}</p>
+        {% endif %}
+        {% if club_youth_hours %}
+          <p><svg aria-hidden="true"><use href="#i-users"></use></svg> Jugendtraining · {{ club_youth_hours }}</p>
+        {% endif %}
+        {% if club_room %}
+          <p><svg aria-hidden="true"><use href="#i-pin"></use></svg> {{ club_room }}</p>
+        {% endif %}
+        <p><svg aria-hidden="true"><use href="#i-mail"></use></svg> {{ club_contact }}</p>
+        <a href="mailto:{{ club_contact }}" data-no-loading>
+          Direkt an den Vorstand schreiben <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
       </div>
     </div>
 
-    <div>
-      <div class="card">
-        <div class="card-head"><h2>Kontakt &amp; Zeiten</h2></div>
-        <div class="card-body">
-          <p><strong>Vereinsabend</strong><br>jeden Donnerstag, 19:00–23:00 Uhr</p>
-          <p><strong>Jugendtraining</strong><br>freitags, 17:30–19:00 Uhr</p>
-          <p class="mb-0"><strong>Kontakt</strong><br><a href="mailto:{{ club_contact }}">{{ club_contact }}</a></p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2>Schon Mitglied?</h2></div>
-        <div class="card-body">
-          <p>Im internen Bereich siehst du deinen Beitragsstand, deine Einsätze und kannst Änderungen beantragen.</p>
-          <a class="btn block" href="{% url 'core:login' %}">Anmelden</a>
-        </div>
+    <div class="membership-form-panel">
+      <span class="eyebrow">BEITRÄGE</span>
+      <h2>Was kostet die <em>Mitgliedschaft?</em></h2>
+      <p>
+        Der Jahresbeitrag wird per SEPA-Lastschrift oder Überweisung eingezogen. Für Familien,
+        Jugendliche und Passive gibt es eigene Beitragskategorien.
+      </p>
+
+      {% if kategorien %}
+        <table class="fee-table">
+          <thead>
+            <tr>
+              <th scope="col">Kategorie</th>
+              <th scope="col" class="num">Beitrag / Jahr</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for kategorie in kategorien %}
+              <tr>
+                <td class="name">
+                  {{ kategorie.name }}
+                  {% if kategorie.beschreibung %}<br><span class="fee-desc">{{ kategorie.beschreibung }}</span>{% endif %}
+                </td>
+                <td class="num">{{ kategorie.betrag|floatformat:2 }} €</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="empty-message">
+          Die Beitragsordnung wird gerade aktualisiert – bitte frag direkt beim Vorstand nach.
+        </p>
+      {% endif %}
+
+      <a class="button button-dark" href="mailto:{{ club_contact }}" data-no-loading>
+        Aufnahme anfragen <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+      </a>
+
+      <div class="membership-login">
+        Schon Mitglied?
+        <a href="{% url 'core:login' %}">Im internen Bereich anmelden</a>
+        – dort findest du Beitragsstand, Einsätze und kannst Änderungen beantragen.
       </div>
     </div>
-  </div>
+  </section>
 </div>
 {% endblock %}

@@ -2,11 +2,12 @@
    Bewusst konservativ: Inhalte kommen zuerst aus dem Netz, damit Vorstandsdaten
    nie veralten; nur die Offline-Seite und statische Dateien liegen im Cache. */
 
-const CACHE = "schachverein-v1";
+const CACHE = "schachverein-v2";
 const OFFLINE_URL = "/offline/";
 const VORAB_CACHE = [
   OFFLINE_URL,
-  "/static/css/app.css",
+  "/static/css/app.css",   /* interner Bereich */
+  "/static/css/site.css",  /* öffentliche Vereinsseite */
   "/static/js/app.js",
   "/static/icons/icon-192.png",
 ];

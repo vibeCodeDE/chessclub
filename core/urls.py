@@ -12,6 +12,7 @@ urlpatterns = [
     path("impressum/", views.rechtliches, {"seite": "impressum"}, name="impressum"),
     path("datenschutz/", views.rechtliches, {"seite": "datenschutz"}, name="datenschutz"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("verein/", views.verein, name="verein"),
     path("aktuelles/", views.news_archiv, name="news_archiv"),
     path("aktuelles/<int:pk>/", views.news_detail, name="news_detail"),
     path("suche/", views.suche, name="suche"),
