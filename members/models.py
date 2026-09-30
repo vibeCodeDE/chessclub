@@ -160,11 +160,11 @@ def clean_member_value(feld, value):
     try:
         model_field = Member._meta.get_field(feld)
     except FieldDoesNotExist:
-        raise ValidationError({"feld": "Unbekanntes Feld."})
+        raise ValidationError({"feld": "Unbekanntes Feld."}) from None
     try:
         return model_field.clean(value, None)
     except ValidationError as exc:
-        raise ValidationError({"wunschwert": exc.messages})
+        raise ValidationError({"wunschwert": exc.messages}) from exc
 
 
 class ChangeRequest(models.Model):

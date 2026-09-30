@@ -1,7 +1,6 @@
 """Ankündigungen: Entwurf, Veröffentlichung und öffentliche Sichtbarkeit."""
 
 import json
-from datetime import date
 
 from django.contrib.auth.models import Group, User
 from django.test import TestCase

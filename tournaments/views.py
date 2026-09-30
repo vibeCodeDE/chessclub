@@ -1,20 +1,19 @@
 """Turnierverwaltung inkl. Paarungen, Ergebnissen und öffentlicher Anmeldung."""
 
 import csv
-from decimal import Decimal
 
 from django.contrib import messages
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from django.http import HttpResponse
 
 from core.roles import ADMIN_GROUP, role_required
-from core.ui import fehler, is_ajax, ok
+from core.ui import fehler, ok
 from members.models import Member
 
 from .forms import ParticipantForm, PublicRegistrationForm, TournamentForm
-from .models import Participant, Pairing, Tournament, TournamentRound, teilnehmer_stand
+from .models import Pairing, Participant, Tournament, TournamentRound, teilnehmer_stand
 from .pairing import generate_round, turnier_abschliessen
 
 

@@ -115,9 +115,19 @@ LOGIN_URL = "/anmelden/"
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/"
 
+# E-Mail komplett per Env konfigurierbar (Variablennamen wie in
+# .env.prod.example). Ohne gesetzte Werte greift das Console-Backend für die
+# Entwicklung; config/production.py erzwingt dort ein Backend mit echter
+# Zustellung.
 EMAIL_BACKEND = os.environ.get(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
 
 # Zwei-Faktor für die Vorstandschaft (PRD N1.6). In der Entwicklung abschaltbar
 # (TWOFA_PFLICHT=0), im Produktivbetrieb verbindlich.

@@ -90,6 +90,21 @@ class StammdatenAuditTests(TestCase):
             AuditLog.objects.filter(aktion="Stammdaten geändert").count(), 0
         )
 
+    def test_langer_wert_wird_vollständig_protokolliert(self):
+        # Regression: alt_wert/neu_wert waren CharField(max_length=200),
+        # Member.email erlaubt aber 254 Zeichen – auf Postgres ließ ein
+        # langer Wert den Save am Audit-Signal scheitern („value too long").
+        lange_email = "l" * 50 + "@" + ".".join(c * 50 for c in "abcd")
+        self.assertGreater(len(lange_email), 200)
+
+        response = self.change(email=lange_email)
+
+        self.assertRedirects(response, "/admin/members/member/")
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.email, lange_email)
+        eintrag = AuditLog.objects.get(aktion="Stammdaten geändert")
+        self.assertEqual(eintrag.neu_wert, lange_email)
+
 
 class LoginAuditTests(TestCase):
     def setUp(self):

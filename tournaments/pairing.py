@@ -52,7 +52,6 @@ def generate_round(tournament):
     weiss_zaehler = farben_bilanz(tournament)
 
     stand = teilnehmer_stand(tournament)
-    rang = {p.pk: index for index, p in enumerate(stand)}
 
     offen = list(stand)
     bye = None

@@ -8,7 +8,11 @@ Aufruf:
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.dsgvo import ANONYMISIERUNGS_FRIST_TAGE, anonymisiere_member, anonymisierungs_kandidaten
+from core.dsgvo import (
+    ANONYMISIERUNGS_FRIST_TAGE,
+    anonymisiere_member,
+    anonymisierungs_kandidaten,
+)
 
 
 class Command(BaseCommand):

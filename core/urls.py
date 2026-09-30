@@ -1,6 +1,5 @@
-from django.urls import path
-
 from django.contrib.auth import views as django_auth_views
+from django.urls import path
 
 from . import auth_views, views
 

@@ -2,7 +2,7 @@
 
 from django.conf import settings
 
-from .roles import ADMIN_GROUP, KAPITAEN_GROUP, role_of
+from .roles import ADMIN_GROUP, role_of
 
 # Menü: (Sektion, [(URL-Name, Label, Icon, Rollen, Badge-Schlüssel)])
 NAV_STRUKTUR = [
