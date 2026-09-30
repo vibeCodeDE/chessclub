@@ -4,35 +4,43 @@
 
 {% block card %}
 <span class="brand-mark" aria-hidden="true">♞</span>
-<h1>Zwei-Faktor-Bestätigung</h1>
+<h1>Zwei-Faktor</h1>
 <p class="lede">Konto: <strong>{{ konto }}</strong></p>
 
 {% if form_fehler %}
-  <div class="alert error"><svg class="icon icon-sm"><use href="#i-alert"></use></svg><div>{{ form_fehler }}</div></div>
+  <div class="public-alert error spaced" role="alert">
+    <svg aria-hidden="true"><use href="#i-alert"></use></svg>
+    <div>{{ form_fehler }}</div>
+  </div>
 {% endif %}
 
 {% if braucht_einrichtung %}
-  <div class="alert info">
-    <svg class="icon icon-sm"><use href="#i-shield"></use></svg>
+  <div class="public-alert spaced" role="status">
+    <svg aria-hidden="true"><use href="#i-shield"></use></svg>
     <div>In der Authenticator-App ein neues Konto anlegen und den Schlüssel eintragen.</div>
   </div>
-  <div class="auth-hint mb-2">
+  <div class="auth-hint">
     <div><strong>Schlüssel:</strong> <span class="mono">{{ secret }}</span></div>
-    <div class="mt-1" style="word-break:break-all"><strong>Link:</strong> <span class="mono">{{ uri }}</span></div>
+    <div class="auth-hint-line"><strong>Link:</strong> <span class="mono">{{ uri }}</span></div>
   </div>
 {% else %}
-  <p class="muted center mb-2">Bitte den aktuellen 6-stelligen Code aus der Authenticator-App eingeben.</p>
+  <p class="lede spaced">Bitte den aktuellen 6-stelligen Code aus der Authenticator-App eingeben.</p>
 {% endif %}
 
 <form method="post" novalidate>
   {% csrf_token %}
-  <div class="field">
-    <label for="code">6-stelliger Code</label>
+  <div class="form-field">
+    <label for="code">6-stelliger Code <span class="required-mark" aria-hidden="true">*</span></label>
     <input class="input mono" id="code" name="code" inputmode="numeric" autocomplete="one-time-code"
-           pattern="[0-9]{6}" maxlength="6" autofocus required style="letter-spacing:.35em; text-align:center">
+           pattern="[0-9]{6}" maxlength="6" autofocus required>
   </div>
-  <button class="btn block" type="submit"><svg class="icon icon-sm"><use href="#i-check"></use></svg>
-    {% if braucht_einrichtung %}Einrichten und anmelden{% else %}Bestätigen{% endif %}</button>
+  <button class="form-submit" type="submit">
+    {% if braucht_einrichtung %}Einrichten und anmelden{% else %}Bestätigen{% endif %}
+    <svg aria-hidden="true"><use href="#i-check"></use></svg>
+  </button>
 </form>
-<p class="center mt-2 mb-0">Kein Zugriff? <a href="{% url 'core:logout' %}">Abbrechen</a></p>
+
+<div class="auth-foot">
+  Kein Zugriff? <a href="{% url 'core:logout' %}">Anmeldung abbrechen</a>
+</div>
 {% endblock %}

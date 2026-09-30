@@ -1,63 +1,98 @@
 {% extends "public_base.html" %}
 
-{% block title %}Turniere – {{ club_short }}{% endblock %}
+{% block title %}Turniere &amp; Termine – {{ club_short }}{% endblock %}
+{% block description %}Turnierkalender des {{ club_name }}: offene Turniere, Vereinsmeisterschaft, Rapid- und Blitzturniere mit Online-Anmeldung.{% endblock %}
 
 {% block content %}
-<div class="public-hero" style="padding:2rem 0 2.2rem">
-  <div class="public-wrap">
-    <h1>Turnierkalender</h1>
-    <p>Vereinsmeisterschaft, Rapid- und Blitzturniere, Jugendturniere – hier finden Sie alle Termine und können sich anmelden.</p>
-  </div>
-</div>
+<div class="inner-page">
+  <section class="page-intro container">
+    <a class="back-link" href="{% url 'core:home' %}">
+      <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Startseite
+    </a>
+    <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> TURNIERKALENDER &amp; POKALE</div>
+    <h1>Dein nächster <em>Zug am Brett.</em></h1>
+    <p>
+      Vereinsmeisterschaft, Rapid- und Blitzturniere, Jugendpokale: Hier findest du alle Termine –
+      und meldest dich für offene Turniere direkt online an, auch ohne Vereinsmitglied zu sein.
+    </p>
+  </section>
 
-<div class="public-wrap" style="padding-top:1.6rem">
-  <h2>Kommende Turniere</h2>
-  <div class="grid cols-2 mt-1">
+  <section class="container tournament-index" aria-labelledby="turnierliste">
+    <div class="index-label-row">
+      <span id="turnierliste">ANSTEHENDE TURNIERE</span>
+      <span>{{ kommende|length }} TERMIN{{ kommende|length|pluralize:"E" }}{% if club_location %} · {{ club_location|upper }}{% endif %}</span>
+    </div>
+
     {% for turnier in kommende %}
-      <article class="card">
-        <div class="card-body">
-          <div class="flex between center wrap gap-1">
-            <span class="date" style="font-size:.8rem;color:var(--muted);font-weight:650">{{ turnier.datum|date:"D, d.m.Y" }}</span>
-            <span class="badge badge-{{ turnier.status }}">{{ turnier.get_status_display }}</span>
-          </div>
-          <h3 class="mt-1"><a href="{% url 'tournaments:public_detail' turnier.pk %}">{{ turnier.name }}</a></h3>
-          <p class="muted mb-1">{{ turnier.beschreibung|truncatewords:22|default:"Ausschreibung folgt." }}</p>
-          <div class="flex wrap gap-1">
-            <span class="chip"><svg class="icon icon-sm"><use href="#i-pin"></use></svg> {{ turnier.ort|default:"Vereinsheim" }}</span>
-            <span class="chip"><svg class="icon icon-sm"><use href="#i-users"></use></svg> {{ turnier.teilnehmer_anzahl }} Anmeldungen</span>
-            {% if turnier.startgeld %}<span class="chip"><svg class="icon icon-sm"><use href="#i-euro"></use></svg> {{ turnier.startgeld|floatformat:2 }} € Startgeld</span>{% endif %}
-            {% if turnier.anmeldeschluss %}<span class="chip"><svg class="icon icon-sm"><use href="#i-clock"></use></svg> Anmeldung bis {{ turnier.anmeldeschluss|date:"d.m.Y" }}</span>{% endif %}
-          </div>
-          <a class="btn mt-2" href="{% url 'tournaments:public_detail' turnier.pk %}">
-            {% if turnier.anmeldung_offen %}Jetzt anmelden{% else %}Details ansehen{% endif %}
-          </a>
+      <article class="tournament-index-item">
+        <div class="tournament-date-large">
+          <strong>{{ turnier.datum|date:"d" }}</strong>
+          <span>{{ turnier.datum|date:"M"|upper }} / {{ turnier.datum|date:"Y" }}</span>
         </div>
+        <div class="tournament-index-copy">
+          <span class="item-kicker">
+            <span class="open-dot{% if not turnier.anmeldung_offen %} closed{% endif %}" aria-hidden="true"></span>
+            ANMELDUNG {{ turnier.anmeldung_offen|yesno:"OFFEN,GESCHLOSSEN" }} · {{ turnier.get_format_display|upper }}
+          </span>
+          <h2>{{ turnier.name }}</h2>
+          <p>{{ turnier.beschreibung|default:"Die Ausschreibung wird in Kürze veröffentlicht."|truncatewords:34 }}</p>
+          <div class="tournament-inline-facts">
+            <span><svg aria-hidden="true"><use href="#i-calendar"></use></svg> {{ turnier.datum|date:"l, j. F Y" }}</span>
+            <span><svg aria-hidden="true"><use href="#i-pin"></use></svg> {{ turnier.ort|default:"Spielort wird noch bekannt gegeben" }}</span>
+            <span><svg aria-hidden="true"><use href="#i-users"></use></svg> {{ turnier.teilnehmer_anzahl }} Anmeldung{{ turnier.teilnehmer_anzahl|pluralize:"en" }}</span>
+            {% if turnier.startgeld %}
+              <span><svg aria-hidden="true"><use href="#i-euro"></use></svg> {{ turnier.startgeld|floatformat:2 }} € Startgeld</span>
+            {% else %}
+              <span><svg aria-hidden="true"><use href="#i-euro"></use></svg> ohne Startgeld</span>
+            {% endif %}
+            {% if turnier.anmeldeschluss %}
+              <span><svg aria-hidden="true"><use href="#i-clock"></use></svg> Anmeldung bis {{ turnier.anmeldeschluss|date:"j. F Y" }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <a class="round-arrow" href="{% url 'tournaments:public_detail' turnier.pk %}" aria-label="{{ turnier.name }} ansehen und anmelden">
+          <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
       </article>
     {% empty %}
-      <div class="card" style="grid-column:1/-1">
-        {% include "includes/empty_state.html" with icon="trophy" titel="Aktuell keine Turniere geplant" text="Sobald der neue Turnierplan steht, erscheinen hier alle Termine mit Anmeldung." %}
-      </div>
+      <p class="empty-message">Aktuell sind keine Turniere geplant. Sobald der neue Turnierplan steht, erscheinen hier alle Termine mit Anmeldung.</p>
     {% endfor %}
-  </div>
+  </section>
 
   {% if vergangene %}
-    <h2 class="mt-2">Vergangene Turniere</h2>
-    <div class="card">
-      <div class="table-wrap">
-        <table class="data">
-          <thead><tr><th>Datum</th><th>Turnier</th><th>Sieger / Ergebnisse</th></tr></thead>
-          <tbody>
-            {% for turnier in vergangene %}
-              <tr>
-                <td class="nowrap">{{ turnier.datum|date:"d.m.Y" }}</td>
-                <td class="cell-main"><a href="{% url 'tournaments:public_detail' turnier.pk %}">{{ turnier.name }}</a></td>
-                <td class="cell-sub">{{ turnier.teilnehmer_anzahl }} Teilnehmer:innen</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <section class="container archive-section" aria-labelledby="archivliste">
+      <div class="section-heading-row">
+        <div>
+          <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> RÜCKBLICK</div>
+          <h2 id="archivliste" class="section-title">Vergangene <em>Turniere.</em></h2>
+        </div>
       </div>
-    </div>
+      <div class="archive-list">
+        {% for turnier in vergangene %}
+          <a class="archive-row" href="{% url 'tournaments:public_detail' turnier.pk %}">
+            <span class="archive-date">{{ turnier.datum|date:"d.m.Y" }}</span>
+            <span class="archive-name">{{ turnier.name }}</span>
+            <span class="archive-meta">
+              {{ turnier.get_format_display }} · {{ turnier.teilnehmer_anzahl }} Teilnehmer:innen
+            </span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
   {% endif %}
+
+  <section class="container tournament-bottom-note">
+    <div>
+      <span class="eyebrow">GUT ZU WISSEN</span>
+      <h2>Offen für alle Spielstärken &amp; Gäste.</h2>
+      <p>
+        Für unsere Turniere musst du kein Vereinsmitglied sein. Bei Fragen zu Bedenkzeit,
+        Wertung oder Anreise erreichst du die Turnierleitung jederzeit per E-Mail.
+      </p>
+    </div>
+    <a class="underlined-link" href="mailto:{{ club_contact }}" data-no-loading>
+      Frage an die Turnierleitung <svg aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+    </a>
+  </section>
 </div>
 {% endblock %}

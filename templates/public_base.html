@@ -1,13 +1,24 @@
 {% load static %}<!DOCTYPE html>
+{% comment %}
+Öffentliche Vereinsseite – gemeinsame Hülle (Designsprache aus der Design-Referenz,
+siehe docs/superpowers/specs/2026-09-30-oeffentliche-designsprache.md).
+
+Lädt bewusst nur `css/site.css`: der interne Bereich (Dashboard, Verwaltung)
+nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
+{% endcomment %}
 <html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ club_name }}{% endblock %}</title>
   <meta name="description" content="{% block description %}Schachverein {{ club_short }} – Termine, Turniere und Vereinsleben.{% endblock %}">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:title" content="{% block og_title %}{{ club_name }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Schach in {{ club_location|default:'unserem Verein' }} – Klubabend, Mannschaften und Turniere.{% endblock %}">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
-  <meta name="theme-color" content="#0d1526">
+  <meta name="theme-color" content="#192f27">
   <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,52 +28,103 @@
 <body>
 {% include "includes/sprite.html" %}
 <div class="loading-bar" data-loading-bar aria-hidden="true"></div>
+<a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
 
-<header class="public-header">
-  <div class="public-wrap">
-    <a class="sidebar-brand" href="{% url 'core:home' %}" style="border:0;padding:0;color:var(--ink)">
+{% with url_name=request.resolver_match.url_name %}
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="{% url 'core:home' %}" aria-label="{{ club_name }} – zur Startseite">
       <span class="brand-mark" aria-hidden="true">♞</span>
-      <span class="brand-text">
-        <strong style="color:var(--ink)">{{ club_short }}</strong>
-        <span style="color:var(--muted)">Schachverein</span>
+      <span class="brand-type">
+        <strong>{{ club_short }}<span class="brand-period">.</span></strong>
+        <small>
+          SCHACHVEREIN{% if club_founded %} SEIT {{ club_founded }}{% endif %}{% if club_location %} · {{ club_location|upper }}{% endif %}
+        </small>
       </span>
     </a>
-    <nav class="public-nav">
-      <a href="{% url 'core:home' %}">Startseite</a>
-      <a href="{% url 'core:news_archiv' %}">Aktuelles</a>
-      <a href="{% url 'tournaments:public_list' %}">Turniere</a>
+
+    <nav class="main-nav" id="hauptnavigation" data-public-nav aria-label="Hauptnavigation">
+      <a class="nav-link{% if url_name == 'home' %} active{% endif %}" href="{% url 'core:home' %}"{% if url_name == 'home' %} aria-current="page"{% endif %}>Startseite</a>
+      <a class="nav-link{% if url_name == 'news_archiv' or url_name == 'news_detail' %} active{% endif %}" href="{% url 'core:news_archiv' %}"{% if url_name == 'news_archiv' or url_name == 'news_detail' %} aria-current="page"{% endif %}>Aktuelles</a>
+      <a class="nav-link{% if url_name == 'public_list' or url_name == 'public_detail' %} active{% endif %}" href="{% url 'tournaments:public_list' %}"{% if url_name == 'public_list' or url_name == 'public_detail' %} aria-current="page"{% endif %}>Turniere</a>
+      <a class="nav-link{% if url_name == 'verein' %} active{% endif %}" href="{% url 'core:verein' %}"{% if url_name == 'verein' %} aria-current="page"{% endif %}>Der Verein</a>
       {% if user.is_authenticated %}
-        <a class="btn small" href="{% url 'core:dashboard' %}">Zum Dashboard</a>
+        <a class="nav-link" href="{% url 'core:dashboard' %}">Dashboard</a>
       {% else %}
-        <a href="{% url 'core:login' %}">Anmelden</a>
-        <a class="btn small" href="{% url 'members:join_info' %}">Mitglied werden</a>
+        <a class="nav-link" href="{% url 'core:login' %}">Anmelden</a>
       {% endif %}
+      <a class="mobile-join" href="{% url 'members:join_info' %}">Mitglied werden <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg></a>
     </nav>
+
+    <a class="header-join" href="{% url 'members:join_info' %}">
+      Mitglied werden <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+    </a>
+
+    <button class="menu-toggle" type="button" data-public-nav-toggle aria-expanded="false" aria-controls="hauptnavigation" aria-label="Menü öffnen">
+      <svg aria-hidden="true"><use href="#i-menu"></use></svg>
+    </button>
   </div>
 </header>
 
-<main>
+<main id="inhalt">
+  {% if messages %}
+    <div class="container flash-wrap">
+      <div class="flash-stack" role="status">
+        {% for message in messages %}
+          <div class="public-alert {{ message.tags }}">
+            <svg aria-hidden="true"><use href="#i-{% if message.tags == 'error' %}alert{% elif message.tags == 'success' %}check{% else %}sparkle{% endif %}"></use></svg>
+            <div>{{ message }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
   {% block content %}{% endblock %}
 </main>
 
-<footer class="site-footer-public">
-  <div class="public-wrap">
-    <div class="flex wrap between gap-2">
-      <div>
-        <strong>{{ club_name }}</strong><br>
-        Kontakt: <a href="mailto:{{ club_contact }}">{{ club_contact }}</a>
-      </div>
-      <div class="right">
-        <a href="{% url 'core:news_archiv' %}">Aktuelles</a> ·
-        <a href="{% url 'tournaments:public_list' %}">Turniere</a> ·
-        <a href="{% url 'core:login' %}">Vorstand-Login</a>
-      </div>
+<footer class="site-footer">
+  <div class="container footer-main">
+    <div class="footer-brand-block">
+      <a class="footer-logo" href="{% url 'core:home' %}">
+        <span aria-hidden="true">♞</span> {{ club_short }}<span class="footer-logo-period">.</span>
+      </a>
+      <p>
+        {% if club_description %}{{ club_description }}{% else %}
+        {{ club_name }} – Vereinsleben, Mannschaften und Turniere. Wir spielen, analysieren und
+        freuen uns über alle, die zum ersten Mal ein Brett aufbauen.
+        {% endif %}
+      </p>
     </div>
-    <p class="mt-2 mb-0" style="font-size:.8rem">Diese Seite läuft DSGVO-konform auf eigener Infrastruktur – keine Tracker, keine externen CDNs.</p>
+    <div class="footer-column">
+      <span class="footer-label">ENTDECKEN</span>
+      <a href="{% url 'core:news_archiv' %}">Aktuelles &amp; Berichte</a>
+      <a href="{% url 'tournaments:public_list' %}">Turniere &amp; Termine</a>
+      <a href="{% url 'core:verein' %}">Über den Verein</a>
+      <a href="{% url 'members:join_info' %}">Mitglied werden</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'core:dashboard' %}">Zur Vereinsverwaltung</a>
+      {% else %}
+        <a href="{% url 'core:login' %}">Vorstand-Login</a>
+      {% endif %}
+    </div>
+    <div class="footer-column">
+      <span class="footer-label">TREFFPUNKT &amp; ZEITEN</span>
+      {% if club_room %}<span>{{ club_room }}</span>{% endif %}
+      {% if club_youth_hours %}<span>Jugend · {{ club_youth_hours }}</span>{% endif %}
+      {% if club_night_hours %}<span>Klubabend · {{ club_night_hours }}</span>{% endif %}
+      <a class="footer-mail" href="mailto:{{ club_contact }}" data-no-loading>
+        {{ club_contact }} <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+      </a>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <span>© {% now "Y" %} {{ club_name }}{% if club_founded %} · gegründet {{ club_founded }}{% endif %}</span>
+    <span>Keine Tracker, keine externen CDNs – alles läuft auf eigener Infrastruktur.</span>
   </div>
 </footer>
+{% endwith %}
 
 <div class="toast-stack" data-toast-stack aria-live="polite"></div>
-<script src="{% static 'js/app.js' %}" defer></script>
+<script src="{% static 'js/public.js' %}" defer></script>
 </body>
 </html>

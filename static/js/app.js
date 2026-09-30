@@ -1,7 +1,8 @@
-/* Schachvereins-Software – Interaktionen
+/* Schachvereins-Software – Interaktionen des internen Bereichs (Dashboard/Verwaltung)
    Progressive Enhancement: ohne JavaScript funktionieren alle Formulare normal.
    Enthält: Sidebar/Drawer, Dropdowns, Toasts, optimistische Updates,
-   Autosave, Bestätigungsdialog, Ladezustände. */
+   Autosave, Bestätigungsdialog, Ladezustände.
+   Die öffentlichen Seiten laden static/js/public.js – beide Dateien sind unabhängig. */
 (function () {
   "use strict";
 

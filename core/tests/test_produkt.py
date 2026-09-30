@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -39,5 +40,10 @@ class ProduktSeiteTests(TestCase):
             self.assertEqual(self.client.get(pfad).status_code, 200)
 
     def test_vereinsstartseite_bleibt_unveraendert(self):
-        antwort = self.client.get("/")
-        self.assertContains(antwort, "Willkommen beim")
+        """„/“ zeigt die Vereinsseite, die Produkt-Landingpage liegt unter „/produkt/“."""
+        vereinsseite = self.client.get("/").content.decode()
+        produktseite = self.client.get("/produkt/").content.decode()
+        verkaufssatz = "Vereinsverwaltung, die Ihr Vorstand gerne benutzt."
+        self.assertIn(settings.CLUB_SHORT, vereinsseite)
+        self.assertIn(verkaufssatz, produktseite)
+        self.assertNotIn(verkaufssatz, vereinsseite)

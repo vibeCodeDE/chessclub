@@ -126,6 +126,15 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 
 ---
 
+### 3.9 Öffentliche Vereinsseite (S)
+
+- S9.1 Öffentliche Startseite mit Vereinszahlen, den nächsten Terminen und aktuellen Ankündigungen (nur Veröffentlichtes, M5.1)
+- S9.2 Vereinsseite mit Selbstverständnis, Trainings-/Klubzeiten, Treffpunkt und dem kommenden Ligaspielplan
+- S9.3 Einheitliche Designsprache für alle öffentlichen Seiten einschließlich Fehlerseite und Anmeldeeinstieg; eigenes Stylesheet, das den internen Bereich (Dashboard/Verwaltung) nicht berührt
+- S9.4 Archiv der Ankündigungen mit Kategoriefilter sowie Turnierkalender mit Anmeldestatus und vergangenen Turnieren
+
+---
+
 ## 4. Nicht-funktionale Anforderungen
 
 ### 4.1 DSGVO (harte Anforderung)
@@ -217,4 +226,5 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 |---|---|---|
 | v1.2 | 2026-09-28 | Review-Feedback: Priorisierung v1/v1.1, DSGVO-Anforderungen geschärft (N1.5, N1.7), Berechtigungsmatrix §3.8, Backup-Verschlüsselung |
 | v1.3 | 2026-09-29 | Redaktionell: Meilensteine als MS1–MS7 umbenannt und an den v1/v1.1-Schnitt angepasst; Tippfehler in N1.3 behoben; §3.8-Verweisliste korrigiert (T19 ist kein Export-Task). Keine inhaltliche Anforderungsänderung |
+| v1.5 | 2026-09-30 | Neu §3.9 (S9.1–S9.4): öffentliche Vereinsseite in der Designsprache der Referenz-ZIP; Abgrenzung zum internen Design in [ADR-013](decisions/ADR-013-oeffentliche-designsprache.md). Alle vier Anforderungen gehen an T28 |
 | v1.4 | 2026-09-29 | Ergänzungen aus Stack-Review: neu S4.6 (iCal-Feed, T16b) und N2.8 (Monitoring, T24b), beide v1.1; Technikentscheidungen in ADR-008 (HTMX/Alpine, T10b) und ADR-009 (Caddy/restic/Uptime Kuma, T24). N2.1 bleibt unverändert (restic erfüllt „verschlüsselt“) |

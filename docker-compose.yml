@@ -28,6 +28,14 @@ services:
       # gelesen werden koennen. Im Betrieb gehoert der Schluessel nach .env.prod
       # (siehe .env.prod.example) – dieser Wert niemals produktiv verwenden.
       IBAN_FERNET_KEY: "up3_XszoFQiTs6TmInARNOIqBlEeh7V_7e46vfQ_g-E="
+      # Vereinsprofil der oeffentlichen Seiten – Demo-Werte passend zu `seed_demo`.
+      # Fuer den echten Verein in .env.prod pflegen (siehe README, ADR-012).
+      CLUB_FOUNDED: "1924"
+      CLUB_LOCATION: "Musterstadt"
+      CLUB_ROOM: "Vereinsheim Musterstadt"
+      CLUB_NIGHT_HOURS: "Donnerstags ab 19:00 Uhr"
+      CLUB_YOUTH_HOURS: "Donnerstags 17:30 – 19:00 Uhr"
+      CLUB_DESCRIPTION: "Schach für alle – vom ersten Bauernzug bis zur Ligapartie."
     volumes:
       - .:/app
     depends_on:

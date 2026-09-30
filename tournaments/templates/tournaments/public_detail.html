@@ -1,107 +1,231 @@
 {% extends "public_base.html" %}
 
 {% block title %}{{ turnier.name }} – {{ club_short }}{% endblock %}
+{% block description %}{% if turnier.beschreibung %}{{ turnier.beschreibung|truncatewords:30 }}{% else %}Turnier beim {{ club_name }} – Ausschreibung und Online-Anmeldung.{% endif %}{% endblock %}
 
 {% block content %}
-<div class="public-hero" style="padding:1.8rem 0 2rem">
-  <div class="public-wrap">
-    <a class="link-btn" style="color:#c7d2e6" href="{% url 'tournaments:public_list' %}">‹ Alle Turniere</a>
-    <h1 class="mt-1">{{ turnier.name }}</h1>
-    <div class="flex wrap gap-1 mt-1">
-      <span class="chip" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#e8eefc"><svg class="icon icon-sm"><use href="#i-calendar"></use></svg> {{ turnier.datum|date:"d.m.Y" }}</span>
-      <span class="chip" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#e8eefc"><svg class="icon icon-sm"><use href="#i-pin"></use></svg> {{ turnier.ort|default:"Vereinsheim" }}</span>
-      <span class="chip" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#e8eefc">{{ turnier.get_format_display }} · {{ turnier.runden_anzahl }} Runden</span>
-      {% if turnier.startgeld %}<span class="chip" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#e8eefc">Startgeld {{ turnier.startgeld|floatformat:2 }} €</span>{% endif %}
-    </div>
+<div class="inner-page">
+  <div class="container">
+    <a class="back-link tournament-back" href="{% url 'tournaments:public_list' %}">
+      <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Alle Turniere
+    </a>
   </div>
-</div>
 
-<div class="public-wrap" style="padding-top:1.6rem">
-  <div class="grid main-side">
-    <div>
-      {% if turnier.beschreibung %}
-        <div class="card">
-          <div class="card-head"><h2>Ausschreibung</h2></div>
-          <div class="card-body prose">{{ turnier.beschreibung|linebreaks }}</div>
-        </div>
+  <section class="container tournament-detail-hero">
+    <div class="tournament-hero-copy">
+      <span class="eyebrow">
+        <span class="eyebrow-dot" aria-hidden="true"></span> {{ club_short|upper }} / {{ turnier.get_status_display|upper }}
+      </span>
+      <h1>{{ turnier.name }}</h1>
+      <p>
+        {{ turnier.beschreibung|default:"Die Ausschreibung wird in Kürze veröffentlicht. Anmeldungen sind bereits möglich."|truncatewords:36 }}
+      </p>
+      {% if turnier.anmeldung_offen %}
+        <a class="button button-lime" href="#anmeldung">
+          Jetzt anmelden <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
       {% endif %}
+    </div>
+    <div class="tournament-hero-date">
+      <span class="hero-date-top">TERMIN</span>
+      <strong>{{ turnier.datum|date:"d" }}</strong>
+      <span class="hero-date-month">{{ turnier.datum|date:"M"|upper }} / {{ turnier.datum|date:"Y" }}</span>
+      <span class="hero-date-knight" aria-hidden="true">♞</span>
+    </div>
+  </section>
 
-      {% if stand %}
-        <div class="card">
-          <div class="card-head"><h2>Zwischenstand</h2><span class="sub">Rang nach Punkten und Buchholz</span></div>
-          <div class="table-wrap">
-            <table class="data">
-              <thead><tr><th>#</th><th>Name</th><th>Verein</th><th class="num">Punkte</th><th class="num">Buchholz</th></tr></thead>
-              <tbody>
-                {% for t in stand %}
-                  <tr>
-                    <td class="mono">{{ t.rang }}</td>
-                    <td class="cell-main">{{ t.name }}</td>
-                    <td class="cell-sub">{{ t.verein|default:"–" }}</td>
-                    <td class="num mono">{{ t.aktuelle_punkte|floatformat:1 }}</td>
-                    <td class="num mono">{{ t.aktuelle_buchholz|floatformat:1 }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+  <section class="container tournament-details-grid">
+    <div class="tournament-description">
+      <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> Ausschreibung</div>
+      <h2>Schach. Taktik.<br><em>Gemeinschaft.</em></h2>
+      {% if turnier.beschreibung %}
+        {{ turnier.beschreibung|linebreaks }}
+      {% else %}
+        <p>Die Ausschreibung für dieses Turnier wird in Kürze veröffentlicht.</p>
+      {% endif %}
+      <p>
+        Bei Fragen zu Ablauf, Bedenkzeit oder Anreise hilft die Turnierleitung gern weiter –
+        eine kurze E-Mail genügt.
+      </p>
+    </div>
+
+    <div class="tournament-facts">
+      <h3>Die Eckdaten</h3>
+      <div class="fact-row">
+        <svg aria-hidden="true"><use href="#i-calendar"></use></svg>
+        <div>
+          <span>DATUM</span>
+          <strong>{{ turnier.datum|date:"l, j. F Y" }}</strong>
+        </div>
+      </div>
+      <div class="fact-row">
+        <svg aria-hidden="true"><use href="#i-pin"></use></svg>
+        <div>
+          <span>SPIELORT</span>
+          <strong>{{ turnier.ort|default:"wird noch bekannt gegeben" }}</strong>
+        </div>
+      </div>
+      <div class="fact-row">
+        <svg aria-hidden="true"><use href="#i-trophy"></use></svg>
+        <div>
+          <span>TURNIERMODUS</span>
+          <strong>{{ turnier.get_format_display }} · {{ turnier.runden_anzahl }} Runden</strong>
+        </div>
+      </div>
+      <div class="fact-row">
+        <svg aria-hidden="true"><use href="#i-euro"></use></svg>
+        <div>
+          <span>STARTGELD</span>
+          <strong>{% if turnier.startgeld %}{{ turnier.startgeld|floatformat:2 }} €{% else %}kein Startgeld{% endif %}</strong>
+        </div>
+      </div>
+      {% if turnier.anmeldeschluss %}
+        <div class="fact-row">
+          <svg aria-hidden="true"><use href="#i-clock"></use></svg>
+          <div>
+            <span>ANMELDUNG BIS</span>
+            <strong>{{ turnier.anmeldeschluss|date:"j. F Y" }}</strong>
           </div>
         </div>
       {% endif %}
+      <div class="fact-row">
+        <svg aria-hidden="true"><use href="#i-users"></use></svg>
+        <div>
+          <span>TEILNAHME</span>
+          <strong>Offen für Mitglieder, Gäste &amp; Vereinlose</strong>
+        </div>
+      </div>
+    </div>
+  </section>
 
-      <div class="card">
-        <div class="card-head"><h2>Teilnehmer:innen</h2><span class="sub">{{ turnier.teilnehmer_anzahl }} Anmeldungen</span></div>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr><th>Name</th><th>Verein</th><th class="num">DWZ/TWZ</th></tr></thead>
+  <section class="registration-section" id="anmeldung" aria-labelledby="registration-title">
+    <div class="container registration-grid">
+      <div class="registration-main">
+        <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> ANMELDUNG</div>
+        <h2 id="registration-title">Sichere dir deinen <em>Platz.</em></h2>
+        {% if turnier.anmeldung_offen %}
+          <p>
+            Trage dich in die Teilnehmerliste ein. Du erhältst eine Bestätigung und alle Infos zum Ablauf.
+            {% if turnier.startgeld %}Das Startgeld wird am Turniertag kassiert.{% endif %}
+          </p>
+          <form class="club-form" method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+              <div class="form-error" role="alert">{{ form.non_field_errors|join:" " }}</div>
+            {% endif %}
+            <div class="form-row">
+              {% include "includes/public_field.html" with field=form.name %}
+              {% include "includes/public_field.html" with field=form.email %}
+            </div>
+            <div class="form-row">
+              {% include "includes/public_field.html" with field=form.verein %}
+              {% include "includes/public_field.html" with field=form.twz %}
+            </div>
+            {% include "includes/public_field.html" with field=form.geburtsjahr %}
+            <button class="form-submit" type="submit">
+              Verbindlich anmelden <svg aria-hidden="true"><use href="#i-check"></use></svg>
+            </button>
+            <p class="form-note">Die Anmeldung ist kostenlos online; das Startgeld wird am Turniertag kassiert.</p>
+          </form>
+        {% else %}
+          <div class="closed-notice">
+            <h3>Anmeldung geschlossen</h3>
+            <p>
+              Dieses Turnier ist nicht mehr buchbar. Bei Fragen wende dich an
+              <a href="mailto:{{ club_contact }}" data-no-loading>{{ club_contact }}</a> –
+              die nächsten Termine findest du im Turnierkalender.
+            </p>
+          </div>
+        {% endif %}
+      </div>
+
+      <aside class="registration-aside">
+        <span class="eyebrow">TEILNEHMENDE</span>
+        <strong>{{ turnier.teilnehmer_anzahl }}</strong>
+        <span class="free-note">
+          Anmeldung{{ turnier.teilnehmer_anzahl|pluralize:"en" }} bisher{% if turnier.anmeldung_offen %} – weitere sind willkommen{% endif %}
+        </span>
+        <div class="registration-aside-rule"></div>
+        <p>Fragen zu Startgeld, Wertung oder Anreise?</p>
+        <a href="mailto:{{ club_contact }}" data-no-loading>
+          Turnierleitung anschreiben <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </aside>
+    </div>
+  </section>
+
+  {% with teilnehmer=turnier.teilnehmer.all %}
+  {% if stand or teilnehmer %}
+    <section class="container index-section" aria-label="Zwischenstand und Teilnehmerliste">
+      {% if stand %}
+        <div class="section-heading-row">
+          <div>
+            <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> WERTUNG</div>
+            <h2 class="section-title">Zwischenstand</h2>
+          </div>
+          <p class="section-aside">Rang nach Punkten und Buchholz.</p>
+        </div>
+        <div class="table-scroll">
+          <table class="ranking-table">
+            <caption>Rangliste nach der aktuellen Runde</caption>
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Verein</th>
+                <th scope="col" class="num">Punkte</th>
+                <th scope="col" class="num">Buchholz</th>
+              </tr>
+            </thead>
             <tbody>
-              {% for t in turnier.teilnehmer.all %}
+              {% for zeile in stand %}
                 <tr>
-                  <td class="cell-main">{{ t.name }}{% if t.ist_mitglied %} <span class="badge badge-bar">Verein</span>{% endif %}</td>
-                  <td>{{ t.verein|default:club_short }}</td>
-                  <td class="num mono">{{ t.twz|default:"–" }}</td>
+                  <td>{{ zeile.rang }}</td>
+                  <td class="main">{{ zeile.name }}</td>
+                  <td>{{ zeile.verein|default:"–" }}</td>
+                  <td class="num">{{ zeile.aktuelle_punkte|floatformat:1 }}</td>
+                  <td class="num">{{ zeile.aktuelle_buchholz|floatformat:1 }}</td>
                 </tr>
-              {% empty %}
-                <tr><td colspan="3">{% include "includes/empty_state.html" with icon="users" titel="Noch keine Anmeldungen" text="Seien Sie die erste Anmeldung – das Formular steht rechts bereit." small=True %}</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-
-    <div>
-      {% if turnier.anmeldung_offen %}
-        <div class="card">
-          <div class="card-head"><h2>Anmeldung</h2><span class="sub">{% if turnier.anmeldeschluss %}bis {{ turnier.anmeldeschluss|date:"d.m.Y" }}{% else %}offen{% endif %}</span></div>
-          <form class="card-body" method="post">
-            {% csrf_token %}
-            {% include "includes/form_fields.html" with form=form %}
-            <div class="form-actions">
-              <button class="btn block" type="submit"><svg class="icon icon-sm"><use href="#i-check"></use></svg> Verbindlich anmelden</button>
-            </div>
-            <p class="help mt-1 mb-0">Die Anmeldung ist kostenlos online; das Startgeld wird am Turniertag kassiert.</p>
-          </form>
-        </div>
-      {% else %}
-        <div class="card">
-          <div class="card-head"><h2>Anmeldung geschlossen</h2></div>
-          <div class="card-body">
-            <p class="mb-0">Die Anmeldung für dieses Turnier ist nicht mehr möglich. Bei Fragen wenden Sie sich an <a href="mailto:{{ club_contact }}">{{ club_contact }}</a>.</p>
-          </div>
-        </div>
       {% endif %}
 
-      <div class="card">
-        <div class="card-head"><h2>Eckdaten</h2></div>
-        <div class="card-body">
-          <div class="flex between center mb-1"><span class="muted">Datum</span><strong>{{ turnier.datum|date:"d.m.Y" }}</strong></div>
-          <div class="flex between center mb-1"><span class="muted">Format</span><strong>{{ turnier.get_format_display }}</strong></div>
-          <div class="flex between center mb-1"><span class="muted">Runden</span><strong>{{ turnier.runden_anzahl }}</strong></div>
-          <div class="flex between center mb-1"><span class="muted">Startgeld</span><strong class="mono">{{ turnier.startgeld|floatformat:2 }} €</strong></div>
-          <div class="flex between center"><span class="muted">Ort</span><strong>{{ turnier.ort|default:"Vereinsheim" }}</strong></div>
+      <div class="section-heading-row ranking-heading">
+        <div>
+          <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> STARTER</div>
+          <h2 class="section-title">Teilnehmerliste</h2>
         </div>
+        <p class="section-aside">{{ teilnehmer|length }} Anmeldung{{ teilnehmer|length|pluralize:"en" }}</p>
       </div>
-    </div>
-  </div>
+      <div class="table-scroll">
+        <table class="ranking-table">
+          <caption>Angemeldete Spielerinnen und Spieler</caption>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Verein</th>
+              <th scope="col" class="num">DWZ / TWZ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for eintrag in teilnehmer %}
+              <tr>
+                <td class="main">{{ eintrag.name }}{% if eintrag.ist_mitglied %} · Verein{% endif %}</td>
+                <td>{{ eintrag.verein|default:club_short }}</td>
+                <td class="num">{{ eintrag.twz|default:"–" }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3">Noch keine Anmeldungen – sei die erste Anmeldung.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+  {% endwith %}
 </div>
 {% endblock %}

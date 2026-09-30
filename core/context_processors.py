@@ -120,4 +120,12 @@ def nav(request):
         "club_name": settings.CLUB_NAME,
         "club_short": settings.CLUB_SHORT,
         "club_contact": settings.CLUB_CONTACT,
+        # Profil der öffentlichen Vereinsseite (ADR-012) – leere Werte blenden
+        # die betroffenen Zeilen im Template aus.
+        "club_founded": settings.CLUB_FOUNDED,
+        "club_location": settings.CLUB_LOCATION,
+        "club_room": settings.CLUB_ROOM,
+        "club_night_hours": settings.CLUB_NIGHT_HOURS,
+        "club_youth_hours": settings.CLUB_YOUTH_HOURS,
+        "club_description": settings.CLUB_DESCRIPTION,
     }

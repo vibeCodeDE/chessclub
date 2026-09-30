@@ -154,6 +154,16 @@ CLUB_NAME = os.environ.get("CLUB_NAME", "Schachclub Königsspringer Musterstadt 
 CLUB_SHORT = os.environ.get("CLUB_SHORT", "SC Königsspringer")
 CLUB_CONTACT = os.environ.get("CLUB_CONTACT", "vorstand@koenigsspringer-musterstadt.de")
 
+# Profil der öffentlichen Vereinsseite (ADR-012). Alle Werte sind optional und
+# kommen aus der Umgebung: fehlt ein Wert, blendet das Template die Zeile aus,
+# statt einen erfundenen Inhalt zu zeigen.
+CLUB_FOUNDED = os.environ.get("CLUB_FOUNDED", "")            # z. B. "1924"
+CLUB_LOCATION = os.environ.get("CLUB_LOCATION", "")          # z. B. "Musterstadt"
+CLUB_ROOM = os.environ.get("CLUB_ROOM", "")                  # Spielort / Anschrift
+CLUB_NIGHT_HOURS = os.environ.get("CLUB_NIGHT_HOURS", "Donnerstags ab 19:00 Uhr")
+CLUB_YOUTH_HOURS = os.environ.get("CLUB_YOUTH_HOURS", "")    # z. B. "Donnerstags 17:30 – 19:00 Uhr"
+CLUB_DESCRIPTION = os.environ.get("CLUB_DESCRIPTION", "")    # Kurztext für den Footer
+
 # Produkt-Landingpage (/produkt/): Name und Kontakt für den Verkauf als Dienstleistung.
 PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Schachclub-Manager")
 PRODUCT_CONTACT = os.environ.get("PRODUCT_CONTACT", "hallo@schachclub-manager.example")

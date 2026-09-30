@@ -42,7 +42,8 @@ docker compose exec app pytest
 
 ## Produkt-Landingpage
 
-Die Verkaufsseite für andere Vereine liegt unter `/produkt/` (`/` bleibt die Vereinsseite).
+Die Verkaufsseite für andere Vereine liegt unter `/produkt/` (in der bisherigen Gestaltung;
+`/` bleibt die Vereinsseite im neuen Design).
 Name und Kontakt kommen aus `PRODUCT_NAME` und `PRODUCT_CONTACT`; Preise, Funktionen und FAQ
 stehen in `core/produkt.py`. Die Preise sind **Platzhalter**, `/impressum/` und `/datenschutz/`
 enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
@@ -50,7 +51,7 @@ enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest          # 252 Tests, 1 Skip (nur mit PostgreSQL)
+.venv/bin/python -m pytest          # 334 Tests, 1 Skip (nur mit PostgreSQL)
 .venv/bin/python manage.py check
 ```
 
@@ -76,11 +77,40 @@ Wartung für die Vorstandschaft: `docs/wartung.md`.
 | `comms` | Ankündigungen mit Entwurfs-Workflow, Gruppen-E-Mails mit Opt-in |
 | `cashbook` | Kassenbuch, Jahresabschluss, CSV-Export |
 
-Oberflächen: öffentliche Vereinsseite (`/`), Verwaltungs-Shell (`/dashboard/`) und
-die Django-Administration (`/admin/`) als Rückfallebene für den Vorstand.
+Oberflächen: öffentliche Vereinsseite (`/`, `/aktuelles/`, `/turniere/`, `/verein/`,
+`/mitglied-werden/`), Verwaltungs-Shell (`/dashboard/`) und die Django-Administration
+(`/admin/`) als Rückfallebene für den Vorstand.
 
-Styles liegen als handgeschriebenes Design-System in `static/css/app.css`; es gibt
-keinen CSS-Buildschritt und keine externen Assets (PRD N1.1).
+**Zwei getrennte Design-Systeme** (kein CSS-Buildschritt, keine externen Assets, PRD N1.1):
+
+| Bereich | Stylesheet | Skript | Hülle |
+| --- | --- | --- | --- |
+| Öffentliche Vereinsseite (inkl. Anmeldung, 2FA, Passwort-Reset) | `static/css/site.css` | `static/js/public.js` | `templates/public_base.html`, `templates/auth_base.html` |
+| Verwaltung/Dashboard/Admin | `static/css/app.css` | `static/js/app.js` | `templates/base.html` |
+
+Der öffentliche Teil folgt der Designsprache aus
+`schachclubmanager-modern-web-design (1).zip` – Entscheidung und Details in
+[ADR-013](docs/decisions/ADR-013-oeffentliche-designsprache.md) und der
+[Spec](docs/superpowers/specs/2026-09-30-oeffentliche-designsprache.md).
+Das interne Design wird separat gepflegt; die beiden Stylesheets überschreiben sich nicht.
+Beispielbilder liegen unter `static/img/` und sind für echte Vereinsfotos austauschbar.
+
+### Vereinsprofil der öffentlichen Seiten
+
+Diese optionalen Umgebungsvariablen steuern den öffentlichen Auftritt; leere Werte
+blenden die betroffene Zeile aus, statt einen Platzhalter zu erfinden (ADR-012):
+
+| Variable | Beispiel | Wirkung |
+| --- | --- | --- |
+| `CLUB_FOUNDED` | `1978` | „Schachverein seit …“, Vereinsjubiläum-Kachel |
+| `CLUB_LOCATION` | `Musterstadt` | Ort in Hero, Fußzeile, Seitentiteln |
+| `CLUB_ROOM` | `Vereinsheim Musterstadt, Musterstraße 1` | Treffpunkt auf Startseite, `/verein/` und Beitragsseite |
+| `CLUB_NIGHT_HOURS` | `Donnerstags ab 19:00 Uhr` | Klubabend, Wochenband, Mitmach-Abschnitt |
+| `CLUB_YOUTH_HOURS` | `Donnerstags 17:30 – 19:00 Uhr` | Jugendtraining |
+| `CLUB_DESCRIPTION` | `Schach für alle – vom ersten Bauernzug bis zur Ligapartie.` | Kurztext in der Fußzeile |
+
+`/verein/` ist die öffentliche Vereinsseite (Selbstverständnis, Zeiten, Ligaspielplan);
+alle Angaben dort kommen aus der Datenbank bzw. aus den obigen Variablen.
 
 ## Dokumentation
 

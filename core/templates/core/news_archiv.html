@@ -1,27 +1,69 @@
 {% extends "public_base.html" %}
 
 {% block title %}Aktuelles – {{ club_short }}{% endblock %}
+{% block description %}Berichte, Termine und Ankündigungen aus dem {{ club_name }}.{% endblock %}
 
 {% block content %}
-<div class="public-wrap" style="padding-top:1.8rem">
-  <h1>Aktuelles aus dem Verein</h1>
-  <p class="muted">Berichte, Termine und Ankündigungen der Vorstandschaft.</p>
+<div class="inner-page">
+  <section class="page-intro container">
+    <a class="back-link" href="{% url 'core:home' %}">
+      <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Startseite
+    </a>
+    <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> NACHRICHTEN &amp; BERICHTE</div>
+    <h1>Geschichten aus dem <em>Vereinsleben.</em></h1>
+    <p>
+      Ligaduelle, Jugenderfolge, neue Turnierbretter und Momente, die in Erinnerung bleiben –
+      hier hält der Vorstand fest, was im Verein passiert.
+    </p>
+  </section>
 
-  <div class="grid cols-3 mt-2">
-    {% for post in news %}
-      <article class="card">
-        <div class="card-body news-card">
-          <span class="date">{{ post.veroeffentlicht_am|date:"d.m.Y" }} · {{ post.kategorie }}</span>
-          <h3><a href="{% url 'core:news_detail' post.pk %}">{{ post.titel }}</a></h3>
-          <p class="muted mb-0">{{ post.auszug }}</p>
-          <a class="link-btn mt-1" href="{% url 'core:news_detail' post.pk %}">Weiterlesen →</a>
-        </div>
-      </article>
-    {% empty %}
-      <div class="card" style="grid-column:1/-1">
-        {% include "includes/empty_state.html" with icon="megaphone" titel="Noch keine Veröffentlichungen" text="Der Vorstand veröffentlicht hier in Kürze die ersten Neuigkeiten." %}
+  <section class="container index-section" aria-label="Ankündigungen">
+    <div class="filter-bar">
+      <span>KATEGORIE</span>
+      <div class="filter-links" aria-label="Nach Kategorie filtern">
+        <a href="{% url 'core:news_archiv' %}"{% if not aktiv %} class="selected" aria-current="page"{% endif %}>Alle</a>
+        {% for kategorie in kategorien %}
+          <a href="{% url 'core:news_archiv' %}?kategorie={{ kategorie|urlencode }}"
+             {% if aktiv == kategorie %}class="selected" aria-current="page"{% endif %}>{{ kategorie }}</a>
+        {% endfor %}
       </div>
-    {% endfor %}
-  </div>
+    </div>
+
+    <div class="index-grid">
+      <div class="news-list index-news-list">
+        {% for post in news %}
+          <a class="news-row" href="{% url 'core:news_detail' post.pk %}">
+            <time class="news-date" datetime="{{ post.veroeffentlicht_am|date:'c' }}">
+              <strong>{{ post.veroeffentlicht_am|date:"d" }}</strong>
+              <span>{{ post.veroeffentlicht_am|date:"M"|upper }}</span>
+            </time>
+            <div class="news-content">
+              <span class="item-kicker">{{ post.kategorie|default:"Verein" }} <span>·</span> {{ post.veroeffentlicht_am|date:"j. F Y" }}</span>
+              <h2>{{ post.titel }}</h2>
+              <p>{{ post.auszug }}</p>
+            </div>
+            <svg class="news-arrow" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+          </a>
+        {% empty %}
+          <p class="empty-message">
+            {% if aktiv %}Zu dieser Kategorie gibt es aktuell noch keine Beiträge.{% else %}Der Vorstand hat noch keine Ankündigung veröffentlicht.{% endif %}
+          </p>
+        {% endfor %}
+      </div>
+
+      <aside class="index-aside">
+        <span class="eyebrow">MITMACHEN</span>
+        <span class="aside-symbol" aria-hidden="true">♞</span>
+        <h2>Die spannendsten Partien sind die ungespielten.</h2>
+        <p>
+          {% if club_night_hours %}Komm vorbei: {{ club_night_hours|lower }}{% if club_room %} im {{ club_room }}{% endif %}. {% endif %}
+          Wir haben immer ein freies Brett und Menschen, die gerne analysieren.
+        </p>
+        <a class="underlined-link" href="{% url 'core:verein' %}#training">
+          Vereinsabend entdecken <svg aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
+      </aside>
+    </div>
+  </section>
 </div>
 {% endblock %}

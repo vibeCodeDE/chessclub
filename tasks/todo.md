@@ -54,6 +54,10 @@
 - **T25: Härtung** — Sicherheits-Header-Middleware (nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP, CSP wenn `DEBUG=0`), Fehlerbenachrichtigung per E-Mail an `DJANGO_ADMINS`, Argon2 als erster Hasher, `config/production.py` (verweigert Dev-Secret-Key und Console-Mail-Backend), `docs/wartung.md`. *Beleg:* `core/tests/test_haertung.py`, `config/tests/test_production_settings.py` — inklusive der Prüfung, dass `docker-compose.prod.yml` `DJANGO_SETTINGS_MODULE=config.production` setzt und die Vorlage dieselbe Mail-Variable nutzt wie die Settings.
 - **T26: 2FA für die Vorstandsgruppe** — TOTP als Eigenimplementierung in `core/twofa.py`, `TwoFactorDevice`, erzwungen über `TWOFA_PFLICHT`. *Beleg:* `core/tests/test_haertung.py` — Admin-Login ohne gültiges Token abgewiesen, Token außerhalb des Zeitfensters nicht akzeptiert, andere Rollen ohne 2FA.
 - **T27: PWA** — Manifest, Service Worker (Precache Offline + Statics, Network-First für Pages), iOS-Meta-Tags, Icons, `tools/generate_icons.py`. *Beleg:* `core/tests/test_pwa.py` + DevTools „Add to home screen".
+- **T28: Öffentliche Designsprache (Referenz-ZIP)** — Designsprache der nächsten Design-Referenz auf den öffentlichen Teil portiert: neues `static/css/site.css`, Hüllen `public_base.html`/`auth_base.html`, Startseite (Hero, Wochenband, Kennzahlen, News, Ligatermine, Turnierbühne, Mitmachen), Aktuelles mit Kategoriefilter, Artikelansicht mit Sidebar, Turnierkalender + Turnierdetail mit Anmeldung, Beitragsseite, **neue Seite `/verein/`** (Selbstverständnis, Zeiten, Ligaspielplan), 404, Offline und der Anmeldeeinstieg (Login, 2FA, Passwort-Reset). Alle Inhalte aus den vorhandenen Modellen, Vereinsprofil aus den Settings (ADR-012); interne Seiten bleiben unverändert ([ADR-013](../docs/decisions/ADR-013-oeffentliche-designsprache.md), [Spec](../docs/superpowers/specs/2026-09-30-oeffentliche-designsprache.md)).
+  *Beleg:* `pytest core/tests/test_oeffentliches_design.py` (25 Tests) — jede im öffentlichen Bereich verwendete Klasse ist in `site.css` definiert, öffentliche Templates laden weder `app.css` noch `landing.css`, kein externes Asset im HTML, Kategoriefilter und Turnieranmeldung geprüft. **Negativtests:** unbekannte Kategorie versteckt nichts, Entwürfe bleiben verborgen, nicht öffentliches Turnier bleibt 404, geschlossene Anmeldung zeigt kein Formular, ohne gepflegte Vereinsdaten keine erfundenen Angaben.
+  *Weitere Belege:* vollständiger Lauf `pytest` → **334 Tests grün** (1 Skip nur mit PostgreSQL, 172 Subtests), `manage.py check` ohne Befund; alle internen Links (22) und Assets (9) der öffentlichen Seiten liefern 200; HTML-Tag-Balance aller öffentlichen Seiten geprüft; mobiles Menü automatisiert getestet (öffnen/schließen, `aria-expanded`, Icon-Wechsel, `Escape`, Klick außerhalb) bei 0 JS-Fehlern.
+  *Trennung:* die öffentlichen Hüllen laden `static/js/public.js` (Mobilmenü, Ladebalken, Toasts, Service Worker); das interne `app.js` bleibt Dashboard und Verwaltung vorbehalten. Beide Tests und ADR-013 halten das fest.
 - **T15: Kassenbuch** — `CashEntry` mit Kategorie, Betrag, Belegnummer, Jahresfilter, Jahresabschluss, CSV-Export. *Beleg:* `cashbook/tests/test_kasse.py` — 403 für Nicht-Admin, CSV-Summe stimmt fürs gefilterte Jahr. **Offener Mangel:** `cashbook:entry_delete` löscht Buchungen hart → T15b.
 
 ### Zusammenführung der Zweige (2026-09-29)
@@ -81,7 +85,8 @@ Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`. V1-relevant (block
 4. [T7b](plan.md) Jahresbeträge je Kategorie — holt ADR-004 nach
 5. [T11b](plan.md) Kassenbericht Beiträge — schließt M2.6
 6. [T25b](plan.md) NFR-Nachweis auf der Zielhardware, WCAG-Durchgang, `docs/nfr-pruefung.md`
-7. **Abnahme** durch den Vorstand gegen `docs/abnahme.md`
+7. [T28](plan.md) öffentlicher Teil — umgesetzt; offen bleiben nur die echten Vereinsfotos und das **interne Design** (Dashboard/Verwaltung), das separat geliefert wird
+8. **Abnahme** durch den Vorstand gegen `docs/abnahme.md`
 
 **Danach (v1.1):** T15b · T16b · T18 · T22 · T24b
 

@@ -8,17 +8,45 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0d1526",
-  "theme_color": "#0d1526",
+  "background_color": "#f7f6f1",
+  "theme_color": "#192f27",
   "icons": [
-    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/static/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
   ],
   "shortcuts": [
-    { "name": "Dashboard", "url": "/dashboard/" },
-    { "name": "Turnierkalender", "url": "/turniere/" },
-    { "name": "Aktuelles", "url": "/aktuelles/" }
+    {
+      "name": "Dashboard",
+      "url": "/dashboard/"
+    },
+    {
+      "name": "Turnierkalender",
+      "url": "/turniere/"
+    },
+    {
+      "name": "Aktuelles",
+      "url": "/aktuelles/"
+    }
   ]
 }

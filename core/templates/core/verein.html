@@ -1,0 +1,152 @@
+{% extends "public_base.html" %}
+{% load static %}
+
+{% block title %}Der Verein – {{ club_short }}{% endblock %}
+{% block description %}Über den {{ club_name }}: Selbstverständnis, Trainingszeiten, Treffpunkt und der Ligaspielplan.{% endblock %}
+
+{% block content %}
+<div class="inner-page">
+  <section class="page-intro container">
+    <a class="back-link" href="{% url 'core:home' %}">
+      <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Startseite
+    </a>
+    <div class="eyebrow section-eyebrow">
+      <span class="small-rule" aria-hidden="true"></span>
+      {% if club_founded %}SEIT {{ club_founded }}{% if club_location %} IN {{ club_location|upper }}{% endif %}{% else %}UNSER VEREIN{% endif %}
+    </div>
+    <h1>Tradition, Taktik &amp; <em>gute Züge.</em></h1>
+    <p>
+      Wir mögen das tiefe Nachdenken am Brett genauso wie das Gespräch danach.
+      Lerne die Menschen, die Zeiten und den Spielbetrieb des {{ club_name }} kennen.
+    </p>
+  </section>
+
+  <section class="container club-story-grid" aria-labelledby="story-title">
+    <div class="club-story-photo">
+      <img class="cover-image" src="{% static 'img/vereinsheim.jpg' %}" alt="Blick in den Vereinsraum mit Schachbrettern" loading="lazy" width="1200" height="1200">
+      <span>{{ club_room|default:"UNSER VEREINSHEIM"|upper }}</span>
+    </div>
+    <div class="club-story-copy">
+      <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> UNSER SELBSTVERSTÄNDNIS</div>
+      <h2 id="story-title">Schach ohne <em>Dünkel.</em></h2>
+      <p>
+        Bei uns sitzen Menschen, die seit Jahren Turniere spielen, neben denen, die gerade
+        ihre erste Eröffnung lernen. Das ist Absicht: Schach ist für alle da – für
+        Jugendliche, Wiedereinsteiger:innen und alle, die einfach gern spielen.
+      </p>
+      <p>
+        {% if mannschaften %}
+          Aktuell sind {{ mannschaften|length }} Mannschaft{{ mannschaften|length|pluralize:"en" }} für den Ligabetrieb gemeldet.
+        {% endif %}
+        Daneben richten wir eigene Turniere aus und treffen uns regelmäßig zum freien Spiel,
+        zu Blitzrunden und zur gemeinsamen Analyse.
+      </p>
+      <a class="underlined-link" href="{% url 'members:join_info' %}">
+        Komm auf ein Probespiel vorbei <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+      </a>
+    </div>
+  </section>
+
+  <section class="training-section" id="training" aria-labelledby="training-title">
+    <div class="container">
+      <div class="section-heading-row">
+        <div>
+          <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> JEDE WOCHE AM BRETT</div>
+          <h2 id="training-title" class="section-title">Trainieren &amp; <em>Spielen.</em></h2>
+        </div>
+        <p class="section-aside">
+          Einfach ohne Voranmeldung vorbeikommen –<br>
+          wir finden immer die passende Spielstärke.
+        </p>
+      </div>
+      <div class="training-grid">
+        {% if club_youth_hours %}
+          <div class="training-item">
+            <span class="training-number">01 / JUGEND &amp; EINSTEIGER</span>
+            <h3>Jugendtraining</h3>
+            <strong>{{ club_youth_hours }}</strong>
+            <p>
+              Taktikaufgaben, Eröffnungsgrundlagen und freies Spiel in entspannter Runde –
+              für Kinder, Jugendliche und alle, die gerade erst anfangen.
+            </p>
+          </div>
+        {% endif %}
+        <div class="training-item">
+          <span class="training-number">{% if club_youth_hours %}02{% else %}01{% endif %} / DER HERZSCHLAG</span>
+          <h3>Offener Klubabend</h3>
+          <strong>{{ club_night_hours|default:"Termine auf Anfrage" }}</strong>
+          <p>
+            Freie Partien, Blitzrunden, Partieanalysen und Austausch in geselliger Runde.
+            Offen für Mitglieder und Gäste – ein Brett ist immer frei.
+          </p>
+        </div>
+        <div class="training-location">
+          <svg aria-hidden="true"><use href="#i-pin"></use></svg>
+          <span>UNSER TREFFPUNKT</span>
+          {% if club_room %}
+            <strong>{{ club_room }}</strong>
+            <p>Anfahrt und Details erfährst du auf Anfrage – schreib uns einfach eine kurze E-Mail an {{ club_contact }}.</p>
+          {% else %}
+            <strong>Vereinsheim</strong>
+            <p>Den aktuellen Treffpunkt und die Zeiten erfährst du per E-Mail an {{ club_contact }}.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container schedule-section" id="spielplan" aria-labelledby="schedule-title">
+    <div class="section-heading-row">
+      <div>
+        <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> LIGABETRIEB</div>
+        <h2 id="schedule-title" class="section-title">Der nächste <em>Spielplan.</em></h2>
+      </div>
+      <p class="section-aside">Alle Paarungen der kommenden Wochen – Änderungen behält sich die Staffelleitung vor.</p>
+    </div>
+    {% if spiele %}
+      <div class="schedule-table">
+        <div class="schedule-head">
+          <span>TERMIN</span>
+          <span>MANNSCHAFT</span>
+          <span>BEGEGNUNG</span>
+          <span>ORT</span>
+        </div>
+        {% for spiel in spiele %}
+          <div class="schedule-row">
+            <div class="schedule-date">
+              <strong>{{ spiel.datum|date:"d" }}</strong>
+              <span>
+                {{ spiel.datum|date:"M"|upper }}
+                <small>{% if spiel.uhrzeit %}{{ spiel.uhrzeit|time:"H:i" }} Uhr{% else %}{{ spiel.datum|date:"D" }}{% endif %}</small>
+              </span>
+            </div>
+            <span class="schedule-team">{{ spiel.team.name }}</span>
+            <span class="schedule-opponent">
+              {{ spiel.heimspiel|yesno:"gegen,bei" }} {{ spiel.gegner }}{% if not spiel.heimspiel %} (A){% endif %}
+            </span>
+            <span class="schedule-place">
+              {{ spiel.ort|default:"Spielort folgt" }}
+              {% if spiel.runde %}<br><small>{{ spiel.runde }}</small>{% endif %}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-message">
+        Sobald die Staffeleinteilung steht, findest du hier alle Begegnungen der Mannschaften.
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="container club-bottom-cta">
+    <div>
+      <span class="eyebrow">MITMACHEN</span>
+      <h2>Komm vorbei. <em>Spiel mit uns.</em></h2>
+      <p>{% if club_night_hours %}Nächster Klubabend: {{ club_night_hours }}. {% endif %}Ohne Anmeldung, ohne Vorkenntnisse.</p>
+    </div>
+    <a class="button button-lime" href="{% url 'members:join_info' %}">
+      Beiträge &amp; Anmeldung <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+    </a>
+  </section>
+</div>
+{% endblock %}
