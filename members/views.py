@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_required
 from core.ui import fehler, is_ajax, ok, paginate
-from dues.models import FeeCategory, MembershipFee, Payment, SepaMandate
+from dues.models import FeeCategory, MembershipFee, Payment
 
 from .forms import ChangeRequestForm, MemberForm, MemberStatusForm
 from .models import ChangeRequest, Member, clean_member_value

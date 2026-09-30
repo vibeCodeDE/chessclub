@@ -10,7 +10,7 @@ class StyledFormMixin:
     """Einheitliche Widget-Klassen und Datumsfelder für das Design-System."""
 
     def _style(self):
-        for name, field in self.fields.items():
+        for field in self.fields.values():
             widget = field.widget
             if isinstance(widget, forms.CheckboxInput):
                 continue
@@ -88,7 +88,7 @@ class ChangeRequestForm(forms.Form):
     def __init__(self, *args, member=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.member = member
-        for name, field in self.fields.items():
+        for field in self.fields.values():
             field.widget.attrs["class"] = "input"
 
     def clean(self):

@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from dues.models import FeeCategory, MembershipFee, Payment
+from dues.models import FeeCategory, MembershipFee
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, Team
 

@@ -12,8 +12,20 @@ from django.test import TestCase
 from cashbook.models import CashEntry, jahresabschluss
 from core.models import AuditLog
 from dues.admin import DunningLetterAdmin, MembershipFeeAdmin, PaymentAdmin
-from dues.models import DunningLetter, FeeCategory, MembershipFee, Payment, SepaMandate, jahres_uebersicht
-from dues.services import beitragslauf, mahnung_erstellen, zahlung_erfassen, zahlung_stornieren
+from dues.models import (
+    DunningLetter,
+    FeeCategory,
+    MembershipFee,
+    Payment,
+    SepaMandate,
+    jahres_uebersicht,
+)
+from dues.services import (
+    beitragslauf,
+    mahnung_erstellen,
+    zahlung_erfassen,
+    zahlung_stornieren,
+)
 from members.models import Member
 
 

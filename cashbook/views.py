@@ -1,11 +1,9 @@
 """Kassenbuch mit Jahresabschluss und CSV-Export (PRD S6.1/S6.2)."""
 
 import csv
-from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone

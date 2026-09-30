@@ -7,21 +7,20 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q, Sum
+from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
-from cashbook.models import CashEntry, jahresabschluss
+from cashbook.models import jahresabschluss
 from comms.models import NewsPost
-from core.dsgvo import datenauskunft, verarbeitungstaetigkeiten
 from core import produkt
+from core.dsgvo import datenauskunft, verarbeitungstaetigkeiten
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_of, role_required
 from dues.models import MembershipFee, Payment, jahres_uebersicht
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, Team
-from teams.services import tabelle
 from tournaments.models import Tournament
 
 

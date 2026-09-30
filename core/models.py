@@ -30,8 +30,11 @@ class AuditLog(models.Model):
         related_name="audit_logs",
     )
     feld = models.CharField("Feld", max_length=30, blank=True)
-    alt_wert = models.CharField("Alter Wert", max_length=200, blank=True)
-    neu_wert = models.CharField("Neuer Wert", max_length=200, blank=True)
+    # TextField (nicht CharField mit max_length): Mitgliedsfelder erlauben bis
+    # zu 254 Zeichen (E-Mail); ein zu kurzer Audit-Wert würde den Save sonst
+    # auf Postgres mit „value too long" komplett fehlschlagen lassen.
+    alt_wert = models.TextField("Alter Wert", blank=True)
+    neu_wert = models.TextField("Neuer Wert", blank=True)
 
     class Meta:
         ordering = ["-zeitpunkt"]

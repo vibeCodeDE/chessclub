@@ -1,25 +1,43 @@
 """Beitragsverwaltung: Übersicht, Beitragslauf, Zahlungen, Mahnwesen, Mandate."""
 
+import csv
 from decimal import Decimal
-from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Q, Sum
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-import csv
 
 from core.roles import ADMIN_GROUP, role_required
 from core.ui import fehler, is_ajax, ok, paginate
 from members.models import Member
 
-from .forms import BeitragslaufForm, DunningForm, FeeCategoryForm, PaymentForm, SepaMandateForm
-from .models import DunningLetter, FeeCategory, MembershipFee, Payment, SepaMandate, jahres_uebersicht
-from .services import beitragslauf, mahntext, mahnung_erstellen, zahlung_erfassen, zahlung_stornieren
+from .forms import (
+    BeitragslaufForm,
+    DunningForm,
+    FeeCategoryForm,
+    PaymentForm,
+    SepaMandateForm,
+)
+from .models import (
+    DunningLetter,
+    FeeCategory,
+    MembershipFee,
+    Payment,
+    SepaMandate,
+    jahres_uebersicht,
+)
+from .services import (
+    beitragslauf,
+    mahntext,
+    mahnung_erstellen,
+    zahlung_erfassen,
+    zahlung_stornieren,
+)
 
 
 def _jahr_aus_request(request):

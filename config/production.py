@@ -42,6 +42,18 @@ DEBUG = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
+# Härtung wie in .env.prod.example dokumentiert: HTTPS erzwingen und HSTS
+# setzen. Ohne das blieb die Seite auch über HTTP erreichbar und der Browser
+# bekäme keine HSTS-Header.
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "1") == "1"
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+    os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+)
+if SECURE_HSTS_SECONDS:
+    SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "0") == "1"
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # ADR-010: Ohne IBAN-Schlüssel startet der Produktivbetrieb nicht. Sonst ginge
 # ein Mandat mit Klartext-IBAN verloren, sobald jemand den Schlüssel nachsetzt.
 if not os.environ.get("IBAN_FERNET_KEY", "").strip():

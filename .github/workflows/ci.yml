@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
+      # Ohne POSTGRES_HOST fällt settings.py auf SQLite zurück – dann liefe der
+      # Postgres-spezifische Teil (select_for_update) nicht und die Testabdeckung
+      # wiche von der lokalen Docker-Umgebung ab.
+      POSTGRES_HOST: localhost
+      POSTGRES_DB: schachverein
+      POSTGRES_USER: schachverein
+      POSTGRES_PASSWORD: schachverein
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: schachverein
+          POSTGRES_USER: schachverein
+          POSTGRES_PASSWORD: schachverein
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U schachverein -d schachverein"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (Ruff)
+        run: ruff check .
+
+      - name: Migrationen aktuell?
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: System-Check
+        run: python manage.py check
+
+      - name: Tests (gegen Postgres, inkl. select_for_update)
+        run: pytest -q
+
+      - name: Produktions-Settings fahren Hoch & bestehen Deploy-Check
+        env:
+          DJANGO_SETTINGS_MODULE: config.production
+          DJANGO_SECRET_KEY: ci-only-dummy-key
+          # Ohne echten IBAN-Schlüssel startet production.py gar nicht (ADR-010).
+          IBAN_FERNET_KEY: ci-only-dummy-fernet-key
+          EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+          EMAIL_HOST: smtp.invalid
+          DEFAULT_FROM_EMAIL: ci@example.invalid
+        run: python manage.py check --deploy

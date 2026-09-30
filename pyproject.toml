@@ -1,0 +1,34 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["."]
+extend-exclude = [
+    ".venv",
+    "venv",
+    "staticfiles",
+    "*/migrations/*",
+]
+
+[tool.ruff.lint]
+select = [
+    "E4",  # PEP8-Import-Blöcke
+    "E7",  # PEP8-Ausdrücke
+    "E9",  # Syntaxfehler
+    "F",   # Pyflakes (unbenutzte Namen, toter Code)
+    "W",   # Whitespace
+    "I",   # Import-Sortierung (isort)
+    "UP",  # Pyupgrade (zeitgemäße Syntax)
+    "B",   # Bugbear (häufige Fallstricke)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "cashbook",
+    "comms",
+    "config",
+    "core",
+    "dues",
+    "members",
+    "teams",
+    "tournaments",
+]

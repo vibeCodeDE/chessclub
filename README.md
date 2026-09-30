@@ -51,9 +51,14 @@ enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest          # 334 Tests, 1 Skip (nur mit PostgreSQL)
+.venv/bin/python -m pytest          # 343 Tests (1 Skip: nur mit PostgreSQL)
+.venv/bin/python -m ruff check .    # Lint
 .venv/bin/python manage.py check
 ```
+
+Die GitHub-Actions-Pipeline (`.github/workflows/ci.yml`) fährt genau diese
+Schritte gegen PostgreSQL 16 plus `manage.py check --deploy` mit den
+Produktions-Settings.
 
 ## Produktivbetrieb
 
