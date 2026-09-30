@@ -86,6 +86,7 @@ Oberflächen: öffentliche Vereinsseite (`/`, `/aktuelles/`, `/turniere/`, `/ver
 | Bereich | Stylesheet | Skript | Hülle |
 | --- | --- | --- | --- |
 | Öffentliche Vereinsseite (inkl. Anmeldung, 2FA, Passwort-Reset) | `static/css/site.css` | `static/js/public.js` | `templates/public_base.html`, `templates/auth_base.html` |
+| Verkaufsseite `/produkt/` (bewusst ohne Skript, ADR-014) | `static/css/site.css` | — | `templates/produkt_base.html` |
 | Verwaltung/Dashboard/Admin | `static/css/app.css` | `static/js/app.js` | `templates/base.html` |
 
 Der öffentliche Teil folgt der Designsprache aus

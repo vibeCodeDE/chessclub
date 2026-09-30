@@ -1,10 +1,102 @@
 """Inhalte der Produkt-Landingpage (/produkt/).
 
-Alles, was sich für den Verkauf ändert (Preise, Funktionsliste, FAQ), steht hier
-an einer Stelle – das Template enthält nur Darstellung.
+Alles, was sich für den Verkauf ändert (Preise, Funktionsliste, FAQ) und alle
+Abschnittstexte (Hero, Kennzahlen, Nutzen, Rollen, Demo-Vorschau) stehen hier an
+einer Stelle – das Template enthält nur Darstellung (PRD S10.2).
 
 ENTWURF: Die Preise sind Platzhalter und vor dem Livegang festzulegen.
 """
+
+HERO = {
+    "eyebrow": "Für Schachvereine in Deutschland",
+    "titel": "Vereinsverwaltung, die Ihr Vorstand gerne benutzt.",
+    "text": (
+        "Mitglieder, Beiträge, Turniere, Mannschaften und Kassenbuch in einer Software. "
+        "Ohne Excel-Listen, ohne Zettelwirtschaft und mit Datenhaltung in Deutschland."
+    ),
+    "checks": ["Monatlich kündbar", "Einrichtung inklusive", "DSGVO-konform"],
+}
+
+KENNZAHLEN = [
+    ("6 Bereiche", "in einer Anwendung"),
+    ("100 % Deutschland", "Hosting und Datenhaltung"),
+    ("0 Tracker", "keine externen Dienste"),
+    ("Mobil", "auch als App installierbar"),
+]
+
+PROBLEM = {
+    "titel": "Vereinsarbeit ist Ehrenamt. Sie sollte sich nicht nach Buchhaltung anfühlen.",
+    "text": (
+        "In vielen Vereinen liegen Mitgliederliste, Beitragsübersicht und Turnierergebnisse "
+        "in drei verschiedenen Dateien, manchmal bei drei verschiedenen Personen. Jeder "
+        "Wechsel im Vorstand wird dann zum Risiko."
+    ),
+    "vorher": [
+        "Adressen in Excel, Zahlungen im Kopf der Kassenwartin",
+        "Turnierergebnisse per Hand in Tabellen getippt und per Mail verschickt",
+        "Datenschutz-Anfragen, bei denen niemand weiß, wo welche Daten liegen",
+    ],
+    "mit_uns": "Eine Software, klare Rollen, alles nachvollziehbar protokolliert",
+}
+
+ROLLEN = [
+    (
+        "Vorstand",
+        "Volle Übersicht über Mitglieder, Beiträge, Kasse und Turniere. Änderungswünsche von Mitgliedern prüfen und freigeben.",
+    ),
+    (
+        "Mannschaftsführer",
+        "Aufstellungen melden, Ergebnisse erfassen und Termine im Blick behalten, ohne Zugriff auf Finanzdaten.",
+    ),
+    (
+        "Mitglieder",
+        "Eigenes Profil, Beitragskonto und Turnieranmeldung. Änderungen der Stammdaten lassen sich direkt beantragen.",
+    ),
+]
+
+# Vorschau-Panel im Hero: ein rein gestalterisches Mock (keine echten Zahlen).
+DEMO = {
+    "label": "Vorschau",
+    "titel": "Dashboard",
+    "kacheln": [
+        ("Aktive Mitglieder", "87"),
+        ("Offene Beiträge", "1.240 €"),
+        ("Turnieranmeldungen", "24"),
+    ],
+    "zeilen": [
+        ("Vereinsmeisterschaft", "Sa, 18.10. · Schweizer System"),
+        ("SC Musterstadt I gegen SV Nachbarort", "So, 26.10. · 10:00 Uhr"),
+        ("3 Mahnungen vorbereitet", "Zur Prüfung durch den Kassenwart"),
+    ],
+}
+
+PREIS_HINWEIS = "Die Preise sind Platzhalter und werden vor dem Livegang festgelegt."
+
+# Überschriften und Einleitungen der Abschnitte (Kicker = Zeile über der Überschrift).
+ABSCHNITTE = {
+    "nutzen_kicker": "Warum",
+    "funktionen_kicker": "Funktionen",
+    "funktionen_titel": "Alles, was ein Schachverein braucht",
+    "funktionen_aside": "Gebaut für Vereine bis etwa 200 Mitglieder. Jede Rolle sieht nur das, was sie braucht.",
+    "rollen_kicker": "Für alle im Verein",
+    "rollen_titel": "Jeder bekommt seinen Bereich",
+    "datenschutz_kicker": "Datenschutz",
+    "datenschutz_titel": "Mitgliederdaten gehören in gute Hände",
+    "datenschutz_text": "Vereine verarbeiten personenbezogene Daten, auch von Kindern und Jugendlichen. Die Software ist deshalb von Anfang an auf die DSGVO ausgelegt.",
+    "ablauf_kicker": "So starten Sie",
+    "ablauf_titel": "In drei Schritten einsatzbereit",
+    "preise_kicker": "Preise",
+    "preise_titel": "Einfach und fair für Vereinskassen",
+    "preise_aside": "Monatliche Zahlung, keine Mindestlaufzeit. Preise zzgl. gesetzlicher Umsatzsteuer.",
+    "faq_kicker": "Häufige Fragen",
+    "faq_titel": "Gut zu wissen",
+    "faq_aside": "Ihre Frage ist nicht dabei? Schreiben Sie uns einfach – wir antworten in der Regel innerhalb eines Werktags.",
+}
+
+CTA = {
+    "titel": "Bereit, die Vereinsverwaltung zu vereinfachen?",
+    "text": "Wir zeigen Ihnen die Software mit Beispieldaten, kostenlos und unverbindlich.",
+}
 
 PREISSTUFEN = [
     {

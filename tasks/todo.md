@@ -60,6 +60,12 @@
   *Trennung:* die öffentlichen Hüllen laden `static/js/public.js` (Mobilmenü, Ladebalken, Toasts, Service Worker); das interne `app.js` bleibt Dashboard und Verwaltung vorbehalten. Beide Tests und ADR-013 halten das fest.
 - **T15: Kassenbuch** — `CashEntry` mit Kategorie, Betrag, Belegnummer, Jahresfilter, Jahresabschluss, CSV-Export. *Beleg:* `cashbook/tests/test_kasse.py` — 403 für Nicht-Admin, CSV-Summe stimmt fürs gefilterte Jahr. **Offener Mangel:** `cashbook:entry_delete` löscht Buchungen hart → T15b.
 
+### Produkt-Marketingseite (2026-09-30)
+
+- **T29: Produkt-Marketingseite im öffentlichen Design** — `/produkt/`, `/impressum/` und `/datenschutz/` in der Designsprache des öffentlichen Auftritts neu gebaut: neue Hülle `templates/produkt_base.html` mit Produkt-Branding (`PRODUCT_NAME`/`PRODUCT_CONTACT`) und reiner Anker-Navigation, alle Inhalte zentral in `core/produkt.py` (neu `HERO`, `KENNZAHLEN`, `PROBLEM`, `ROLLEN`, `DEMO`, `ABSCHNITTE`, `CTA`, `PREIS_HINWEIS`), FAQ als `<details>` ohne JavaScript, Kontakt ausschließlich per mailto, Preise als Platzhalter gekennzeichnet; `static/css/landing.css` gelöscht, neuer Abschnitt „Produkt-Marketingseite“ in `site.css` ([ADR-014](../docs/decisions/ADR-014-produkt-marketingseite-im-oeffentlichen-design.md), [Spec](../docs/superpowers/specs/2026-09-30-produkt-marketingseite.md); PRD §3.10).
+  *Beleg:* `pytest core/tests/test_produkt.py core/tests/test_oeffentliches_design.py` — produkt-Templates stehen in `PUBLIC_TEMPLATES` (Klassendeckung, Stylesheet-Trennung), `/produkt/`, `/impressum/`, `/datenschutz/` im Fremdquellen-Test (N1.1). **Negativtests:** die Verkaufsseite lädt weder `app.css` noch `landing.css` noch irgendein Skript, enthält keine Vereins-Navigation, und `landing.css` existiert nicht mehr.
+  *Weitere Belege:* vollständiger Lauf `pytest` → **343 Tests grün** (1 Skip nur mit PostgreSQL, 414 Subtests), `manage.py check` ohne Befund, `makemigrations --check` ohne offene Migration; `/produkt/`, `/impressum/`, `/datenschutz/`, `/` liefern 200, HTML-Tag-Balance geprüft; statischer 360-px-Check (Nowrap-Elemente, längste Tokens) — die E-Mail-Adresse im Footer bricht jetzt per `overflow-wrap: anywhere` statt die 1-fr-Spalte aufzuweiten (hilft auch dem Vereins-Footer). Kein Headless-Browser in der Sandbox verfügbar; echter Browser-Check bei 360/1280 px bleibt Teil der nächsten Sichtprüfung.
+
 ### Zusammenführung der Zweige (2026-09-29)
 
 - `origin/master` enthielt eine zweite, konkurrierende Umsetzung derselben Phasen (T1–T23 in der Zählung des Ursprungszweigs). Beide Seiten wurden zu einem Baum zusammengeführt; die Implementierung folgt der umfassenderen Fassung (`MembershipFee`/`DunningLetter`, `teams`, `tournaments`, `comms`, `cashbook`, DSGVO, 2FA, PWA, Deployment).
@@ -86,7 +92,8 @@ Reihenfolge und Akzeptanzkriterien stehen in `tasks/plan.md`. V1-relevant (block
 5. [T11b](plan.md) Kassenbericht Beiträge — schließt M2.6
 6. [T25b](plan.md) NFR-Nachweis auf der Zielhardware, WCAG-Durchgang, `docs/nfr-pruefung.md`
 7. [T28](plan.md) öffentlicher Teil — umgesetzt; offen bleiben nur die echten Vereinsfotos und das **interne Design** (Dashboard/Verwaltung), das separat geliefert wird
-8. **Abnahme** durch den Vorstand gegen `docs/abnahme.md`
+8. [T29](plan.md) Produkt-Marketingseite — umgesetzt (ADR-014); offen bleiben die echten Preise (Platzhalter) und rechtlich geprüfte Texte für `/impressum/` und `/datenschutz/`
+9. **Abnahme** durch den Vorstand gegen `docs/abnahme.md`
 
 **Danach (v1.1):** T15b · T16b · T18 · T22 · T24b
 

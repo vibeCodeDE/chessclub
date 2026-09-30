@@ -133,6 +133,18 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 - S9.3 Einheitliche Designsprache für alle öffentlichen Seiten einschließlich Fehlerseite und Anmeldeeinstieg; eigenes Stylesheet, das den internen Bereich (Dashboard/Verwaltung) nicht berührt
 - S9.4 Archiv der Ankündigungen mit Kategoriefilter sowie Turnierkalender mit Anmeldestatus und vergangenen Turnieren
 
+### 3.10 Produkt-Marketingseite (S)
+
+Die Verkaufsseite `/produkt/` richtet sich an **andere Vereine** (Verkauf der Software als
+Dienstleistung), nicht an die Mitglieder des eigenen Vereins. Sie erhält die Designsprache
+des öffentlichen Auftritts, behält aber ihr eigenes Produkt-Branding
+([ADR-014](decisions/ADR-014-produkt-marketingseite-im-oeffentlichen-design.md)).
+
+- S10.1 Verkaufsseite `/produkt/` inklusive Impressum und Datenschutzerklärung in der Designsprache des öffentlichen Auftritts (nur `site.css`, Tokens und Bausteine nach ADR-013); eigene Hülle mit Produkt-Branding aus `PRODUCT_NAME`/`PRODUCT_CONTACT` statt der Vereins-Navigation; keine Fremdquellen (N1.1)
+- S10.2 Alle Inhalte (Hero, Kennzahlen, Nutzen, Funktionen, Rollen, Datenschutzpunkte, Einstiegsschritte, Preisstufen, FAQ) stehen zentral in `core/produkt.py`; das Template enthält nur Darstellung. Die Preise sind Platzhalter und werden bis zur Festlegung als solche gekennzeichnet
+- S10.3 Seitenaufbau: Hero mit Demo-CTA, Kennzahlenband, Nutzen-Argumentation (vorher/nachher), Funktionen, Rollen, Datenschutz, Einstieg in drei Schritten, Preisstufen, FAQ und Abschluss-CTA; die einzige Kontaktmöglichkeit ist der mailto-Link an `PRODUCT_CONTACT` — es gibt keinen Bestell- oder Anmeldeprozess und keine Preis-/Vertragsdaten in der Datenbank
+- S10.4 Die bisherige eigene Gestaltung (`landing.css`) entfällt ersatzlos; die Seite lädt kein JavaScript (FAQ über `<details>`, Anker über Sprunglinks) und ist ab 360 px Breite ohne horizontalen Overflow nutzbar
+
 ---
 
 ## 4. Nicht-funktionale Anforderungen
@@ -224,6 +236,7 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 
 | Version | Datum | Änderung |
 |---|---|---|
+| v1.6 | 2026-09-30 | Neu §3.10 (S10.1–S10.4): Produkt-Marketingseite `/produkt/` in der Designsprache des öffentlichen Auftritts — löst die Ausklammerung „`/produkt/` bleibt vorerst unverändert" aus [ADR-013](decisions/ADR-013-oeffentliche-designsprache.md) per [ADR-014](decisions/ADR-014-produkt-marketingseite-im-oeffentlichen-design.md) ab. Alle vier Anforderungen gehen an T29 (v1.1) |
 | v1.2 | 2026-09-28 | Review-Feedback: Priorisierung v1/v1.1, DSGVO-Anforderungen geschärft (N1.5, N1.7), Berechtigungsmatrix §3.8, Backup-Verschlüsselung |
 | v1.3 | 2026-09-29 | Redaktionell: Meilensteine als MS1–MS7 umbenannt und an den v1/v1.1-Schnitt angepasst; Tippfehler in N1.3 behoben; §3.8-Verweisliste korrigiert (T19 ist kein Export-Task). Keine inhaltliche Anforderungsänderung |
 | v1.5 | 2026-09-30 | Neu §3.9 (S9.1–S9.4): öffentliche Vereinsseite in der Designsprache der Referenz-ZIP; Abgrenzung zum internen Design in [ADR-013](decisions/ADR-013-oeffentliche-designsprache.md). Alle vier Anforderungen gehen an T28 |

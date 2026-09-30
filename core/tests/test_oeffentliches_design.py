@@ -17,12 +17,15 @@ from tournaments.models import Tournament
 PUBLIC_TEMPLATES = [
     "templates/public_base.html",
     "templates/auth_base.html",
+    "templates/produkt_base.html",
     "templates/404.html",
     "templates/includes/public_field.html",
     "core/templates/core/home.html",
     "core/templates/core/news_archiv.html",
     "core/templates/core/news_detail.html",
     "core/templates/core/verein.html",
+    "core/templates/core/produkt.html",
+    "core/templates/core/rechtliches.html",
     "core/templates/core/offline.html",
     "core/templates/registration/login.html",
     "core/templates/registration/zwei_faktor.html",
@@ -91,7 +94,7 @@ class DesignSystemTests(TestCase):
 
     def test_keine_fremdquellen_im_ausgelieferten_html(self):
         """PRD N1.1: keine CDNs, keine externen Schriften oder Skripte."""
-        for url in ["/", "/aktuelles/", "/turniere/", "/verein/", "/mitglied-werden/", "/anmelden/", "/offline/"]:
+        for url in ["/", "/aktuelles/", "/turniere/", "/verein/", "/mitglied-werden/", "/anmelden/", "/offline/", "/produkt/", "/impressum/", "/datenschutz/"]:
             with self.subTest(url=url):
                 inhalt = self.client.get(url).content.decode()
                 self.assertNotRegex(inhalt, r'(?:href|src)="https?://')

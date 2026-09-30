@@ -1,6 +1,6 @@
 # ADR-013: Designsprache der öffentlichen Vereinsseite
 
-**Status:** angenommen (2026-09-30)
+**Status:** angenommen (2026-09-30); die Abgrenzung zur Verkaufsseite `/produkt/` ist seit 2026-09-30 durch [ADR-014](ADR-014-produkt-marketingseite-im-oeffentlichen-design.md) ersetzt
 **Betrifft:** `core/templates/core/*`, `tournaments/templates/tournaments/public_*`, `members/templates/members/join_info.html`, `templates/public_base.html`, `templates/auth_base.html`, `static/css/site.css`, `static/js/public.js`
 
 ## Kontext
