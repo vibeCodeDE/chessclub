@@ -275,16 +275,19 @@ Jahreshauptversammlung. Deshalb:
 
 ## Offene Punkte
 
-Umsetzung (nicht Teil dieses ADR):
+Umsetzung: **Punkte 1–4 sind erledigt** (`core/produkt.py` mit `PREISHINWEIS` und den
+Feldern `jahr`/`preis_monatlich`/`einrichtung`, Preiskarten und Kopfbereich im Template,
+FAQ auf zwölf Fragen erweitert, README aktualisiert). Die Regeln werden durch
+Negativtests in `core/tests/test_produkt.py` gegen ein Zurückrutschen in die alten
+Formulierungen („zzgl. gesetzlicher Umsatzsteuer", „keine Mindestlaufzeit") abgesichert.
 
-1. `core/produkt.py` — Preise, Laufzeit, Einrichtung, USt-Hinweis, Testphase.
-2. `core/templates/core/produkt.html` — „zzgl. gesetzlicher Umsatzsteuer" → „Endpreise,
-   keine Umsatzsteuer gem. § 19 UStG"; „keine Mindestlaufzeit" → Laufzeitregel.
-3. FAQ ergänzen: Laufzeit/Kündigung, Testphase, Zahlungsarten, Wachstum über die
-   Stufengrenze, Datenmitnahme bei Kündigung.
-4. `README.md` — Hinweis „Die Preise sind Platzhalter" entfernen.
-5. Vor Livegang ohnehin fällig: Impressum, Datenschutz, AVV-Vorlage, AGB-Prüfung der
-   Laufzeitklausel.
+Noch offen:
+
+5. Vor dem Livegang: Impressum, Datenschutzerklärung, AVV-Vorlage, AGB-Prüfung der
+   Laufzeitklausel (12 Monate, Verlängerung, Kündigungsfrist).
+6. Gründerpreis (29 € für die ersten zehn Vereine) ist beschlossen, aber noch nicht auf
+   der Seite sichtbar — bewusst: er wird im Gespräch vergeben, nicht öffentlich
+   ausgeschrieben.
 
 **Review-Trigger:**
 

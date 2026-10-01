@@ -45,13 +45,15 @@ docker compose exec app pytest
 Die Verkaufsseite für andere Vereine liegt unter `/produkt/` (in der bisherigen Gestaltung;
 `/` bleibt die Vereinsseite im neuen Design).
 Name und Kontakt kommen aus `PRODUCT_NAME` und `PRODUCT_CONTACT`; Preise, Funktionen und FAQ
-stehen in `core/produkt.py`. Die Preise sind **Platzhalter**, `/impressum/` und `/datenschutz/`
-enthalten nur Platzhaltertexte und müssen vor dem Livegang ersetzt werden.
+stehen in `core/produkt.py`. Die Preise sind festgelegt (19/35/69 € Endpreise, Jahreszahlung,
+zwölf Monate Laufzeit) und in [ADR-014](docs/decisions/ADR-014-preisgestaltung.md) begründet.
+`/impressum/` und `/datenschutz/` enthalten nur Platzhaltertexte und müssen vor dem Livegang
+ersetzt werden.
 
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest          # 343 Tests (1 Skip: nur mit PostgreSQL)
+.venv/bin/python -m pytest          # 349 Tests (1 Skip: nur mit PostgreSQL)
 .venv/bin/python -m ruff check .    # Lint
 .venv/bin/python manage.py check
 ```

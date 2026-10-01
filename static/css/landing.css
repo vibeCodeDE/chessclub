@@ -116,6 +116,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
 .lp-badge { position: absolute; top: -0.75rem; left: 1.5rem; background: var(--gold); color: #fff; font-size: 0.72rem; font-weight: 750; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.2rem 0.7rem; border-radius: var(--radius-pill); }
 .lp-plan h3 { font-size: 1.2rem; margin-bottom: 0.1rem; }
 .lp-plan-for { color: var(--muted); font-size: 0.88rem; }
+.lp-plan-note { color: var(--muted); font-size: 0.84rem; line-height: 1.45; margin: 0 0 0.5rem; }
 .lp-price { margin: 0.6rem 0 1rem; }
 .lp-price strong { font-size: 2.3rem; letter-spacing: -0.03em; }
 .lp-price span { color: var(--muted); font-size: 0.9rem; }
@@ -159,13 +160,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
   .lp-two { grid-template-columns: 1fr 1fr; gap: 3rem; }
   .lp-cards { grid-template-columns: repeat(2, 1fr); }
   .lp-roles { grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-  .lp-steps { grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  .lp-steps { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
   .lp-plans { grid-template-columns: repeat(3, 1fr); align-items: stretch; }
 }
 @media (min-width: 64rem) {
   .lp-hero { padding: 4.4rem 0 4.8rem; }
   .lp-hero-grid { grid-template-columns: 1.05fr 0.95fr; gap: 3.5rem; }
   .lp-cards { grid-template-columns: repeat(3, 1fr); }
+  .lp-steps { grid-template-columns: repeat(4, 1fr); }
   .lp-section { padding: 4.6rem 0; }
 }
 @media (max-width: 29.99rem) {

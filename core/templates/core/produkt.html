@@ -52,9 +52,9 @@
           <a class="btn secondary lp-btn-lg" href="#funktionen">Funktionen ansehen</a>
         </div>
         <ul class="lp-checks">
-          <li>{% include "includes/icon.html" with name="check" size="sm" %} Monatlich kündbar</li>
-          <li>{% include "includes/icon.html" with name="check" size="sm" %} Einrichtung inklusive</li>
-          <li>{% include "includes/icon.html" with name="check" size="sm" %} DSGVO-konform</li>
+          <li>{% include "includes/icon.html" with name="check" size="sm" %} 30 Tage kostenlos testen</li>
+          <li>{% include "includes/icon.html" with name="check" size="sm" %} Datenübernahme inklusive (ab „Verein“)</li>
+          <li>{% include "includes/icon.html" with name="check" size="sm" %} Endpreise, keine Umsatzsteuer</li>
         </ul>
       </div>
 
@@ -161,7 +161,7 @@
     <div class="lp-wrap">
       <div class="lp-head">
         <span class="lp-eyebrow dark">So starten Sie</span>
-        <h2 class="lp-h2">In drei Schritten einsatzbereit</h2>
+        <h2 class="lp-h2">In vier Schritten einsatzbereit</h2>
       </div>
       <ol class="lp-steps">
         {% for titel, text in schritte %}
@@ -180,7 +180,7 @@
       <div class="lp-head">
         <span class="lp-eyebrow dark">Preise</span>
         <h2 class="lp-h2">Einfach und fair für Vereinskassen</h2>
-        <p class="lp-muted">Monatliche Zahlung, keine Mindestlaufzeit. Preise zzgl. gesetzlicher Umsatzsteuer.</p>
+        <p class="lp-muted">{{ preishinweis }}</p>
       </div>
       <div class="lp-plans">
         {% for stufe in preisstufen %}
@@ -189,6 +189,8 @@
             <h3>{{ stufe.name }}</h3>
             <p class="lp-plan-for">{{ stufe.fuer }}</p>
             <p class="lp-price"><strong>{{ stufe.preis }} €</strong> <span>pro Monat</span></p>
+            <p class="lp-plan-note">{{ stufe.jahr }} € pro Jahr bei Jahreszahlung<br>{{ stufe.preis_monatlich }} € bei monatlicher Zahlung</p>
+            <p class="lp-plan-note"><strong>Einrichtung:</strong> {{ stufe.einrichtung }}</p>
             <ul>
               {% for punkt in stufe.punkte %}
                 <li>{% include "includes/icon.html" with name="check" size="sm" %} {{ punkt }}</li>
