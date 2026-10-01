@@ -252,6 +252,21 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   `tournaments/templates/tournaments/public_*`, `members/templates/members/join_info.html`, `core/views.py`,
   `core/urls.py`, `static/js/public.js`, `static/sw.js`, `static/img/` · *Größe:* L · *PRD:* S9.1, S9.2, S9.3, S9.4 · *Release:* v1.1 · *Deps:* T13, T19
 
+- [x] **T29: Produkt-Marketingseite im öffentlichen Design (S10.1–S10.4)**
+  `/produkt/` (und `/impressum/`, `/datenschutz/`) werden in der Designsprache des öffentlichen Auftritts neu gebaut:
+  eigene Hülle `templates/produkt_base.html` mit Produkt-Branding (`PRODUCT_NAME`/`PRODUCT_CONTACT`) und reiner
+  Anker-Navigation, alle Inhalte zentral in `core/produkt.py`, FAQ ohne JavaScript (`<details>`), Kontakt ausschließlich
+  per mailto. `landing.css` entfällt ersatzlos. Siehe [ADR-014](../docs/decisions/ADR-014-produkt-marketingseite-im-oeffentlichen-design.md)
+  und [Spec](../docs/superpowers/specs/2026-09-30-produkt-marketingseite.md).
+  *Acceptance:* `/produkt/` lädt nur `site.css` und kein Skript; jede verwendete Klasse ist in `site.css` definiert;
+  Preise sind als Platzhalter gekennzeichnet; Demo-Anfrage läuft per mailto an `PRODUCT_CONTACT`; Seite ab 360 px
+  ohne horizontalen Overflow; Impressum und Datenschutzerklärung im selben Design.
+  *Verify:* `pytest core/tests/test_produkt.py core/tests/test_oeffentliches_design.py` — **Negativtest:** die Verkaufsseite
+  lädt weder `app.css` noch `landing.css` noch irgendein Skript, enthält keine Vereins-Navigation, und `landing.css`
+  existiert nicht mehr. · *Files:* `templates/produkt_base.html`, `core/templates/core/produkt.html`,
+  `core/templates/core/rechtliches.html`, `core/produkt.py`, `core/views.py`, `static/css/site.css`,
+  gelöscht: `static/css/landing.css` · *Größe:* M · *PRD:* S10.1, S10.2, S10.3, S10.4 · *Release:* v1.1 · *Deps:* T28
+
 **Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T15b, T16b, T18, T22, T24b.
 
 ## Release-Schnitt
@@ -283,6 +298,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | N2.5 | T25 |
 | N2.6 / N2.7 | T1 / T27 |
 | S9.1–S9.4 | T28 *(v1.1)* |
+| S10.1–S10.4 | T29 *(v1.1)* |
 
 ## Risks and Mitigations
 

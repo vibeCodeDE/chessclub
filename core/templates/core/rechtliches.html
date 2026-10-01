@@ -1,31 +1,31 @@
-{% load static %}<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ titel }} · {{ product_name }}</title>
-  <meta name="robots" content="noindex">
-  <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
-  <link rel="stylesheet" href="{% static 'css/landing.css' %}">
-</head>
-<body class="lp">
-<header class="lp-header">
-  <div class="lp-wrap lp-header-row">
-    <a class="lp-brand" href="{% url 'core:produkt' %}">
-      <span class="lp-brand-mark" aria-hidden="true">♞</span>
-      <span>{{ product_name }}</span>
-    </a>
-    <div class="lp-header-cta">
-      <a class="lp-link" href="{% url 'core:produkt' %}">Zurück zur Startseite</a>
-    </div>
+{% extends "produkt_base.html" %}
+{% comment %}
+Impressum und Datenschutzerklärung der Produkt-Verkaufsseite — in derselben Gestaltung
+wie /produkt/ (PRD S10.1). Beide Seiten sind Platzhalter und müssen vor dem Livegang
+durch rechtlich geprüfte Angaben ersetzt werden.
+{% endcomment %}
+
+{% block titel %}{{ titel }} · {{ product_name }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block produkt_nav %}{% endblock %}
+
+{% block footer_anker %}
+<a href="{% url 'core:produkt' %}#funktionen">Funktionen</a>
+<a href="{% url 'core:produkt' %}#preise">Preise</a>
+<a href="{% url 'core:produkt' %}#faq">Fragen &amp; Antworten</a>
+{% endblock %}
+
+{% block inhalt %}
+<div class="inner-page">
+  <div class="container page-intro">
+    <a class="back-link" href="{% url 'core:produkt' %}"><svg aria-hidden="true"><use href="#i-arrow-left"></use></svg>Zur Verkaufsseite</a>
+    <span class="eyebrow section-eyebrow"><span class="small-rule"></span>{{ product_name }}</span>
+    <h1>{{ titel }}</h1>
   </div>
-</header>
-<main class="lp-section">
-  <div class="lp-wrap">
-    <div class="lp-legal prose">
-      <h1>{{ titel }}</h1>
-      <p class="alert alert-warning"><strong>Platzhalter:</strong> Dieser Text ist ein Entwurf und muss vor dem Livegang durch rechtlich geprüfte Angaben ersetzt werden.</p>
+  <div class="container produkt-legal">
+    <p class="produkt-hinweis"><svg aria-hidden="true"><use href="#i-alert"></use></svg>Platzhalter: Dieser Text ist ein Entwurf und muss vor dem Livegang durch rechtlich geprüfte Angaben ersetzt werden.</p>
+    <div class="prose">
       {% if seite == "impressum" %}
         <h2>Angaben gemäß § 5 DDG</h2>
         <p>[Name / Firma des Anbieters]<br>[Straße und Hausnummer]<br>[PLZ Ort]</p>
@@ -47,15 +47,5 @@
       {% endif %}
     </div>
   </div>
-</main>
-<footer class="lp-footer">
-  <div class="lp-wrap lp-footer-row">
-    <span>© {% now "Y" %} {{ product_name }}</span>
-    <nav aria-label="Rechtliches">
-      <a href="{% url 'core:impressum' %}">Impressum</a>
-      <a href="{% url 'core:datenschutz' %}">Datenschutz</a>
-    </nav>
-  </div>
-</footer>
-</body>
-</html>
+</div>
+{% endblock %}

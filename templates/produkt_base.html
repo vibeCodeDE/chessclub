@@ -1,0 +1,95 @@
+{% load static %}<!DOCTYPE html>
+{% comment %}
+Produkt-Marketingseite – gemeinsame Hülle für /produkt/, /impressum/ und /datenschutz/.
+
+Designsprache des öffentlichen Auftritts (nur css/site.css, ADR-013/ADR-014), aber
+eigenes Produkt-Branding: Diese Seite richtet sich an andere Vereine, nicht an die
+Mitglieder des Demo-Vereins – deshalb keine Vereins-Navigation und kein Vereins-Footer
+(PRD S10.1). Bewusst ohne JavaScript (S10.4): Die Navigation sind reine Sprunglinks,
+die FAQ läuft über <details>.
+{% endcomment %}
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titel %}{{ product_name }} – Vereinsverwaltung für Schachvereine{% endblock %}</title>
+  <meta name="description" content="{% block beschreibung %}{{ product_name }}: Mitglieder, Beiträge, Turniere, Spielbetrieb und Kassenbuch in einer Software. Für Schachvereine, datenschutzkonform, Hosting in Deutschland.{% endblock %}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:title" content="{% block og_titel %}{{ product_name }} – Vereinsverwaltung für Schachvereine{% endblock %}">
+  <meta property="og:description" content="{% block og_beschreibung %}Schluss mit Excel-Listen: Mitglieder, Beiträge, Turniere und Kasse an einem Ort. Hosting in Deutschland.{% endblock %}">
+  <meta name="theme-color" content="#192f27">
+  <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  {% block robots %}{% endblock %}
+</head>
+<body>
+{% include "includes/sprite.html" %}
+<a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand produkt-brand" href="{% url 'core:produkt' %}" aria-label="{{ product_name }} – Verkaufsseite">
+      <span class="brand-mark" aria-hidden="true">♞</span>
+      <span class="brand-type">
+        <strong>{{ product_name }}<span class="brand-period">.</span></strong>
+        <small>VEREINSVERWALTUNG FÜR SCHACHVEREINE</small>
+      </span>
+    </a>
+
+    {% block produkt_nav %}
+    <nav class="main-nav produkt-nav" aria-label="Bereiche dieser Seite">
+      <a class="nav-link" href="#funktionen">Funktionen</a>
+      <a class="nav-link" href="#datenschutz">Datenschutz</a>
+      <a class="nav-link" href="#preise">Preise</a>
+      <a class="nav-link" href="#faq">Fragen</a>
+    </nav>
+    {% endblock %}
+
+    <a class="header-join produkt-cta" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
+      <span class="produkt-cta-lang">Demo anfragen</span><span class="produkt-cta-kurz">Demo</span>
+      <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+    </a>
+  </div>
+</header>
+
+<main id="inhalt">
+{% block inhalt %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-main">
+    <div class="footer-brand-block">
+      <a class="footer-logo" href="{% url 'core:produkt' %}">
+        <span aria-hidden="true">♞</span> {{ product_name }}<span class="footer-logo-period">.</span>
+      </a>
+      <p>
+        Die Vereinsverwaltung für Schachvereine: Mitglieder, Beiträge, Turniere, Spielbetrieb
+        und Kassenbuch — selbst gehostet, ohne Tracker, mit Datenhaltung in Deutschland.
+      </p>
+    </div>
+    <div class="footer-column">
+      <span class="footer-label">DIESE SEITE</span>
+      {% block footer_anker %}
+      <a href="#funktionen">Funktionen</a>
+      <a href="#datenschutz">Datenschutz</a>
+      <a href="#preise">Preise</a>
+      <a href="#faq">Fragen &amp; Antworten</a>
+      {% endblock %}
+    </div>
+    <div class="footer-column">
+      <span class="footer-label">KONTAKT &amp; RECHTLICHES</span>
+      <a class="footer-mail" href="mailto:{{ product_contact }}">{{ product_contact }} <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg></a>
+      <a href="{% url 'core:impressum' %}">Impressum</a>
+      <a href="{% url 'core:datenschutz' %}">Datenschutz</a>
+      <a href="{% url 'core:login' %}">Anmelden</a>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <span>© {% now "Y" %} {{ product_name }}</span>
+    <span>Hosting in Deutschland · Keine Tracker, keine externen CDNs.</span>
+  </div>
+</footer>
+</body>
+</html>
