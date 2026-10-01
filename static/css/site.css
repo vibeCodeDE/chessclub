@@ -29,7 +29,12 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 30px; }
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 30px;
+  overflow-x: hidden;
+  max-width: 100%;
+}
 body {
   margin: 0;
   background: var(--paper);
@@ -37,14 +42,17 @@ body {
   font-family: var(--sans);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
 }
 ::selection { background: var(--lime); color: var(--forest-deep); }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-img { display: block; }
+img { display: block; max-width: 100%; }
 p { margin: 0; }
-h1, h2, h3 { margin: 0; }
+h1, h2, h3, h4, h5, h6 { margin: 0; overflow-wrap: break-word; word-break: break-word; }
 :focus-visible { outline: 2px solid var(--rust); outline-offset: 4px; }
 
 .container { width: min(1360px, calc(100% - 80px)); margin-inline: auto; }

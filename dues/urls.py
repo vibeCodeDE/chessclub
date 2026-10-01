@@ -21,5 +21,7 @@ urlpatterns = [
     path("beitraege/posten/<int:pk>/", views.fee_detail, name="fee_detail"),
     path("beitraege/posten/<int:pk>/zahlung/", views.payment_create, name="payment_create"),
     path("beitraege/zahlung/<int:pk>/storno/", views.payment_storno, name="payment_storno"),
+    path("beitraege/kassenbericht/", views.kassenbericht, name="kassenbericht"),
+    path("beitraege/kassenbericht/export.csv", views.kassenbericht_export, name="kassenbericht_export"),
     path("mein-beitragskonto/", views.mein_konto, name="mein_konto"),
 ]

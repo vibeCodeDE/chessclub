@@ -3,13 +3,61 @@ from django.utils import timezone
 
 from members.forms import StyledFormMixin
 
-from .models import FeeCategory, MembershipFee, Payment, SepaMandate
+from .models import FeeAmount, FeeCategory, MembershipFee, Payment, SepaMandate
 
 
 class FeeCategoryForm(StyledFormMixin, forms.ModelForm):
+    betrag = forms.DecimalField(
+        label="Jahresbeitrag (€)",
+        max_digits=8,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        help_text="Wird als Satz für das gewählte Beitragsjahr gespeichert.",
+    )
+    jahr = forms.IntegerField(
+        label="Beitragsjahr",
+        required=False,
+    )
+
     class Meta:
         model = FeeCategory
-        fields = ["name", "beschreibung", "betrag", "aktiv"]
+        fields = ["name", "beschreibung", "aktiv"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        heute_jahr = timezone.localdate().year
+        self.fields["jahr"].initial = heute_jahr
+        if self.instance and self.instance.pk:
+            amt = (
+                self.instance.amounts.filter(jahr=heute_jahr).first()
+                or self.instance.amounts.order_by("-jahr").first()
+            )
+            if amt and not self.is_bound:
+                self.fields["betrag"].initial = amt.betrag
+                self.fields["jahr"].initial = amt.jahr
+        self._style()
+
+    def save(self, commit=True):
+        instance = super().save(commit=commit)
+        betrag = self.cleaned_data.get("betrag")
+        jahr = self.cleaned_data.get("jahr") or timezone.localdate().year
+        if betrag is not None:
+            if commit:
+                FeeAmount.objects.update_or_create(
+                    kategorie=instance,
+                    jahr=jahr,
+                    defaults={"betrag": betrag},
+                )
+            else:
+                self._pending_fee_amount = (jahr, betrag)
+        return instance
+
+
+class FeeAmountForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = FeeAmount
+        fields = ["kategorie", "jahr", "betrag"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,0 +1,36 @@
+{$DJANGO_ALLOWED_HOSTS:localhost} {
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+
+    # Statische Dateien direkt bedienen
+    handle /static/* {
+        root * /app/staticfiles
+        file_server
+    }
+
+    # Alle weiteren Anfragen an Gunicorn (Django) weiterleiten
+    handle {
+        reverse_proxy app:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Komprimierung
+    encode zstd gzip
+
+    # Sicherheits-Header (DSGVO & Härtung, PRD N1.1 / N2.5)
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "same-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
+}

@@ -10,7 +10,7 @@
     <div class="card-head"><h2>{{ liga }}</h2><span class="sub">{{ zeilen|length }} Mannschaften</span></div>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Platz</th><th>Mannschaft</th><th class="num">Spiele</th><th class="num">Mannschaftspunkte</th><th class="num">Brettpunkte</th><th class="num">Diff.</th></tr></thead>
+        <thead><tr><th>Platz</th><th>Mannschaft</th><th class="num">Spiele</th><th class="num">Mannschaftspunkte</th><th class="num">Brettpunkte</th><th class="num">Diff.</th><th class="num">Buchholz</th></tr></thead>
         <tbody>
           {% for zeile in zeilen %}
             <tr class="{% if zeile.eigene_mannschaft %}row-warn{% endif %}">
@@ -20,9 +20,10 @@
               <td class="num mono">{{ zeile.mannschaftspunkte }}</td>
               <td class="num mono">{{ zeile.brettpunkte|floatformat:1 }}</td>
               <td class="num mono">{{ zeile.brettdifferenz|floatformat:1 }}</td>
+              <td class="num mono">{{ zeile.buchholz }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="6">{% include "includes/empty_state.html" with icon="table" titel="Noch keine Ergebnisse" text="Sobald Ergebnisse erfasst sind, berechnet sich die Tabelle automatisch." small=True %}</td></tr>
+            <tr><td colspan="7">{% include "includes/empty_state.html" with icon="table" titel="Noch keine Ergebnisse" text="Sobald Ergebnisse erfasst sind, berechnet sich die Tabelle automatisch." small=True %}</td></tr>
           {% endfor %}
         </tbody>
       </table>

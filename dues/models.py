@@ -34,24 +34,73 @@ def mask_iban(iban):
 
 
 class FeeCategory(models.Model):
-    """Beitragssatz, z. B. Erwachsene, Jugendliche, Familie (PRD M2.1)."""
+    """Beitragssatz, z. B. Erwachsene, Jugendliche, Familie (PRD M2.1, ADR-004)."""
 
     name = models.CharField("Bezeichnung", max_length=100, unique=True)
     beschreibung = models.CharField("Beschreibung", max_length=200, blank=True)
-    betrag = models.DecimalField("Jahresbeitrag (€)", max_digits=8, decimal_places=2)
     aktiv = models.BooleanField("Aktiv", default=True)
 
     class Meta:
         verbose_name = "Beitragskategorie"
         verbose_name_plural = "Beitragskategorien"
-        ordering = ["betrag", "name"]
+        ordering = ["name"]
 
     def __str__(self):
-        return f"{self.name} ({self.betrag} €)"
+        betrag = self.aktueller_betrag
+        if betrag is not None:
+            return f"{self.name} ({betrag:.2f} €)"
+        return self.name
 
     @property
     def mitglieder_anzahl(self):
         return self.mitglieder.exclude(status="ausgetreten").count()
+
+    def betrag_fuer_jahr(self, jahr):
+        amt = self.amounts.filter(jahr=jahr).first()
+        return amt.betrag if amt else None
+
+    @property
+    def aktueller_betrag(self):
+        jahr = timezone.localdate().year
+        amt = self.amounts.filter(jahr=jahr).first() or self.amounts.order_by("-jahr").first()
+        return amt.betrag if amt else None
+
+    @property
+    def betrag(self):
+        amt = self.aktueller_betrag
+        return amt if amt is not None else Decimal("0.00")
+
+
+class FeeAmount(models.Model):
+    """Jahresbeitrag einer Beitragskategorie für ein bestimmtes Jahr (PRD M2.1, ADR-004)."""
+
+    kategorie = models.ForeignKey(
+        FeeCategory,
+        verbose_name="Beitragskategorie",
+        on_delete=models.CASCADE,
+        related_name="amounts",
+    )
+    jahr = models.PositiveSmallIntegerField("Beitragsjahr")
+    betrag = models.DecimalField("Jahresbeitrag (€)", max_digits=8, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Jahresbeitrag"
+        verbose_name_plural = "Jahresbeiträge"
+        ordering = ["-jahr", "kategorie__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["kategorie", "jahr"],
+                name="unique_kategorie_jahr",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.kategorie.name} · {self.jahr}: {self.betrag:.2f} €"
+
+    def clean(self):
+        super().clean()
+        if self.betrag is not None and self.betrag < 0:
+            raise ValidationError({"betrag": "Der Jahresbeitrag darf nicht negativ sein."})
 
 
 class SepaMandate(models.Model):

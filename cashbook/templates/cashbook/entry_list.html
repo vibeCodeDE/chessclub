@@ -78,9 +78,7 @@
                   <span class="badge badge-neutral">Storniert</span>
                 {% else %}
                   <a class="btn small secondary" href="{% url 'cashbook:entry_update' buchung.pk %}">Bearbeiten</a>
-                  <button class="btn small ghost" type="button" data-optimistic="remove-row"
-                          data-url="{% url 'cashbook:entry_storno' buchung.pk %}"
-                          data-confirm="Buchung „{{ buchung.beschreibung }}“ per Gegenbuchung stornieren?">Stornieren</button>
+                  <button class="btn small ghost" type="button" data-dialog-open="#storno-dialog-{{ buchung.pk }}">Stornieren</button>
                 {% endif %}
               </div>
             </td>
@@ -93,6 +91,33 @@
   </div>
   {% include "includes/pagination.html" %}
 </div>
+
+{% for buchung in buchungen %}
+  {% if not buchung.ist_storno and not buchung.ist_storniert %}
+    <div class="dialog modal-backdrop" id="storno-dialog-{{ buchung.pk }}" data-dialog>
+      <div class="modal">
+        <div class="modal-head">
+          <h3>Kassenbuchung stornieren</h3>
+          <button class="icon-btn" type="button" data-dialog-close aria-label="Schließen"><svg class="icon"><use href="#i-x"></use></svg></button>
+        </div>
+        <form method="post" action="{% url 'cashbook:entry_storno' buchung.pk %}" data-ajax>
+          {% csrf_token %}
+          <div class="modal-body">
+            <p class="mb-2">Buchung <strong>„{{ buchung.beschreibung }}“</strong> über <strong>{{ buchung.betrag|floatformat:2 }} €</strong> per Gegenbuchung stornieren?</p>
+            <div class="field required">
+              <label for="id_grund_{{ buchung.pk }}">Begründung für das Storno</label>
+              <input class="input" type="text" name="grund" id="id_grund_{{ buchung.pk }}" required placeholder="z. B. Fehlbuchung, Doppelzahlung">
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn secondary" type="button" data-dialog-close>Abbrechen</button>
+            <button class="btn danger" type="submit"><svg class="icon icon-sm"><use href="#i-alert"></use></svg> Stornieren</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endfor %}
 
 <div class="dialog modal-backdrop" id="buchung-dialog" data-dialog>
   <div class="modal">

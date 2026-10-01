@@ -83,6 +83,10 @@ class Member(models.Model):
             errors["austrittsdatum"] = (
                 "Ein Austrittsdatum ist nur beim Status „ausgetreten“ erlaubt."
             )
+        if self.status == self.Status.AUSGETRETEN and self.beitragskategorie_id:
+            errors["beitragskategorie"] = (
+                "Ein ausgetretenes Mitglied kann keiner Beitragskategorie zugeordnet werden."
+            )
         if errors:
             raise ValidationError(errors)
 

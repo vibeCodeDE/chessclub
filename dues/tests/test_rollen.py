@@ -12,7 +12,7 @@ from decimal import Decimal
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from dues.models import FeeCategory, MembershipFee
+from dues.models import FeeAmount, FeeCategory, MembershipFee
 from members.models import Member
 
 
@@ -39,9 +39,8 @@ class RollenTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.kategorie = FeeCategory.objects.create(
-            name="Erwachsene", betrag=Decimal("90.00")
-        )
+        cls.kategorie = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=cls.kategorie, jahr=2026, betrag=Decimal("90.00"))
         cls.gast = make_user("gast", "mitglied")
         cls.mitglied = make_user("mitglied1", "mitglied")
         cls.kapitaen = make_user("kapit1", "kapitaen")
@@ -57,9 +56,8 @@ class RollenTests(TestCase):
         )
         # Zweiter Posten an einem anderen Mitglied: eigener Jahrgang und eigene
         # Kategorie, damit der Negativtest eindeutig ist.
-        cls.fremde_kategorie = FeeCategory.objects.create(
-            name="Ermäßigt", betrag=Decimal("60.00")
-        )
+        cls.fremde_kategorie = FeeCategory.objects.create(name="Ermäßigt")
+        FeeAmount.objects.create(kategorie=cls.fremde_kategorie, jahr=2025, betrag=Decimal("60.00"))
         MembershipFee.objects.create(
             member=cls.fremdes,
             jahr=2025,
@@ -106,6 +104,28 @@ class RollenTests(TestCase):
             with self.subTest(rolle=user.groups.get().name):
                 self.wechsle(user)
                 antwort = self.client.get("/beitraege/export.csv")
+                self.assertEqual(antwort.status_code, 200 if erlaubt else 403)
+
+    def test_kassenbericht_nur_vorstand(self):
+        for user, erlaubt in (
+            (self.mitglied, False),
+            (self.kapitaen, False),
+            (self.admin, True),
+        ):
+            with self.subTest(rolle=user.groups.get().name):
+                self.wechsle(user)
+                antwort = self.client.get("/beitraege/kassenbericht/")
+                self.assertEqual(antwort.status_code, 200 if erlaubt else 403)
+
+    def test_kassenbericht_export_nur_vorstand(self):
+        for user, erlaubt in (
+            (self.mitglied, False),
+            (self.kapitaen, False),
+            (self.admin, True),
+        ):
+            with self.subTest(rolle=user.groups.get().name):
+                self.wechsle(user)
+                antwort = self.client.get("/beitraege/kassenbericht/export.csv")
                 self.assertEqual(antwort.status_code, 200 if erlaubt else 403)
 
     def test_kategorien_nur_vorstand(self):

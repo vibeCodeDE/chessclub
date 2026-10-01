@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -271,11 +271,18 @@ def run_beitragslauf(request):
             messages.error(request, "Bitte Jahr und Fälligkeit prüfen.")
             return redirect("dues:overview")
         return fehler("Bitte Eingaben prüfen.", errors=form.errors)
-    ergebnis = beitragslauf(
-        form.cleaned_data["jahr"],
-        faellig_am=form.cleaned_data["faellig_am"],
-        benutzer=request.user,
-    )
+    try:
+        ergebnis = beitragslauf(
+            form.cleaned_data["jahr"],
+            faellig_am=form.cleaned_data["faellig_am"],
+            benutzer=request.user,
+        )
+    except ValidationError as e:
+        msg = e.message if hasattr(e, "message") else ", ".join(e.messages) if hasattr(e, "messages") else str(e)
+        if not is_ajax(request):
+            messages.error(request, msg)
+            return redirect("dues:overview")
+        return fehler(msg)
     nachricht = (
         f"Beitragslauf {ergebnis['jahr']}: {ergebnis['angelegt']} Posten über "
         f"{ergebnis['summe']:.2f} € angelegt."
@@ -433,6 +440,75 @@ def export(request):
                 fee.get_status_display(),
                 fee.faellig_am.strftime("%d.%m.%Y"),
                 fee.mahnstufe,
+            ]
+        )
+    return response
+
+
+@role_required(ADMIN_GROUP)
+def kassenbericht(request):
+    """Reine Lese-Sicht für den Kassenbericht (PRD M2.6).
+
+    Zeigt Zahlungen je Mitglied für das gewählte Beitragsjahr,
+    Jahressumme der Einnahmen und offene Posten zum Stichtag.
+    """
+    jahr = _jahr_aus_request(request)
+    uebersicht = jahres_uebersicht(jahr)
+    zahlungen = (
+        Payment.objects.filter(fee__jahr=jahr)
+        .select_related("fee", "fee__member", "erfasst_von")
+        .order_by("datum", "fee__member__nachname", "fee__member__vorname", "pk")
+    )
+    jahressumme = zahlungen.aggregate(s=Sum("betrag"))["s"] or Decimal("0.00")
+    posten = (
+        MembershipFee.objects.filter(jahr=jahr)
+        .select_related("member")
+        .prefetch_related("zahlungen")
+        .order_by("member__nachname", "member__vorname")
+    )
+    offene_posten = [fee for fee in posten if fee.ist_offen]
+    jahre = sorted(
+        set(MembershipFee.objects.values_list("jahr", flat=True))
+        | set(Payment.objects.values_list("fee__jahr", flat=True))
+        | {timezone.localdate().year},
+        reverse=True,
+    )
+    kontext = {
+        "jahr": jahr,
+        "jahre": jahre,
+        "uebersicht": uebersicht,
+        "zahlungen": zahlungen,
+        "offene_posten": offene_posten,
+        "jahressumme": jahressumme,
+        "heute": timezone.localdate(),
+    }
+    return render(request, "dues/kassenbericht.html", kontext)
+
+
+@role_required(ADMIN_GROUP)
+def kassenbericht_export(request):
+    """CSV-Export des Kassenberichts (Beitragszahlungen je Mitglied, PRD M2.6)."""
+    jahr = _jahr_aus_request(request)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="kassenbericht-beitraege-{jahr}.csv"'
+    response.write("\ufeff")
+    writer = csv.writer(response, delimiter=";")
+    writer.writerow(["Datum", "Nachname", "Vorname", "Kategorie", "Zahlungsart", "Betrag", "Notiz"])
+    zahlungen = (
+        Payment.objects.filter(fee__jahr=jahr)
+        .select_related("fee", "fee__member")
+        .order_by("datum", "fee__member__nachname", "fee__member__vorname", "pk")
+    )
+    for z in zahlungen:
+        writer.writerow(
+            [
+                z.datum.strftime("%d.%m.%Y"),
+                z.fee.member.nachname,
+                z.fee.member.vorname,
+                z.fee.kategorie_name,
+                z.get_art_display(),
+                f"{z.betrag:.2f}".replace(".", ","),
+                z.notiz,
             ]
         )
     return response

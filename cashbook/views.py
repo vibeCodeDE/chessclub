@@ -111,13 +111,6 @@ def entry_storno(request, pk):
 
 
 @role_required(ADMIN_GROUP)
-@require_POST
-def entry_delete(request, pk):
-    """Rückwärtskompatibler Alias: Kassenbuchungen werden storniert statt hart gelöscht."""
-    return entry_storno(request, pk)
-
-
-@role_required(ADMIN_GROUP)
 def jahresabschluss_view(request):
     jahr = _jahr(request)
     jahre = sorted(

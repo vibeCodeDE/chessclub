@@ -2,6 +2,7 @@
 
 import csv
 
+from django.conf import settings
 from django.contrib import messages
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -264,7 +265,39 @@ def export_csv(request, pk):
     response["Content-Disposition"] = f'attachment; filename="ergebnisse-{turnier.pk}.csv"'
     response.write("\ufeff")
     writer = csv.writer(response, delimiter=";")
-    kopf = ["Rang", "Name", "Verein", "DWZ/TWZ", "Punkte", "Buchholz"] + [f"R{n.nummer}" for n in runden]
+
+    # Abschnitt [TRN] - Turnier-Metadaten
+    writer.writerow(["[TRN]"])
+    writer.writerow(["Kennung", "Name", "Datum", "Ort", "Runden", "Format", "Status"])
+    writer.writerow(
+        [
+            "TRN",
+            turnier.name,
+            turnier.datum.strftime("%d.%m.%Y"),
+            turnier.ort or "Vereinsheim",
+            turnier.runden_anzahl,
+            turnier.get_format_display(),
+            turnier.get_status_display(),
+        ]
+    )
+    writer.writerow([])
+
+    # Abschnitt [ARB] - Organisation und Schiedsrichter
+    writer.writerow(["[ARB]"])
+    writer.writerow(["Kennung", "Organisator", "Kontakt", "Erstelldatum"])
+    writer.writerow(
+        [
+            "ARB",
+            settings.CLUB_NAME,
+            getattr(settings, "CLUB_CONTACT", ""),
+            timezone.localdate().strftime("%d.%m.%Y"),
+        ]
+    )
+    writer.writerow([])
+
+    # Abschnitt [RAN] - Rangliste und Rundenergebnisse
+    writer.writerow(["[RAN]"])
+    kopf = ["Kennung", "Rang", "Name", "Verein", "DWZ/TWZ", "Punkte", "Buchholz"] + [f"R{n.nummer}" for n in runden]
     writer.writerow(kopf)
     for teilnehmer in stand:
         ergebnisse = []
@@ -290,6 +323,7 @@ def export_csv(request, pk):
                 ergebnisse.append(f"{eigene_punkte:g}{farbe} {gegner.name}" if gegner else f"{eigene_punkte:g}{farbe}")
         writer.writerow(
             [
+                "RAN",
                 teilnehmer.rang,
                 teilnehmer.name,
                 teilnehmer.verein,

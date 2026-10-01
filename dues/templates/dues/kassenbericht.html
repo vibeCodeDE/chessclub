@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Kassenbericht Beiträge {{ jahr }}{% endblock %}
+{% block page_title %}Kassenbericht Beiträge {{ jahr }}{% endblock %}
+{% block crumbs %}<div class="crumbs">Einnahmen aus Mitgliedsbeiträgen · Stand {{ heute|date:"d.m.Y" }}</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head no-print">
+  <p class="lede">Reine Lese-Sicht auf Beitragszahlungen und offene Posten für den Kassenbericht.</p>
+  <div class="page-actions">
+    <div class="segmented">
+      {% for j in jahre %}<a class="{% if j == jahr %}is-active{% endif %}" href="?jahr={{ j }}">{{ j }}</a>{% endfor %}
+    </div>
+    <a class="btn secondary" href="{% url 'dues:kassenbericht_export' %}?jahr={{ jahr }}"><svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV</a>
+    <a class="btn secondary" href="{% url 'dues:overview' %}?jahr={{ jahr }}"><svg class="icon icon-sm"><use href="#i-wallet"></use></svg> Beitragsverwaltung</a>
+    <button class="btn" type="button" onclick="window.print()"><svg class="icon icon-sm"><use href="#i-print"></use></svg> Drucken</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-4">
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Beitragseinnahmen {{ jahr }}</span><span class="stat-icon"><svg class="icon"><use href="#i-check"></use></svg></span></div>
+    <div class="stat-value">{{ jahressumme|floatformat:2 }} €</div>
+    <div class="stat-foot">{{ zahlungen|length }} Zahlungsbuchung{{ zahlungen|length|pluralize:"en" }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Soll {{ jahr }}</span><span class="stat-icon"><svg class="icon"><use href="#i-euro"></use></svg></span></div>
+    <div class="stat-value">{{ uebersicht.soll|floatformat:2 }} €</div>
+    <div class="stat-foot">{{ uebersicht.anzahl }} Beitragsposten</div>
+  </div>
+  <div class="stat {% if uebersicht.offen %}accent-warn{% else %}accent-success{% endif %}">
+    <div class="stat-head"><span class="stat-label">Offene Beiträge</span><span class="stat-icon"><svg class="icon"><use href="#i-wallet"></use></svg></span></div>
+    <div class="stat-value">{{ uebersicht.offen|floatformat:2 }} €</div>
+    <div class="stat-foot">{{ uebersicht.offene_anzahl }} Posten offen</div>
+  </div>
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Erfüllungsquote</span><span class="stat-icon"><svg class="icon"><use href="#i-chart"></use></svg></span></div>
+    <div class="stat-value">{% if uebersicht.soll %}{% widthratio uebersicht.bezahlt uebersicht.soll 100 %}%{% else %}100%{% endif %}</div>
+    <div class="progress success mt-1" data-progress="{% if uebersicht.soll %}{% widthratio uebersicht.bezahlt uebersicht.soll 100 %}{% else %}100{% endif %}"><span style="width:0"></span></div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head">
+    <h2>Zahlungseingänge {{ jahr }}</h2>
+    <span class="sub">{{ zahlungen|length }} Buchung{{ zahlungen|length|pluralize:"en" }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Mitglied</th>
+          <th>Kategorie</th>
+          <th>Zahlungsart</th>
+          <th>Notiz</th>
+          <th class="num">Betrag</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for z in zahlungen %}
+          <tr>
+            <td class="nowrap">{{ z.datum|date:"d.m.Y" }}</td>
+            <td class="cell-main">
+              <a href="{% url 'members:member_detail' z.fee.member.pk %}">{{ z.fee.member }}</a>
+            </td>
+            <td>{{ z.fee.kategorie_name }}</td>
+            <td>{{ z.get_art_display }}</td>
+            <td class="cell-sub">{{ z.notiz|default:"–" }}</td>
+            <td class="num mono">{{ z.betrag|floatformat:2 }} €</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="muted">Keine Buchungen für das Jahr {{ jahr }} vorhanden.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      {% if zahlungen %}
+        <tfoot>
+          <tr>
+            <th colspan="5">Jahressumme Einnahmen</th>
+            <th class="num mono">{{ jahressumme|floatformat:2 }} €</th>
+          </tr>
+        </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head">
+    <h2>Offene Posten zum Stichtag ({{ heute|date:"d.m.Y" }})</h2>
+    <span class="sub">{{ offene_posten|length }} offen</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Mitglied</th>
+          <th>Kategorie</th>
+          <th>Fällig am</th>
+          <th class="num">Soll</th>
+          <th class="num">Bezahlt</th>
+          <th class="num">Offen</th>
+          <th>Mahnstufe</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fee in offene_posten %}
+          <tr>
+            <td class="cell-main">
+              <a href="{% url 'dues:fee_detail' fee.pk %}">{{ fee.member }}</a>
+            </td>
+            <td>{{ fee.kategorie_name }}</td>
+            <td class="nowrap">{{ fee.faellig_am|date:"d.m.Y" }}</td>
+            <td class="num mono">{{ fee.betrag|floatformat:2 }} €</td>
+            <td class="num mono">{{ fee.bezahlter_betrag|floatformat:2 }} €</td>
+            <td class="num mono font-semibold">{{ fee.offener_betrag|floatformat:2 }} €</td>
+            <td>
+              {% if fee.mahnstufe %}
+                <span class="badge badge-mahnung">{{ fee.mahnstufe }}. Mahnung</span>
+              {% else %}
+                <span class="badge badge-neutral">Keine</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="muted">Keine offenen Posten für das Jahr {{ jahr }}.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      {% if offene_posten %}
+        <tfoot>
+          <tr>
+            <th colspan="5">Summe offene Beiträge</th>
+            <th class="num mono font-semibold">{{ uebersicht.offen|floatformat:2 }} €</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

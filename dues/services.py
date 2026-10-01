@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from cashbook.models import CashEntry, storniere_kassenbuchung
 
-from .models import DunningLetter, MembershipFee, Payment
+from .models import DunningLetter, FeeAmount, MembershipFee, Payment
 
 STANDARD_FAELLIGKEIT = date(2000, 1, 31)  # Platzhalter; Jahr wird ersetzt
 
@@ -20,9 +20,10 @@ def _faelligkeit(jahr):
 
 @transaction.atomic
 def beitragslauf(jahr, faellig_am=None, benutzer=None):
-    """Erzeugt Beitragsposten für alle aktiven Mitglieder mit Kategorie (M2.2).
+    """Erzeugt Beitragsposten für alle aktiven Mitglieder mit Kategorie (M2.2, ADR-004, ADR-005).
 
     Idempotent: ein zweiter Lauf für dasselbe Jahr legt nichts doppelt an.
+    Bricht ab, wenn für eine Kategorie im angegebenen Jahr kein Beitragssatz hinterlegt ist.
     """
     from members.models import Member
 
@@ -40,6 +41,27 @@ def beitragslauf(jahr, faellig_am=None, benutzer=None):
     ohne_kategorie = Member.objects.filter(
         status=Member.Status.AKTIV, beitragskategorie__isnull=True
     ).count()
+
+    zu_verarbeitende_kategorien = {
+        member.beitragskategorie for member in mitglieder if member.pk not in vorhandene
+    }
+    saetze = {
+        fa.kategorie_id: fa.betrag
+        for fa in FeeAmount.objects.filter(
+            kategorie__in=zu_verarbeitende_kategorien, jahr=jahr
+        )
+    }
+    fehlende = [
+        kat.name
+        for kat in sorted(zu_verarbeitende_kategorien, key=lambda k: k.name)
+        if kat.pk not in saetze
+    ]
+    if fehlende:
+        namen = ", ".join(f"„{name}“" for name in fehlende)
+        raise ValidationError(
+            f"Für das Beitragsjahr {jahr} ist für folgende Beitragskategorie(n) kein Beitragssatz hinterlegt: {namen}."
+        )
+
     for member in mitglieder:
         if member.pk in vorhandene:
             uebersprungen += 1
@@ -50,7 +72,7 @@ def beitragslauf(jahr, faellig_am=None, benutzer=None):
                 member=member,
                 jahr=jahr,
                 kategorie_name=kategorie.name,
-                betrag=kategorie.betrag,
+                betrag=saetze[kategorie.pk],
                 faellig_am=faellig_am,
             )
         )
@@ -122,8 +144,9 @@ def zahlung_stornieren(zahlung, *, grund="", datum=None, benutzer=None):
             .first()
         )
     if ursprungs_kasse is not None and not ursprungs_kasse.ist_storniert:
+        kassen_grund = grund or f"Storno Beitragszahlung #{zahlung.pk}"
         kassen_storno = storniere_kassenbuchung(
-            ursprungs_kasse, benutzer=benutzer, grund=grund, datum=storno_datum
+            ursprungs_kasse, benutzer=benutzer, grund=kassen_grund, datum=storno_datum
         )
 
     gegenbuchung = Payment.objects.create(

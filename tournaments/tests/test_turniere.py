@@ -19,6 +19,13 @@ def make_admin(username="vorstand"):
     return user
 
 
+def make_user_in_group(username, group_name):
+    user = User.objects.create_user(username, password="x")
+    group, _ = Group.objects.get_or_create(name=group_name)
+    user.groups.add(group)
+    return user
+
+
 def turnier_mit_teilnehmern(anzahl=8, **kwargs):
     daten = {
         "name": "Testturnier",
@@ -192,19 +199,81 @@ class TurnierverwaltungsTests(TestCase):
         self.turnier.refresh_from_db()
         self.assertEqual(self.turnier.status, Tournament.Status.BEENDET)
 
-    def test_export_enthaelt_rundenergebnisse(self):
+    def test_export_enthaelt_chessresults_struktur_und_rundenergebnisse(self):
         runde, _ = generate_round(self.turnier)
         for paarung in runde.paarungen.all():
             paarung.ergebnis = Pairing.Ergebnis.REMIS
             paarung.save(update_fields=["ergebnis"])
 
         response = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/export.csv")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn(f'filename="ergebnisse-{self.turnier.pk}.csv"', response["Content-Disposition"])
+
         inhalt = response.content.decode("utf-8-sig")
         zeilen = list(csv.reader(io.StringIO(inhalt), delimiter=";"))
-        self.assertEqual(zeilen[0][0], "Rang")
-        self.assertIn("R1", zeilen[0])
-        self.assertIn("Buchholz", zeilen[0])
-        self.assertEqual(len(zeilen), 7)  # Kopfzeile + 6 Teilnehmer
+
+        # [TRN] Sektion
+        self.assertEqual(zeilen[0], ["[TRN]"])
+        self.assertEqual(zeilen[1][0], "Kennung")
+        self.assertEqual(zeilen[1][1], "Name")
+        self.assertEqual(zeilen[2][0], "TRN")
+        self.assertEqual(zeilen[2][1], self.turnier.name)
+
+        # [ARB] Sektion
+        self.assertEqual(zeilen[4], ["[ARB]"])
+        self.assertEqual(zeilen[5][0], "Kennung")
+        self.assertEqual(zeilen[6][0], "ARB")
+
+        # [RAN] Sektion
+        self.assertEqual(zeilen[8], ["[RAN]"])
+        self.assertEqual(zeilen[9][0], "Kennung")
+        self.assertEqual(zeilen[9][1], "Rang")
+        self.assertIn("R1", zeilen[9])
+        self.assertIn("Buchholz", zeilen[9])
+
+        # Datenzeilen
+        teilnehmer_zeilen = [z for z in zeilen[10:] if z and z[0] == "RAN"]
+        self.assertEqual(len(teilnehmer_zeilen), 6)  # 6 Teilnehmer
+        self.assertEqual(teilnehmer_zeilen[0][0], "RAN")
+        self.assertEqual(teilnehmer_zeilen[0][1], "1")  # Rang 1
+
+    def test_export_datenschutz_keine_privatdaten(self):
+        # Teilnehmer mit E-Mail und Notiz
+        p = self.turnier.teilnehmer.first()
+        p.email = "geheim@privat.example"
+        p.notiz = "Geheime Anmerkung"
+        p.save(update_fields=["email", "notiz"])
+
+        response = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/export.csv")
+        inhalt = response.content.decode("utf-8-sig")
+        self.assertNotIn("geheim@privat.example", inhalt)
+        self.assertNotIn("Geheime Anmerkung", inhalt)
+
+    def test_export_deterministisch(self):
+        generate_round(self.turnier)
+        r1 = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/export.csv")
+        r2 = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/export.csv")
+        self.assertEqual(r1.content, r2.content)
+
+    def test_export_und_druck_rollen_berechtigungen(self):
+        # Negativtests je Rolle nach Berechtigungsmatrix §3.8
+        kapitaen = make_user_in_group("kapitaen_user", "kapitaen")
+        mitglied = make_user_in_group("mitglied_user", "mitglied")
+
+        for user in (kapitaen, mitglied):
+            self.client.force_login(user)
+            resp_csv = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/export.csv")
+            self.assertEqual(resp_csv.status_code, 403, f"Rolle {user.groups.first().name} darf CSV nicht exportieren")
+            resp_print = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/druck/")
+            self.assertEqual(resp_print.status_code, 403, f"Rolle {user.groups.first().name} darf Druckansicht nicht aufrufen")
+
+        # Gast / Anonym
+        self.client.logout()
+        resp_csv = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/export.csv")
+        self.assertEqual(resp_csv.status_code, 302)
+        resp_print = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/druck/")
+        self.assertEqual(resp_print.status_code, 302)
 
     def test_druckansicht(self):
         generate_round(self.turnier)
@@ -212,6 +281,7 @@ class TurnierverwaltungsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ergebnisliste")
         self.assertContains(response, "Buchholz")
+        self.assertContains(response, "Drucken")
 
 
 class OeffentlicheAnmeldungTests(TestCase):

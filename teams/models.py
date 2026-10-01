@@ -1,11 +1,16 @@
 """Spielbetrieb: Mannschaften, Ligaspiele, Aufstellungen (PRD M4)."""
 
+import secrets
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
 
 from members.models import Member
+
+
+def generate_ical_token():
+    return secrets.token_urlsafe(24)
 
 
 class Team(models.Model):
@@ -31,6 +36,9 @@ class Team(models.Model):
         related_name="kapitaen_von",
     )
     aktiv = models.BooleanField("Aktiv", default=True)
+    ical_token = models.CharField(
+        "iCal-Token", max_length=64, unique=True, default=generate_ical_token
+    )
 
     class Meta:
         verbose_name = "Mannschaft"
@@ -40,13 +48,18 @@ class Team(models.Model):
     def __str__(self):
         return self.name
 
+    def renew_ical_token(self):
+        self.ical_token = generate_ical_token()
+        self.save(update_fields=["ical_token"])
+        return self.ical_token
+
     @property
     def naechstes_spiel(self):
         from django.utils import timezone
 
         return (
             self.matches.filter(datum__gte=timezone.localdate())
-            .exclude(status=LeagueMatch.Status.GESPIELT)
+            .exclude(status__in=[LeagueMatch.Status.GESPIELT, LeagueMatch.Status.ABGESAGT])
             .order_by("datum", "uhrzeit")
             .first()
         )
@@ -66,6 +79,33 @@ class Team(models.Model):
         return {"siege": sieg, "remis": remis, "niederlagen": niederlage, "spiele": spiele.count()}
 
 
+class LeagueCalendarFeed(models.Model):
+    """Globaler Feed für alle Ligaspiele aller Mannschaften (PRD S4.6)."""
+
+    name = models.CharField("Feed-Name", max_length=50, unique=True, default="gesamt")
+    token = models.CharField("iCal-Token", max_length=64, unique=True, default=generate_ical_token)
+    aktualisiert_am = models.DateTimeField("Aktualisiert am", auto_now=True)
+
+    class Meta:
+        verbose_name = "Liga-Kalender-Feed"
+        verbose_name_plural = "Liga-Kalender-Feeds"
+
+    def __str__(self):
+        return f"Kalender-Feed: {self.name}"
+
+    @classmethod
+    def get_token(cls):
+        feed, _ = cls.objects.get_or_create(name="gesamt")
+        return feed.token
+
+    @classmethod
+    def renew_token(cls):
+        feed, _ = cls.objects.get_or_create(name="gesamt")
+        feed.token = generate_ical_token()
+        feed.save(update_fields=["token", "aktualisiert_am"])
+        return feed.token
+
+
 class LeagueMatch(models.Model):
     """Ein Ligaspiel mit Termin, Gegner und Ergebnissen (PRD M4.2/M4.4)."""
 
@@ -73,6 +113,7 @@ class LeagueMatch(models.Model):
         GEPLANT = "geplant", "Geplant"
         AUFGESTELLT = "aufgestellt", "Aufstellung gemeldet"
         GESPIELT = "gespielt", "Gespielt"
+        ABGESAGT = "abgesagt", "Abgesagt"
 
     team = models.ForeignKey(
         Team, verbose_name="Mannschaft", on_delete=models.CASCADE, related_name="matches"

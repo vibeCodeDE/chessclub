@@ -1,13 +1,31 @@
 from django.contrib import admin
 
-from .models import DunningLetter, FeeCategory, MembershipFee, Payment, SepaMandate
+from .models import DunningLetter, FeeAmount, FeeCategory, MembershipFee, Payment, SepaMandate
+
+
+class FeeAmountInline(admin.TabularInline):
+    model = FeeAmount
+    extra = 1
 
 
 @admin.register(FeeCategory)
 class FeeCategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "betrag", "aktiv", "mitglieder_anzahl")
+    list_display = ("name", "aktueller_betrag_display", "aktiv", "mitglieder_anzahl")
     list_filter = ("aktiv",)
     search_fields = ("name",)
+    inlines = [FeeAmountInline]
+
+    @admin.display(description="Jahresbeitrag (aktuell)")
+    def aktueller_betrag_display(self, obj):
+        betrag = obj.aktueller_betrag
+        return f"{betrag:.2f} €" if betrag is not None else "–"
+
+
+@admin.register(FeeAmount)
+class FeeAmountAdmin(admin.ModelAdmin):
+    list_display = ("kategorie", "jahr", "betrag")
+    list_filter = ("jahr", "kategorie")
+    search_fields = ("kategorie__name",)
 
 
 @admin.register(SepaMandate)

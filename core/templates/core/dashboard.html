@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% comment %}
   Rollen nach PRD §3.8: Beiträge, Zahlungen, Mahnungen, Kassenbuch, Mitgliederliste
@@ -8,287 +9,463 @@
 {% endcomment %}
 
 {% block title %}Dashboard{% endblock %}
-{% block page_title %}Guten Tag, {{ user.get_full_name|default:user.get_username }}{% endblock %}
+{% block page_title %}Guten Tag, {{ user.first_name|default:user.get_username }}{% endblock %}
 
 {% block crumbs %}
-{% if rolle == "admin" %}<div class="crumbs">Beitragsjahr {{ jahr }} · Stand {{ heute|date:"d.m.Y" }}</div>{% else %}<div class="crumbs">Spielbetrieb · Stand {{ heute|date:"d.m.Y" }}</div>{% endif %}
+<span class="crumbs-detail">{% if rolle == "admin" %}· Beitragsjahr {{ jahr }} · Stand {{ heute|date:"d.m.Y" }}{% else %}· Spielbetrieb · Stand {{ heute|date:"d.m.Y" }}{% endif %}</span>
 {% endblock %}
 
 {% block page_actions %}
-<div class="page-head">
-  {% if rolle == "admin" %}
-    <p class="lede">Alle Kennzahlen des Vereins auf einen Blick – Beiträge, Spielbetrieb und Turniere.</p>
-    <div class="page-actions">
-      <a class="btn secondary" href="{% url 'dues:export' %}?jahr={{ jahr }}">
-        <svg class="icon icon-sm"><use href="#i-download"></use></svg> Beitrags-CSV
+<div class="page-heading">
+  <div>
+    <div class="page-eyebrow">{{ heute|date:"l, j. F Y"|upper }}</div>
+    <h1>Guten Tag, {{ user.first_name|default:user.get_username }}.</h1>
+    <p>{% if rolle == "admin" %}Dein Verein im Überblick. Schön, dass du da bist.{% else %}Deine Mannschaften, die nächsten Begegnungen und deine offenen Aufgaben.{% endif %}</p>
+  </div>
+  <div class="page-heading-actions">
+    {% if rolle == "admin" %}
+      <a class="btn secondary button button-secondary" href="{% url 'dues:export' %}?jahr={{ jahr }}">
+        <svg class="icon icon-sm"><use href="#i-download"></use></svg> Exportieren
       </a>
-      <a class="btn" href="{% url 'dues:overview' %}">
-        <svg class="icon icon-sm"><use href="#i-wallet"></use></svg> Beitragslauf
+      <a class="btn button button-primary" href="{% url 'dues:overview' %}">
+        <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Beitragslauf
       </a>
-    </div>
-  {% else %}
-    <p class="lede">Deine Mannschaften, die nächsten Begegnungen und deine offenen Aufgaben.</p>
-    <div class="page-actions">
-      <a class="btn secondary" href="{% url 'teams:meine_aufstellungen' %}">
+    {% else %}
+      <a class="btn secondary button button-secondary" href="{% url 'teams:meine_aufstellungen' %}">
         <svg class="icon icon-sm"><use href="#i-swords"></use></svg> Meine Einsätze
       </a>
-      <a class="btn" href="{% url 'teams:match_list' %}">
+      <a class="btn button button-primary" href="{% url 'teams:match_list' %}">
         <svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Spielplan
       </a>
-    </div>
-  {% endif %}
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
 
 {% block content %}
 {% if rolle == "admin" %}
-<div class="grid cols-4">
-  <div class="stat {% if uebersicht.offen %}accent-warn{% else %}accent-success{% endif %}">
-    <div class="stat-head">
-      <span class="stat-label">Offene Beiträge {{ jahr }}</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-wallet"></use></svg></span>
+<div class="stats-grid">
+  <section class="stat-card">
+    <div class="stat-label">
+      <span>Mitglieder</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg>
     </div>
-    <div class="stat-value">{{ uebersicht.offen|floatformat:2 }} €</div>
-    <div class="stat-foot">{{ uebersicht.offene_anzahl }} von {{ uebersicht.anzahl }} Posten offen</div>
-    <div class="progress warn mt-1" data-progress="{% widthratio uebersicht.bezahlt uebersicht.soll 100 %}"><span style="width:0"></span></div>
-    <div class="stat-foot mt-1">{{ uebersicht.bezahlt|floatformat:2 }} € eingegangen ({{ uebersicht.bezahlt|floatformat:0 }} von {{ uebersicht.soll|floatformat:0 }} €)</div>
-  </div>
+    <div class="stat-value">
+      {{ mitglieder_gesamt }}
+      {% if neue_mitglieder %}
+        <span class="stat-growth"><svg class="icon icon-sm" style="width:11px;height:11px" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>{{ neue_mitglieder|length }} neu</span>
+      {% endif %}
+    </div>
+    <div class="stat-bottom">
+      <span>{{ aktive_mitglieder }} aktiv <span class="middle-dot">·</span> {{ passive_mitglieder }} passiv</span>
+      <span class="avatar-stack">
+        {% for neu in neue_mitglieder|slice:":3" %}
+          <span class="avatar avatar-sm avatar-sage" title="{{ neu }}">{{ neu.nachname|slice:":1" }}</span>
+        {% endfor %}
+        {% if mitglieder_gesamt > 3 %}
+          <span class="stack-more">+{{ mitglieder_gesamt|add:"-3" }}</span>
+        {% endif %}
+      </span>
+    </div>
+  </section>
 
-  <div class="stat">
-    <div class="stat-head">
-      <span class="stat-label">Mitglieder</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-users"></use></svg></span>
+  <section class="stat-card">
+    <div class="stat-label">
+      <span>Offene Beiträge {{ jahr }}</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-card"></use></svg>
     </div>
-    <div class="stat-value">{{ mitglieder_gesamt }}</div>
-    <div class="stat-foot">{{ aktive_mitglieder }} aktiv · {{ passive_mitglieder }} passiv{% if ohne_kategorie %} · {{ ohne_kategorie }} ohne Kategorie{% endif %}</div>
-  </div>
+    <div class="stat-value money-value">{{ uebersicht.offen|floatformat:2 }} €</div>
+    <div class="stat-bottom">
+      <span><span class="status-dot amber"></span>{{ uebersicht.offene_anzahl }} von {{ uebersicht.anzahl }} offen</span>
+      <span class="progress-percent">{% widthratio uebersicht.bezahlt uebersicht.soll 100 %} %</span>
+    </div>
+    <div class="progress-track" data-progress="{% widthratio uebersicht.bezahlt uebersicht.soll 100 %}">
+      <span style="width: {% widthratio uebersicht.bezahlt uebersicht.soll 100 %}%"></span>
+    </div>
+  </section>
 
-  <div class="stat accent-success">
-    <div class="stat-head">
-      <span class="stat-label">Kasse {{ jahr }}</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-book"></use></svg></span>
+  <section class="stat-card">
+    <div class="stat-label">
+      <span>Vereinskasse {{ jahr }}</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-wallet"></use></svg>
     </div>
-    <div class="stat-value">{{ kasse.saldo|floatformat:2 }} €</div>
-    <div class="stat-foot">{{ kasse.einnahmen|floatformat:2 }} € ein · {{ kasse.ausgaben|floatformat:2 }} € aus</div>
-  </div>
+    <div class="stat-value money-value">{{ kasse.saldo|floatformat:2 }} €</div>
+    <div class="cash-meta">
+      <span style="color:#668448"><svg class="icon icon-sm" style="width:12px;height:12px" aria-hidden="true"><use href="#i-arrow-left"></use></svg>{{ kasse.einnahmen|floatformat:2 }} € <small>ein</small></span>
+      <span style="color:#95752f"><svg class="icon icon-sm" style="width:12px;height:12px" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>{{ kasse.ausgaben|floatformat:2 }} € <small>aus</small></span>
+    </div>
+  </section>
 
-  <div class="stat accent-gold">
-    <div class="stat-head">
-      <span class="stat-label">Zahlungen im Monat</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-chart"></use></svg></span>
+  <section class="stat-card monthly-stat">
+    <div class="stat-label">
+      <span>Zahlungen im Monat</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>
     </div>
-    <div class="stat-value">{{ zahlungen_monat|floatformat:2 }} €</div>
-    <div class="sparkbar">
+    <div class="stat-value money-value">{{ zahlungen_monat|floatformat:2 }} €</div>
+    <div class="stat-bottom">
+      <span>{{ verlauf|length }} Buchungsmonate</span>
+    </div>
+    <div class="mini-chart" aria-label="Monatsverlauf">
       {% for punkt in verlauf %}
-        <div class="bar" style="height: {{ punkt.prozent }}%" title="{{ punkt.label }}: {{ punkt.wert|floatformat:2 }} €"><span>{{ punkt.label }}</span></div>
+        <div class="{% if forloop.last %}current{% endif %}" style="height: {{ punkt.prozent }}%" title="{{ punkt.label }}: {{ punkt.wert|floatformat:2 }} €"></div>
       {% endfor %}
     </div>
-  </div>
+  </section>
 </div>
 {% else %}
-<div class="grid cols-4">
-  <div class="stat accent-gold">
-    <div class="stat-head">
-      <span class="stat-label">Meine Mannschaften</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-flag"></use></svg></span>
+<div class="stats-grid">
+  <section class="stat-card">
+    <div class="stat-label">
+      <span>Meine Mannschaften</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-flag"></use></svg>
     </div>
     <div class="stat-value">{{ eigene_mannschaften|length }}</div>
-    <div class="stat-foot">Als Kapitän geführt</div>
-  </div>
+    <div class="stat-bottom"><span>Als Kapitän geführt</span></div>
+  </section>
 
-  <div class="stat {% if offene_aufgaben %}accent-warn{% else %}accent-success{% endif %}">
-    <div class="stat-head">
-      <span class="stat-label">Offene Aufgaben</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-edit"></use></svg></span>
+  <section class="stat-card">
+    <div class="stat-label">
+      <span>Offene Aufgaben</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-edit"></use></svg>
     </div>
     <div class="stat-value">{{ offene_aufgaben|length }}</div>
-    <div class="stat-foot">Aufstellung oder Ergebnis fehlt</div>
-  </div>
+    <div class="stat-bottom">
+      <span><span class="status-dot {% if offene_aufgaben %}amber{% else %}green{% endif %}"></span>Aufstellung oder Ergebnis fehlt</span>
+    </div>
+  </section>
 
-  <div class="stat">
-    <div class="stat-head">
-      <span class="stat-label">Nächste Begegnungen</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-calendar"></use></svg></span>
+  <section class="stat-card">
+    <div class="stat-label">
+      <span>Nächste Begegnungen</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-calendar"></use></svg>
     </div>
     <div class="stat-value">{{ kommende_spiele|length }}</div>
-    <div class="stat-foot">geplante Ligaspiele</div>
-  </div>
+    <div class="stat-bottom"><span>geplante Ligaspiele</span></div>
+  </section>
 
-  <div class="stat accent-success">
-    <div class="stat-head">
-      <span class="stat-label">Turniere</span>
-      <span class="stat-icon"><svg class="icon"><use href="#i-trophy"></use></svg></span>
+  <section class="stat-card">
+    <div class="stat-label">
+      <span>Turniere</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-trophy"></use></svg>
     </div>
     <div class="stat-value">{{ kommende_turniere|length }}</div>
-    <div class="stat-foot">bevorstehende Termine</div>
-  </div>
+    <div class="stat-bottom"><span>bevorstehende Termine</span></div>
+  </section>
 </div>
 {% endif %}
 
-<div class="grid main-side mt-2">
-  <div>
+<div class="dashboard-columns">
+  <div class="dashboard-main-column">
     {% if rolle == "admin" %}
-    <div class="card">
-      <div class="card-head">
-        <h2>Offene Beitragsposten</h2>
-        <a class="link-btn" href="{% url 'dues:overview' %}?status=offen">Alle ansehen</a>
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Offene Beiträge <span class="count-badge">{{ offene_posten|length }}</span></h2>
+          <p>Ein Überblick über ausstehende Zahlungen.</p>
+        </div>
+        <a class="text-button" href="{% url 'dues:overview' %}?status=offen">
+          Alle ansehen <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-up-right"></use></svg>
+        </a>
       </div>
-      <div class="table-wrap">
-        <table class="data">
-          <thead><tr><th>Mitglied</th><th>Kategorie</th><th class="right">Betrag</th><th class="right">Offen</th><th>Mahnstufe</th><th></th></tr></thead>
+      <div class="table-scroll">
+        <table class="contribution-table">
+          <thead>
+            <tr>
+              <th>Mitglied</th>
+              <th>Kategorie</th>
+              <th class="amount">Beitrag</th>
+              <th class="amount">Offen</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
             {% for fee in offene_posten %}
               <tr data-row>
-                <td class="cell-main"><a href="{% url 'members:member_detail' fee.member.pk %}">{{ fee.member }}</a></td>
-                <td>{{ fee.kategorie_name }}</td>
-                <td class="num mono">{{ fee.betrag|floatformat:2 }} €</td>
-                <td class="num mono">{{ fee.offener_betrag|floatformat:2 }} €</td>
                 <td>
-                  {% if fee.mahnstufe %}<span class="badge badge-mahnung">{{ fee.mahnstufe }}. Mahnung</span>{% else %}<span class="badge badge-neutral">–</span>{% endif %}
+                  <a class="person-cell" href="{% url 'members:member_detail' fee.member.pk %}">
+                    <span class="avatar avatar-sm avatar-sage">{{ fee.member.nachname|slice:":1" }}</span>
+                    <span>
+                      <strong>{{ fee.member }}</strong>
+                      <small>{{ fee.kategorie_name }}</small>
+                    </span>
+                  </a>
                 </td>
-                <td class="right"><a class="btn small secondary" href="{% url 'dues:fee_detail' fee.pk %}">Buchen</a></td>
+                <td>{{ fee.kategorie_name }}</td>
+                <td class="amount muted">{{ fee.betrag|floatformat:2 }} €</td>
+                <td class="amount semibold">{{ fee.offener_betrag|floatformat:2 }} €</td>
+                <td>
+                  {% if fee.mahnstufe %}
+                    <span class="badge badge-amber">{{ fee.mahnstufe }}. Mahnung</span>
+                  {% else %}
+                    <span class="badge badge-neutral"><span class="badge-dot"></span>Offen</span>
+                  {% endif %}
+                </td>
+                <td class="action-cell">
+                  <a class="row-action" href="{% url 'dues:fee_detail' fee.pk %}" title="Zahlung buchen" aria-label="Zahlung buchen für {{ fee.member }}">
+                    <svg class="icon icon-sm"><use href="#i-arrow-up-right"></use></svg>
+                  </a>
+                </td>
               </tr>
             {% empty %}
-              <tr><td colspan="6">{% include "includes/empty_state.html" with icon="check" titel="Alle Beiträge bezahlt" text="Für dieses Jahr ist kein Beitrag offen – sehr gut." small=True %}</td></tr>
+              <tr>
+                <td colspan="6">
+                  {% include "includes/empty_state.html" with icon="check" titel="Alle Beiträge bezahlt" text="Für dieses Jahr ist kein Beitrag offen – sehr gut." small=True %}
+                </td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
-    {% else %}
-    <div class="card">
-      <div class="card-head">
-        <h2>Meine offenen Aufgaben</h2>
-        <a class="link-btn" href="{% url 'teams:match_list' %}">Spielplan</a>
+      <div class="panel-footer">
+        <span><span class="status-dot amber"></span>{{ uebersicht.offen|floatformat:2 }} € insgesamt offen</span>
+        <a class="text-button" href="{% url 'dues:overview' %}">
+          Beiträge verwalten <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-right"></use></svg>
+        </a>
       </div>
-      <div class="table-wrap">
+    </section>
+    {% else %}
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Meine offenen Aufgaben <span class="count-badge amber-count">{{ offene_aufgaben|length }}</span></h2>
+          <p>Aufstellung oder Ergebnis noch offen.</p>
+        </div>
+        <a class="text-button" href="{% url 'teams:match_list' %}">
+          Spielplan <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </div>
+      <div class="table-scroll">
         <table class="data">
-          <thead><tr><th>Datum</th><th>Begegnung</th><th>Wettbewerb</th><th class="right">Status</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Begegnung</th>
+              <th>Wettbewerb</th>
+              <th class="amount">Status</th>
+            </tr>
+          </thead>
           <tbody>
             {% for spiel in offene_aufgaben %}
               <tr>
-                <td class="nowrap">{{ spiel.datum|date:"d.m.Y" }}{% if spiel.uhrzeit %}<div class="cell-sub">{{ spiel.uhrzeit|time:"H:i" }}</div>{% endif %}</td>
+                <td class="nowrap">{{ spiel.datum|date:"d.m.Y" }}{% if spiel.uhrzeit %}<div class="cell-sub">{{ spiel.uhrzeit|time:"H:i" }} Uhr</div>{% endif %}</td>
                 <td class="cell-main"><a href="{% url 'teams:match_detail' spiel.pk %}">{{ spiel.team.name }} {{ spiel.heimspiel|yesno:"–,bei" }} {{ spiel.gegner }}</a></td>
                 <td>{{ spiel.runde|default:spiel.team.liga }}</td>
-                <td class="right"><span class="badge badge-{{ spiel.status }}">{{ spiel.get_status_display }}</span></td>
+                <td class="amount"><span class="badge badge-{{ spiel.status }}">{{ spiel.get_status_display }}</span></td>
               </tr>
             {% empty %}
-              <tr><td colspan="4">{% include "includes/empty_state.html" with icon="check" titel="Nichts offen" text="Für deine Mannschaften steht nichts an." small=True %}</td></tr>
+              <tr>
+                <td colspan="4">
+                  {% include "includes/empty_state.html" with icon="check" titel="Nichts offen" text="Für deine Mannschaften steht nichts an." small=True %}
+                </td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
     {% endif %}
 
-    <div class="card">
-      <div class="card-head">
-        <h2>Nächste Termine</h2>
-        <a class="link-btn" href="{% url 'teams:match_list' %}">Spielplan</a>
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Nächste Termine</h2>
+          <p>Was im Verein als Nächstes ansteht.</p>
+        </div>
+        <a class="text-button" href="{% url 'teams:match_list' %}">
+          Zum Spielplan <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-up-right"></use></svg>
+        </a>
       </div>
-      <div class="table-wrap">
-        <table class="data">
-          <thead><tr><th>Datum</th><th>Begegnung</th><th>Wettbewerb</th><th class="right">Status</th></tr></thead>
-          <tbody>
-            {% for spiel in kommende_spiele %}
-              <tr>
-                <td class="nowrap">{{ spiel.datum|date:"d.m.Y" }}{% if spiel.uhrzeit %}<div class="cell-sub">{{ spiel.uhrzeit|time:"H:i" }}</div>{% endif %}</td>
-                <td class="cell-main">{{ spiel.team.name }} {{ spiel.heimspiel|yesno:"–,bei" }} {{ spiel.gegner }}</td>
-                <td>{{ spiel.runde|default:spiel.team.liga }}</td>
-                <td class="right"><span class="badge badge-{{ spiel.status }}">{{ spiel.get_status_display }}</span></td>
-              </tr>
-            {% endfor %}
-            {% for turnier in kommende_turniere %}
-              <tr>
-                <td class="nowrap">{{ turnier.datum|date:"d.m.Y" }}</td>
-                <td class="cell-main">{{ turnier.name }}</td>
-                <td>Turnier · {{ turnier.teilnehmer_anzahl }} Anmeldungen</td>
-                <td class="right"><span class="badge badge-{{ turnier.status }}">{{ turnier.get_status_display }}</span></td>
-              </tr>
-            {% endfor %}
-            {% if not kommende_spiele and not kommende_turniere %}
-              <tr><td colspan="4">{% include "includes/empty_state.html" with icon="calendar" titel="Keine Termine in der nächsten Zeit" text="Ligaspiele und Turniere erscheinen hier automatisch." small=True %}</td></tr>
-            {% endif %}
-          </tbody>
-        </table>
+      <div class="event-list">
+        {% for spiel in kommende_spiele %}
+          <a class="event-row" href="{% url 'teams:match_detail' spiel.pk %}">
+            <span class="date-tile">
+              <small>{{ spiel.datum|date:"M"|upper }}</small>
+              <strong>{{ spiel.datum|date:"j" }}</strong>
+            </span>
+            <span class="event-row-content">
+              <strong>{{ spiel.team.name }} {{ spiel.heimspiel|yesno:"–,bei" }} {{ spiel.gegner }}</strong>
+              <span class="event-meta">
+                <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"></use></svg>{{ spiel.uhrzeit|time:"H:i"|default:"19:00" }} Uhr</span>
+                <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-pin"></use></svg>{{ spiel.heimspiel|yesno:"Vereinsheim,Auswärts" }}</span>
+                <span>{{ spiel.runde|default:spiel.team.liga }}</span>
+              </span>
+            </span>
+            <span class="badge {% if spiel.heimspiel %}badge-green{% else %}badge-neutral{% endif %}">
+              {{ spiel.heimspiel|yesno:"Heimspiel,Auswärts" }}
+            </span>
+            <svg class="icon icon-sm event-chevron"><use href="#i-arrow-right"></use></svg>
+          </a>
+        {% endfor %}
+        {% for turnier in kommende_turniere %}
+          <a class="event-row" href="{% url 'tournaments:public_detail' turnier.pk %}">
+            <span class="date-tile">
+              <small>{{ turnier.datum|date:"M"|upper }}</small>
+              <strong>{{ turnier.datum|date:"j" }}</strong>
+            </span>
+            <span class="event-row-content">
+              <strong>{{ turnier.name }}</strong>
+              <span class="event-meta">
+                <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trophy"></use></svg>Turnier</span>
+                <span>{{ turnier.teilnehmer_anzahl }} Anmeldungen</span>
+              </span>
+            </span>
+            <span class="badge badge-amber">{{ turnier.get_status_display }}</span>
+            <svg class="icon icon-sm event-chevron"><use href="#i-arrow-right"></use></svg>
+          </a>
+        {% endfor %}
+        {% if not kommende_spiele and not kommende_turniere %}
+          <div style="padding:10px">
+            {% include "includes/empty_state.html" with icon="calendar" titel="Keine Termine in der nächsten Zeit" text="Ligaspiele und Turniere erscheinen hier automatisch." small=True %}
+          </div>
+        {% endif %}
       </div>
+    </section>
+
+    <div class="dashboard-note">
+      <svg class="icon icon-sm" style="color:#668448;width:15px;height:15px" aria-hidden="true"><use href="#i-check"></use></svg>
+      <span>Alles an einem Ort. Damit der nächste Zug wieder am Brett stattfindet.</span>
     </div>
   </div>
 
-  <div>
+  <aside class="dashboard-side-column">
     {% if rolle == "admin" %}
-    <div class="card">
-      <div class="card-head">
-        <h2>Zu erledigen</h2>
-        <a class="link-btn" href="{% url 'members:change_request_list' %}">Wünsche</a>
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Zu erledigen <span class="count-badge amber-count">{{ offene_wuensche|length }}</span></h2>
+          <p>Deine Aufgaben · Ein kurzer Blick von dir genügt.</p>
+        </div>
       </div>
-      <ul class="list">
+      <div class="task-list">
         {% for wunsch in offene_wuensche %}
-          <li>
-            <span class="avatar-sm">{{ wunsch.member.nachname|slice:":1" }}</span>
-            <span class="grow">
-              <span class="title">{{ wunsch.member }}</span>
-              <span class="meta">{{ wunsch.get_feld_display }} → „{{ wunsch.wunschwert }}“</span>
+          <a class="task-row" href="{% url 'members:change_request_list' %}">
+            <span class="task-icon {% if wunsch.feld == 'email' %}email{% elif wunsch.feld == 'adresse' %}address{% else %}phone{% endif %}">
+              <svg class="icon icon-sm">
+                {% if wunsch.feld == 'email' %}
+                  <use href="#i-mail"></use>
+                {% elif wunsch.feld == 'adresse' %}
+                  <use href="#i-pin"></use>
+                {% else %}
+                  <use href="#i-phone"></use>
+                {% endif %}
+              </svg>
             </span>
-            <a class="btn small secondary" href="{% url 'members:change_request_list' %}">Prüfen</a>
-          </li>
+            <span>
+              <strong>{{ wunsch.get_feld_display }} ändern</strong>
+              <small>{{ wunsch.member }} <span class="middle-dot">·</span> {{ wunsch.get_feld_display }}: „{{ wunsch.wunschwert }}“</small>
+            </span>
+            <svg class="icon icon-sm" style="color:#a6af9b"><use href="#i-arrow-right"></use></svg>
+          </a>
         {% empty %}
-          <li>{% include "includes/empty_state.html" with icon="check" titel="Keine offenen Wünsche" text="Alle Änderungswünsche sind bearbeitet." small=True %}</li>
+          <div class="empty-state small" style="padding:20px 10px">
+            <span class="empty-icon"><svg class="icon" style="color:#92a976"><use href="#i-check"></use></svg></span>
+            <h3>Alles auf dem neuesten Stand.</h3>
+            <p>Du hast alle Anfragen erledigt.</p>
+          </div>
         {% endfor %}
-      </ul>
-    </div>
-
-    <div class="card">
-      <div class="card-head"><h2>Letzte Aktivitäten</h2></div>
-      <div class="card-body">
-        <ul class="timeline">
-          {% for eintrag in letzte_aktivitaeten %}
-            <li>
-              <div class="when">{{ eintrag.zeitpunkt|date:"d.m.Y H:i" }} · {{ eintrag.benutzer.get_username|default:"System" }}</div>
-              <div>{{ eintrag.aktion }}{% if eintrag.member %}: {{ eintrag.member }}{% endif %}</div>
-              {% if eintrag.feld %}<div class="cell-sub">{{ eintrag.feld }}: „{{ eintrag.alt_wert }}“ → „{{ eintrag.neu_wert }}“</div>{% endif %}
-            </li>
-          {% empty %}
-            <li><div class="muted">Noch keine protokollierten Aktionen.</div></li>
-          {% endfor %}
-        </ul>
       </div>
-    </div>
+      <a class="full-panel-link" href="{% url 'members:change_request_list' %}">
+        Alle Anfragen ansehen <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-right"></use></svg>
+      </a>
+    </section>
 
-    <div class="card">
-      <div class="card-head"><h2>Neue Mitglieder</h2></div>
-      <ul class="list">
+    <a class="club-evening-card" href="{% url 'core:verein' %}">
+      <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img">
+      <span class="photo-shade"></span>
+      <div class="evening-content">
+        <span class="evening-eyebrow"><span></span>UNSER VEREINSABEND</span>
+        <strong>Gute Züge.<br>Gute Gesellschaft.</strong>
+        <span class="evening-date">
+          <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-clock"></use></svg>
+          Freitags ab 19:00 Uhr · Vereinsheim
+        </span>
+        <span class="evening-link">Dabei sein <svg class="icon icon-sm" style="width:15px;height:15px"><use href="#i-arrow-up-right"></use></svg></span>
+      </div>
+    </a>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Letzte Aktivitäten</h2>
+        <a class="icon-button small" href="{% url 'core:audit_list' %}" title="Alle Aktivitäten" aria-label="Alle Aktivitäten">
+          <svg class="icon icon-sm"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+      </div>
+      <div class="activity-list">
+        {% for eintrag in letzte_aktivitaeten|slice:":5" %}
+          <div class="activity-item">
+            <span class="activity-symbol">
+              <svg class="icon icon-sm"><use href="#i-shield"></use></svg>
+            </span>
+            <div>
+              <strong>{{ eintrag.aktion }}</strong>
+              <p>{% if eintrag.member %}{{ eintrag.member }}{% if eintrag.feld %} · {{ eintrag.feld }}{% endif %}{% else %}{{ eintrag.benutzer.get_username|default:"System" }}{% endif %}</p>
+              <small>{{ eintrag.zeitpunkt|date:"d.m.Y H:i" }} Uhr</small>
+            </div>
+          </div>
+        {% empty %}
+          <div class="muted" style="padding:15px">Noch keine protokollierten Aktionen.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Neue Mitglieder</h2>
+      </div>
+      <div class="task-list">
         {% for neu in neue_mitglieder %}
-          <li>
-            <span class="avatar-sm gold">{{ neu.nachname|slice:":1" }}</span>
-            <span class="grow">
-              <span class="title"><a href="{% url 'members:member_detail' neu.pk %}">{{ neu }}</a></span>
-              <span class="meta">Eintritt {{ neu.eintrittsdatum|date:"d.m.Y" }}{% if neu.beitragskategorie %} · {{ neu.beitragskategorie.name }}{% endif %}</span>
+          <a class="task-row" href="{% url 'members:member_detail' neu.pk %}">
+            <span class="avatar avatar-sm avatar-sand">{{ neu.nachname|slice:":1" }}</span>
+            <span>
+              <strong>{{ neu }}</strong>
+              <small>Eintritt {{ neu.eintrittsdatum|date:"d.m.Y" }}{% if neu.beitragskategorie %} · {{ neu.beitragskategorie.name }}{% endif %}</small>
             </span>
-          </li>
+            <svg class="icon icon-sm" style="color:#a6af9b"><use href="#i-arrow-right"></use></svg>
+          </a>
         {% empty %}
-          <li>{% include "includes/empty_state.html" with icon="users" titel="Keine Neueintritte" text="Neue Mitglieder der letzten sechs Monate erscheinen hier." small=True %}</li>
+          <div class="muted" style="padding:15px">Keine Neueintritte in den letzten sechs Monaten.</div>
         {% endfor %}
-      </ul>
-    </div>
+      </div>
+    </section>
     {% else %}
-    <div class="card">
-      <div class="card-head"><h2>Meine Mannschaften</h2></div>
-      <ul class="list">
+    <a class="club-evening-card" href="{% url 'core:verein' %}">
+      <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img">
+      <span class="photo-shade"></span>
+      <div class="evening-content">
+        <span class="evening-eyebrow"><span></span>UNSER VEREINSABEND</span>
+        <strong>Gute Züge.<br>Gute Gesellschaft.</strong>
+        <span class="evening-date">
+          <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-clock"></use></svg>
+          Freitags ab 19:00 Uhr · Vereinsheim
+        </span>
+        <span class="evening-link">Dabei sein <svg class="icon icon-sm" style="width:15px;height:15px"><use href="#i-arrow-up-right"></use></svg></span>
+      </div>
+    </a>
+
+    <section class="panel">
+      <div class="panel-heading"><h2>Meine Mannschaften</h2></div>
+      <div class="task-list">
         {% for mannschaft in eigene_mannschaften %}
-          <li>
-            <span class="avatar-sm gold">{{ mannschaft.name|slice:":1" }}</span>
-            <span class="grow">
-              <span class="title"><a href="{% url 'teams:team_detail' mannschaft.pk %}">{{ mannschaft.name }}</a></span>
-              <span class="meta">{{ mannschaft.liga|default:"ohne Liga" }} · {{ mannschaft.brettanzahl }} Bretter</span>
+          <a class="task-row" href="{% url 'teams:team_detail' mannschaft.pk %}">
+            <span class="avatar avatar-sm avatar-sand">{{ mannschaft.name|slice:":1" }}</span>
+            <span>
+              <strong>{{ mannschaft.name }}</strong>
+              <small>{{ mannschaft.liga|default:"ohne Liga" }} · {{ mannschaft.brettanzahl }} Bretter</small>
             </span>
-          </li>
+            <svg class="icon icon-sm" style="color:#a6af9b"><use href="#i-arrow-right"></use></svg>
+          </a>
         {% empty %}
-          <li>{% include "includes/empty_state.html" with icon="flag" titel="Keine Mannschaft" text="Du bist aktuell kein Kapitän einer Mannschaft." small=True %}</li>
+          <div class="muted" style="padding:15px">Du bist aktuell kein Kapitän einer Mannschaft.</div>
         {% endfor %}
-      </ul>
-    </div>
+      </div>
+    </section>
     {% endif %}
-  </div>
+  </aside>
 </div>
+
+<footer class="page-footer">
+  <span>Mit Köpfchen verwalten. Mit Freude spielen.</span>
+  <span>{{ club_name|default:club_short }} <span class="footer-dot">·</span> <a href="{% url 'core:impressum' %}">Hilfe &amp; Rechtliches</a></span>
+</footer>
 {% endblock %}

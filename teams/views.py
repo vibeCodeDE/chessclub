@@ -1,10 +1,12 @@
-"""Spielbetrieb: Mannschaften, Ligaspiele, Aufstellungen, Tabellen."""
+"""Spielbetrieb: Mannschaften, Ligaspiele, Aufstellungen, Tabellen, iCal-Feeds."""
 
 from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -13,8 +15,8 @@ from core.ui import fehler, is_ajax, ok, paginate
 from members.models import Member
 
 from .forms import LineupBoardForm, MatchForm, TeamForm
-from .models import LeagueMatch, LineupEntry, Team
-from .services import tabelle
+from .models import LeagueCalendarFeed, LeagueMatch, LineupEntry, Team
+from .services import generate_ical_feed, tabelle
 
 TEAM_ROLES = (ADMIN_GROUP, KAPITAEN_GROUP)
 
@@ -96,6 +98,9 @@ def team_delete(request, pk):
 def team_detail(request, pk):
     team = get_object_or_404(Team.objects.select_related("kapitaen"), pk=pk)
     matches = team.matches.all().order_by("-datum")
+    feed_url = request.build_absolute_uri(
+        reverse("teams:ical_team", kwargs={"pk": team.pk, "token": team.ical_token})
+    )
     kontext = {
         "team": team,
         "matches": matches,
@@ -105,6 +110,7 @@ def team_detail(request, pk):
         "aufstellungen": LineupEntry.objects.filter(match__team=team)
         .select_related("member", "match")
         .order_by("-match__datum")[:12],
+        "feed_url": feed_url,
     }
     return render(request, "teams/team_detail.html", kontext)
 
@@ -123,6 +129,9 @@ def match_list(request):
         matches = matches.filter(datum__gte=timezone.localdate())
     elif zeitraum == "vergangen":
         matches = matches.filter(datum__lt=timezone.localdate())
+    gesamt_feed_url = request.build_absolute_uri(
+        reverse("teams:ical_gesamt", kwargs={"token": LeagueCalendarFeed.get_token()})
+    )
     kontext = {
         "matches": paginate(matches, request, per_page=25),
         "teams": Team.objects.all(),
@@ -130,6 +139,7 @@ def match_list(request):
         "status": status,
         "zeitraum": zeitraum,
         "status_choices": LeagueMatch.Status.choices,
+        "gesamt_feed_url": gesamt_feed_url,
     }
     return render(request, "teams/match_list.html", kontext)
 
@@ -290,3 +300,49 @@ def meine_aufstellungen(request):
         "teams/meine_aufstellungen.html",
         {"member": member, "eintraege": eintraege},
     )
+
+
+def ical_feed_team(request, pk, token):
+    """Abonnierbarer Kalender-Feed für eine Mannschaft (PRD S4.6). Ohne Login, nur mit Token."""
+    team = get_object_or_404(Team, pk=pk, ical_token=token)
+    matches = list(team.matches.select_related("team").order_by("datum", "uhrzeit"))
+    feed_content = generate_ical_feed(matches, kalender_name=f"{team.name} – Ligaspiele")
+    response = HttpResponse(feed_content, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = f'inline; filename="ligaspiele_{team.pk}.ics"'
+    return response
+
+
+def ical_feed_gesamt(request, token):
+    """Abonnierbarer Kalender-Feed für alle Ligaspiele (PRD S4.6). Ohne Login, nur mit Token."""
+    feed = LeagueCalendarFeed.objects.filter(name="gesamt", token=token).first()
+    if not feed or not token:
+        raise Http404("Ungültiger Kalender-Token.")
+    matches = list(LeagueMatch.objects.select_related("team").order_by("datum", "uhrzeit"))
+    feed_content = generate_ical_feed(matches, kalender_name="Alle Ligaspiele")
+    response = HttpResponse(feed_content, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = 'inline; filename="ligaspiele_gesamt.ics"'
+    return response
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def team_renew_ical_token(request, pk):
+    """Erneuert das Kalender-Token einer Mannschaft (PRD S4.6)."""
+    team = get_object_or_404(Team, pk=pk)
+    team.renew_ical_token()
+    messages.success(
+        request, f"Kalender-Token für „{team.name}“ wurde erneuert. Alte Abonnements sind ungültig."
+    )
+    return redirect("teams:team_detail", pk=team.pk)
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def gesamt_renew_ical_token(request):
+    """Erneuert das globale Kalender-Token aller Ligaspiele (PRD S4.6)."""
+    LeagueCalendarFeed.renew_token()
+    messages.success(
+        request, "Globaler Kalender-Token wurde erneuert. Alte Abonnements sind ungültig."
+    )
+    return redirect("teams:match_list")
+

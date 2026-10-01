@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import LeagueMatch, LineupEntry, Team
+from .models import LeagueCalendarFeed, LeagueMatch, LineupEntry, Team
 
 
 class LineupInline(admin.TabularInline):
@@ -11,9 +11,10 @@ class LineupInline(admin.TabularInline):
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
-    list_display = ("name", "liga", "altersklasse", "kapitaen", "aktiv")
+    list_display = ("name", "liga", "altersklasse", "kapitaen", "aktiv", "ical_token")
     list_filter = ("altersklasse", "aktiv")
     search_fields = ("name", "liga")
+    readonly_fields = ("ical_token",)
 
 
 @admin.register(LeagueMatch)
@@ -22,3 +23,10 @@ class LeagueMatchAdmin(admin.ModelAdmin):
     list_filter = ("team", "status")
     search_fields = ("gegner",)
     inlines = [LineupInline]
+
+
+@admin.register(LeagueCalendarFeed)
+class LeagueCalendarFeedAdmin(admin.ModelAdmin):
+    list_display = ("name", "token", "aktualisiert_am")
+    readonly_fields = ("token", "aktualisiert_am")
+

@@ -50,6 +50,7 @@ NAV_STRUKTUR = [
         "Finanzen",
         [
             ("dues:overview", "Beiträge", "wallet", {"admin"}, "offene_posten"),
+            ("dues:kassenbericht", "Kassenbericht Beiträge", "chart", {"admin"}, None),
             ("dues:category_list", "Beitragskategorien", "tag", {"admin"}, None),
             ("dues:mandate_list", "SEPA-Mandate", "card", {"admin"}, None),
             ("dues:dunning_list", "Mahnwesen", "alert", {"admin"}, "mahnungen"),

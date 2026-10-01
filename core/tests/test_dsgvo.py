@@ -130,7 +130,65 @@ class DatenauskunftTests(TestCase):
         group, _ = Group.objects.get_or_create(name="mitglied")
         user.groups.add(group)
         self.client.force_login(user)
-        self.assertEqual(self.client.get(f"/mitglieder/{self.member.pk}/auskunft/").status_code, 403)
+
+        for endpunkt in [
+            f"/mitglieder/{self.member.pk}/auskunft/",
+            f"/mitglieder/{self.member.pk}/auskunft.pdf",
+            f"/mitglieder/{self.member.pk}/auskunft.json",
+        ]:
+            with self.subTest(endpunkt=endpunkt):
+                AuditLog.objects.all().delete()
+                response = self.client.get(endpunkt)
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(AuditLog.objects.count(), 0)
+
+    def test_kapitaen_erhaelt_403_auf_auskunft(self):
+        user = User.objects.create_user("k1", password="x")
+        group, _ = Group.objects.get_or_create(name="kapitaen")
+        user.groups.add(group)
+        self.client.force_login(user)
+
+        for endpunkt in [
+            f"/mitglieder/{self.member.pk}/auskunft/",
+            f"/mitglieder/{self.member.pk}/auskunft.pdf",
+            f"/mitglieder/{self.member.pk}/auskunft.json",
+        ]:
+            with self.subTest(endpunkt=endpunkt):
+                AuditLog.objects.all().delete()
+                response = self.client.get(endpunkt)
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(AuditLog.objects.count(), 0)
+
+    def test_audit_eintraege_aufbewahrungsfrist_filterbar(self):
+        """PRD N1.5: Audit-Einträge sind nach 12 Monaten Aufbewahrungsfrist markierbar/filterbar."""
+        from django.utils import timezone
+
+        alt_zeitpunkt = timezone.now() - timedelta(days=370)
+        frisch_zeitpunkt = timezone.now() - timedelta(days=30)
+
+        eintrag_alt = AuditLog.objects.create(
+            benutzer=self.admin,
+            aktion="Datenauskunft erstellt",
+            text="Auskunft alt",
+            member=self.member,
+        )
+        AuditLog.objects.filter(pk=eintrag_alt.pk).update(zeitpunkt=alt_zeitpunkt)
+        eintrag_alt.refresh_from_db()
+
+        eintrag_frisch = AuditLog.objects.create(
+            benutzer=self.admin,
+            aktion="Datenauskunft erstellt",
+            text="Auskunft frisch",
+            member=self.member,
+        )
+        AuditLog.objects.filter(pk=eintrag_frisch.pk).update(zeitpunkt=frisch_zeitpunkt)
+        eintrag_frisch.refresh_from_db()
+
+        abgelaufen = list(AuditLog.objects.aufbewahrungsfrist_abgelaufen(tage=365))
+        self.assertIn(eintrag_alt, abgelaufen)
+        self.assertNotIn(eintrag_frisch, abgelaufen)
+        self.assertTrue(eintrag_alt.aufbewahrungsfrist_abgelaufen)
+        self.assertFalse(eintrag_frisch.aufbewahrungsfrist_abgelaufen)
 
 
 class AnonymisierungTests(TestCase):

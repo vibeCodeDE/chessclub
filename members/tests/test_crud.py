@@ -42,7 +42,7 @@ class MemberCrudTests(TestCase):
     def setUp(self):
         self.admin = make_admin()
         self.client.force_login(self.admin)
-        self.kategorie = FeeCategory.objects.create(name="Erwachsene", betrag="90.00")
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene")
 
     def test_create_legt_mitglied_und_audit_eintrag_an(self):
         response = self.client.post("/mitglieder/neu/", form_daten())

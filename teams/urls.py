@@ -19,4 +19,9 @@ urlpatterns = [
     path("spiele/<int:pk>/aufstellung/", views.lineup_save, name="lineup_save"),
     path("ligen/", views.tabelle_list, name="tabelle_list"),
     path("meine-einsaetze/", views.meine_aufstellungen, name="meine_aufstellungen"),
+    path("ical/gesamt/token-erneuern/", views.gesamt_renew_ical_token, name="gesamt_renew_ical_token"),
+    path("ical/gesamt/<str:token>/", views.ical_feed_gesamt, name="ical_gesamt"),
+    path("mannschaften/<int:pk>/ical-token-erneuern/", views.team_renew_ical_token, name="team_renew_ical_token"),
+    path("mannschaften/<int:pk>/ical/<str:token>/", views.ical_feed_team, name="ical_team"),
 ]
+

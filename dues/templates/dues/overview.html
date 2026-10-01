@@ -11,6 +11,9 @@
     <a class="btn secondary" href="{% url 'dues:export' %}?jahr={{ jahr }}">
       <svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV {{ jahr }}
     </a>
+    <a class="btn secondary" href="{% url 'dues:kassenbericht' %}?jahr={{ jahr }}">
+      <svg class="icon icon-sm"><use href="#i-chart"></use></svg> Kassenbericht
+    </a>
     <a class="btn secondary" href="{% url 'dues:dunning_list' %}">
       <svg class="icon icon-sm"><use href="#i-alert"></use></svg> Mahnwesen
     </a>

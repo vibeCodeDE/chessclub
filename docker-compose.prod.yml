@@ -1,4 +1,4 @@
-# Produktivbetrieb: App + PostgreSQL + nächtliches Backup (PRD N2.1/T21)
+# Produktivbetrieb: App + PostgreSQL + Caddy TLS-Proxy + nächtliches verschlüsseltes Backup (PRD N1.1, N2.1, N2.4 / ADR-009 / T24)
 #
 # Start:  docker compose -f docker-compose.prod.yml up -d --build
 # Wichtig: Vor dem ersten Start .env.prod anlegen (siehe docs/deployment.md).
@@ -34,31 +34,49 @@ services:
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60"
-    ports:
-      - "127.0.0.1:8000:8000"          # nur lokal – davor gehört der TLS-Reverse-Proxy
     volumes:
       - static_files:/app/staticfiles
 
-  # Nächtliches Datenbank-Backup mit 30-Tage-Aufbewahrung (PRD N2.1)
+  # TLS Reverse Proxy (Caddy, ADR-009)
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - static_files:/app/staticfiles:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  # Nächtliches verschlüsseltes Datenbank-Backup mit 30-Tage-Aufbewahrung (PRD N2.1 / ADR-009)
   backup:
     image: postgres:16-alpine
     restart: unless-stopped
     env_file: [.env.prod]
+    environment:
+      POSTGRES_HOST: db
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./backups:/backups
+      - ./tools:/tools:ro
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "while true; do
-         ts=$$(date +%Y-%m-%d_%H%M);
-         pg_dump -h db -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" | gzip > /backups/schachverein_$$ts.sql.gz &&
-         echo \"Backup $$ts erstellt\";
-         find /backups -name 'schachverein_*.sql.gz' -mtime +30 -delete;
+      "apk add --no-cache openssl >/dev/null 2>&1 || true;
+       while true; do
+         /tools/backup.sh;
          sleep 86400;
        done"
 
 volumes:
   db_data:
   static_files:
+  caddy_data:
+  caddy_config:

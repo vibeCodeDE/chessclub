@@ -74,23 +74,69 @@ class KassenbuchTests(TestCase):
         self.assertNotIn("Alt", inhalt)
         self.assertIn("Saldo", inhalt)
 
-    def test_loeschen_ueber_ajax_storniert_statt_hard_delete(self):
+    def test_loeschen_route_existiert_nicht_mehr_404(self):
         buchung = CashEntry.objects.create(
             art="einnahme", kategorie="sonstiges", betrag="5.00",
             datum=date(2026, 7, 1), beschreibung="Kleinigkeit",
         )
+        response = self.client.post(f"/kasse/{buchung.pk}/loeschen/")
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(CashEntry.objects.filter(pk=buchung.pk).exists())
+        self.assertFalse(buchung.ist_storniert)
+
+    def test_storno_ohne_begruendung_wird_abgelehnt(self):
+        buchung = CashEntry.objects.create(
+            art="einnahme", kategorie="sonstiges", betrag="15.00",
+            datum=date(2026, 7, 1), beschreibung="Spende",
+        )
+        # Über Route ohne Grund
         response = self.client.post(
-            f"/kasse/{buchung.pk}/loeschen/", HTTP_ACCEPT="application/json"
+            f"/kasse/{buchung.pk}/storno/", {"grund": "   "}, HTTP_ACCEPT="application/json"
+        )
+        daten = json.loads(response.content)
+        self.assertFalse(daten["ok"])
+        self.assertIn("Begründung", daten["message"])
+        self.assertFalse(buchung.ist_storniert)
+
+        # Über Python-Funktion ohne Grund
+        with self.assertRaises(ValidationError) as ctx:
+            storniere_kassenbuchung(buchung, benutzer=self.admin, grund="")
+        self.assertIn("Begründung", str(ctx.exception))
+
+        # Über Python-Funktion ohne Benutzer (Actor)
+        with self.assertRaises(ValidationError) as ctx:
+            storniere_kassenbuchung(buchung, benutzer=None, grund="Fehlbuchung")
+        self.assertIn("Erfasser", str(ctx.exception))
+
+    def test_storno_saldo_nach_storno_wieder_wie_vorher(self):
+        saldo_vorher = jahresabschluss(2026)["saldo"]
+        buchung = CashEntry.objects.create(
+            art="ausgabe", kategorie="material", betrag="45.00",
+            datum=date(2026, 7, 10), beschreibung="Schachuhr",
+        )
+        self.assertEqual(jahresabschluss(2026)["saldo"], saldo_vorher - Decimal("45.00"))
+
+        response = self.client.post(
+            f"/kasse/{buchung.pk}/storno/", {"grund": "Doppelkauf"}, HTTP_ACCEPT="application/json"
         )
         daten = json.loads(response.content)
         self.assertTrue(daten["ok"])
-        self.assertTrue(CashEntry.objects.filter(pk=buchung.pk).exists(), "Originalbuchung darf nicht gelöscht werden")
+        self.assertTrue(CashEntry.objects.filter(pk=buchung.pk).exists(), "Originalbuchung bleibt erhalten")
         self.assertTrue(buchung.ist_storniert)
+
         gegen = CashEntry.objects.get(storno_von=buchung)
-        self.assertEqual(gegen.betrag, Decimal("-5.00"))
+        self.assertEqual(gegen.betrag, Decimal("-45.00"))
         self.assertTrue(gegen.ist_storno)
-        self.assertEqual(jahresabschluss(2026)["saldo"], Decimal("0.00"))
-        self.assertTrue(AuditLog.objects.filter(aktion="Kassenbuchung storniert").exists())
+        self.assertEqual(gegen.erfasst_von, self.admin)
+        self.assertIn("Doppelkauf", gegen.beschreibung)
+
+        # Saldo ist wieder identisch zu vorher
+        self.assertEqual(jahresabschluss(2026)["saldo"], saldo_vorher)
+
+        # AuditLog enthält Eintrag mit Actor und Grund
+        audit = AuditLog.objects.filter(aktion="Kassenbuchung storniert").latest("zeitpunkt")
+        self.assertEqual(audit.benutzer, self.admin)
+        self.assertIn("Doppelkauf", audit.text)
 
     def test_storno_route_und_doppelstorno_schutz(self):
         buchung = CashEntry.objects.create(
@@ -106,19 +152,19 @@ class KassenbuchTests(TestCase):
 
         # Zweites Storno auf dieselbe Buchung wird abgewiesen
         zweiter = self.client.post(
-            f"/kasse/{buchung.pk}/storno/", HTTP_ACCEPT="application/json"
+            f"/kasse/{buchung.pk}/storno/", {"grund": "Nochmal"}, HTTP_ACCEPT="application/json"
         )
         self.assertFalse(json.loads(zweiter.content)["ok"])
         # Storno auf die Gegenbuchung selbst wird ebenfalls abgewiesen
         with self.assertRaises(ValidationError):
-            storniere_kassenbuchung(gegen, benutzer=self.admin)
+            storniere_kassenbuchung(gegen, benutzer=self.admin, grund="Storno vom Storno")
 
     def test_stornierte_buchung_nicht_bearbeitbar(self):
         buchung = CashEntry.objects.create(
             art="einnahme", kategorie="sponsoring", betrag="100.00",
             datum=date(2026, 6, 1), beschreibung="Spende",
         )
-        storniere_kassenbuchung(buchung, benutzer=self.admin)
+        storniere_kassenbuchung(buchung, benutzer=self.admin, grund="Korrektur")
         response = self.client.post(
             f"/kasse/{buchung.pk}/bearbeiten/",
             {"art": "einnahme", "kategorie": "sponsoring", "betrag": "200.00",
@@ -139,7 +185,7 @@ class KassenbuchTests(TestCase):
         post_resp = self.client.post(
             f"/kasse/{buchung.pk}/bearbeiten/",
             {"art": "ausgabe", "kategorie": "material", "betrag": "25.00",
-             "datum": "2026-05-01", "beschreibung": "Neu", "belegnummer": "B-1"},
+              "datum": "2026-05-01", "beschreibung": "Neu", "belegnummer": "B-1"},
         )
         self.assertRedirects(post_resp, "/kasse/")
         buchung.refresh_from_db()
@@ -156,11 +202,19 @@ class KassenbuchTests(TestCase):
         model_admin = CashEntryAdmin(CashEntry, AdminSite())
         self.assertFalse(model_admin.has_delete_permission(None, buchung))
 
-        mitglied = User.objects.create_user("m1", password="x")
-        g, _ = Group.objects.get_or_create(name="mitglied")
-        mitglied.groups.add(g)
-        self.client.force_login(mitglied)
-        self.assertEqual(self.client.post(f"/kasse/{buchung.pk}/storno/").status_code, 403)
+        for role_name in ("mitglied", "kapitaen"):
+            user = User.objects.create_user(f"user_{role_name}", password="x")
+            g, _ = Group.objects.get_or_create(name=role_name)
+            user.groups.add(g)
+            self.client.force_login(user)
+
+            self.assertEqual(self.client.get("/kasse/").status_code, 403)
+            self.assertEqual(self.client.get("/kasse/neu/").status_code, 403)
+            self.assertEqual(self.client.get(f"/kasse/{buchung.pk}/bearbeiten/").status_code, 403)
+            self.assertEqual(self.client.post(f"/kasse/{buchung.pk}/storno/", {"grund": "x"}).status_code, 403)
+            self.assertEqual(self.client.get("/kasse/jahresabschluss/").status_code, 403)
+            self.assertEqual(self.client.get("/kasse/export.csv").status_code, 403)
+
         self.assertFalse(buchung.ist_storniert)
 
     def test_abschlussseite_zeigt_kategorien(self):

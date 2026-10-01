@@ -3,6 +3,7 @@ from datetime import date
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
+from core.models import AuditLog
 from members.models import Member
 
 
@@ -78,6 +79,17 @@ class MemberListTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Meier")
 
+    def test_list_erzeugt_keinen_audit_eintrag(self):
+        """PRD N1.5: Listenansichten werden nicht als Zugriff protokolliert."""
+        make_member("Anna", "Meier")
+        make_member("Bernd", "Schmidt")
+        AuditLog.objects.all().delete()
+        response = self.client.get("/mitglieder/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            AuditLog.objects.filter(aktion="Mitgliedsakte eingesehen").count(), 0
+        )
+
     def test_nav_shows_members_link_for_admin(self):
         response = self.client.get("/dashboard/")
         self.assertContains(response, 'href="/mitglieder/"')
@@ -92,7 +104,7 @@ class MemberListTests(TestCase):
 
 class MemberDetailTests(TestCase):
     def setUp(self):
-        make_user("vorstand", "admin")
+        self.admin = make_user("vorstand", "admin")
         self.client.login(username="vorstand", password="x")
 
     def test_detail_requires_login(self):
@@ -103,12 +115,38 @@ class MemberDetailTests(TestCase):
         self.assertIn("/anmelden/", response.url)
 
     def test_detail_is_forbidden_for_plain_member(self):
+        """Negativtest: Rolle 'mitglied' darf Detailseite nicht öffnen (403), kein Audit-Log."""
         member = make_member("Anna", "Meier")
         self.client.logout()
         make_user("p1", "mitglied")
         self.client.login(username="p1", password="x")
+        AuditLog.objects.all().delete()
         response = self.client.get(f"/mitglieder/{member.pk}/")
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(AuditLog.objects.count(), 0)
+
+    def test_detail_is_forbidden_for_kapitaen(self):
+        """Negativtest: Rolle 'kapitaen' darf Detailseite nicht öffnen (403), kein Audit-Log."""
+        member = make_member("Anna", "Meier")
+        self.client.logout()
+        make_user("k1", "kapitaen")
+        self.client.login(username="k1", password="x")
+        AuditLog.objects.all().delete()
+        response = self.client.get(f"/mitglieder/{member.pk}/")
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(AuditLog.objects.count(), 0)
+
+    def test_detail_erzeugt_audit_eintrag(self):
+        """PRD N1.5: Aufruf der Detailansicht protokolliert Wer, Wann und welches Mitglied."""
+        member = make_member("Anna", "Meier")
+        AuditLog.objects.all().delete()
+        response = self.client.get(f"/mitglieder/{member.pk}/")
+        self.assertEqual(response.status_code, 200)
+        eintrag = AuditLog.objects.filter(aktion="Mitgliedsakte eingesehen").first()
+        self.assertIsNotNone(eintrag)
+        self.assertEqual(eintrag.benutzer, self.admin)
+        self.assertEqual(eintrag.member, member)
+        self.assertIn(str(member), eintrag.text)
 
     def test_detail_shows_data_and_status_history(self):
         member = make_member("Anna", "Meier", email="anna@example.org", telefon="030 123456")

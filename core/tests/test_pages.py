@@ -1,11 +1,12 @@
 """Seiten-Smoke-Tests: alle Kernseiten laden und Rollen greifen wie geplant."""
 
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from dues.models import FeeCategory, MembershipFee
+from dues.models import FeeAmount, FeeCategory, MembershipFee
 from members.models import Member
 from teams.models import LeagueMatch, Team
 from tournaments.models import Tournament
@@ -46,7 +47,8 @@ class AdminSeitenTests(TestCase):
         self.turnier = Tournament.objects.create(
             name="Testturnier", datum=date(2026, 11, 1), status=Tournament.Status.ANMELDUNG
         )
-        self.kategorie = FeeCategory.objects.create(name="Erwachsene", betrag="90.00")
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=2026, betrag=Decimal("90.00"))
         self.fee = MembershipFee.objects.create(
             member=self.member,
             jahr=2026,

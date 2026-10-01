@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Funktionsübersicht – Schachvereins-Software</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-card: #182234;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --accent: #f59e0b;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --badge-admin: #dc2626;
+      --badge-captain: #d97706;
+      --badge-member: #2563eb;
+      --badge-guest: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #09101d 0%, #1e293b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      position: relative;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .badge-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+    }
+
+    .badge.primary { background: rgba(56, 189, 248, 0.15); color: var(--primary); border-color: rgba(56, 189, 248, 0.4); }
+    .badge.accent { background: rgba(245, 158, 11, 0.15); color: var(--accent); border-color: rgba(245, 158, 11, 0.4); }
+    .badge.success { background: rgba(34, 197, 94, 0.15); color: var(--success); border-color: rgba(34, 197, 94, 0.4); }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    /* Navigation / Quick Links */
+    .quick-nav {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .quick-nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      background: var(--surface);
+      font-size: 0.9rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .quick-nav a:hover {
+      color: #fff;
+      background: #273549;
+      border-color: var(--primary);
+    }
+
+    /* Grid & Cards */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .icon {
+      font-size: 1.3rem;
+    }
+
+    .app-tag {
+      font-family: monospace;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+    }
+
+    .feature-list {
+      list-style: none;
+    }
+
+    .feature-list li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      color: #cbd5e1;
+    }
+
+    .feature-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .endpoint-badge {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 0.75rem;
+      background: #09101d;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      color: var(--accent);
+      border: 1px solid #334155;
+      margin-left: 0.35rem;
+    }
+
+    /* Tables */
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      padding: 0.85rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #111c2e;
+      color: #f1f5f9;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .check-yes {
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    .check-no {
+      color: #64748b;
+    }
+
+    .role-pill {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+
+    .role-admin { background: rgba(220, 38, 38, 0.2); color: #f87171; }
+    .role-captain { background: rgba(217, 119, 6, 0.2); color: #fbbf24; }
+    .role-member { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+    .role-guest { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      header h1 {
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>♟️ Schachvereins-Software – Funktionsübersicht</h1>
+  <p>Lückenlose Aufstellung aller Module, Workflows, Sicherheitsfeatures und Rollenrechte der Anwendung.</p>
+  <div class="badge-bar">
+    <span class="badge primary">Django 5 &amp; PostgreSQL</span>
+    <span class="badge success">100% DSGVO-konform (kein externes CDN)</span>
+    <span class="badge accent">Zwei-Faktor-Authentifizierung (2FA)</span>
+    <span class="badge">Progressive Web App (PWA)</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <nav class="quick-nav">
+    <a href="#matrix">Berechtigungsmatrix</a>
+    <a href="#public">Öffentlicher Bereich</a>
+    <a href="#core">Core &amp; Sicherheit</a>
+    <a href="#members">Mitgliederverwaltung</a>
+    <a href="#dues">Beiträge &amp; Finanzen</a>
+    <a href="#teams">Spielbetrieb &amp; Ligen</a>
+    <a href="#tournaments">Turniere</a>
+    <a href="#comms">Kommunikation</a>
+    <a href="#cashbook">Kassenbuch</a>
+    <a href="#dsgvo">Datenschutz &amp; DSGVO</a>
+  </nav>
+
+  <!-- BERECHTIGUNGSMATRIX -->
+  <h2 id="matrix" class="section-title">🔑 Rollenkonzept &amp; Berechtigungsmatrix</h2>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Funktion / Modul</th>
+          <th><span class="role-pill role-admin">Vorstand (Admin)</span></th>
+          <th><span class="role-pill role-captain">Mannschaftskapitän</span></th>
+          <th><span class="role-pill role-member">Mitglied</span></th>
+          <th><span class="role-pill role-guest">Gast / Extern</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Öffentliche Seiten &amp; News lesen</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja</td>
+        </tr>
+        <tr>
+          <td><strong>Turnieranmeldung</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja (bis Anmeldeschluss)</td>
+        </tr>
+        <tr>
+          <td><strong>Profil &amp; Beitragsstand einsehen</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja (nur eigenes Profil)</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Änderungswunsch für Stammdaten</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja</td>
+          <td class="check-yes">Ja (via Workflow)</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Aufstellung &amp; Einzelergebnisse erfassen</strong></td>
+          <td class="check-yes">Ja (alle Teams)</td>
+          <td class="check-yes">Ja (eigene Mannschaft)</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Mitgliederliste &amp; Suche</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Änderungswünsche genehmigen</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Beitragsläufe, Zahlungen &amp; Mahnungen</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Vereins-Kassenbuch</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Turniere verwalten &amp; Paarungen</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Gruppen-E-Mails &amp; News verwalten</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>DSGVO-Datenauskunft (PDF/JSON)</strong></td>
+          <td class="check-yes">Ja (alle)</td>
+          <td class="check-no">Nein</td>
+          <td class="check-yes">Ja (nur eigene Daten)</td>
+          <td class="check-no">Nein</td>
+        </tr>
+        <tr>
+          <td><strong>Audit-Log &amp; VVT einsehen</strong></td>
+          <td class="check-yes">Ja</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+          <td class="check-no">Nein</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MODULE GRID -->
+  <h2 class="section-title">📦 Alle Fachmodule im Detail</h2>
+
+  <div class="grid">
+
+    <!-- Öffentliche Website -->
+    <div class="card" id="public">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🌐</span> Öffentlicher Bereich</div>
+        <span class="app-tag">public</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Startseite:</strong> Dynamische Vereinsdaten, nächste Termine, News &amp; Statistiken <span class="endpoint-badge">/</span></li>
+        <li><strong>Vereinsseite:</strong> Selbstverständnis, Spielstätte, Trainingszeiten &amp; automatischer Ligaspielplan <span class="endpoint-badge">/verein/</span></li>
+        <li><strong>Mitglied werden:</strong> Beitragskategorien, Schnuppertraining &amp; Aufnahmeantrag <span class="endpoint-badge">/mitglied-werden/</span></li>
+        <li><strong>Turnierkalender:</strong> Öffentliche Ausschreibungen &amp; Gastanmeldung <span class="endpoint-badge">/turniere/</span></li>
+        <li><strong>Aktuelles &amp; Archiv:</strong> Vollständiges Nachrichtenarchiv mit Filter <span class="endpoint-badge">/aktuelles/</span></li>
+        <li><strong>Produkt-Landingpage:</strong> Informationsseite für andere Schachvereine <span class="endpoint-badge">/produkt/</span></li>
+        <li><strong>Rechtliches:</strong> DSGVO-Datenschutzerklärung &amp; Impressum <span class="endpoint-badge">/impressum/</span></li>
+      </ul>
+    </div>
+
+    <!-- Core & Sicherheit -->
+    <div class="card" id="core">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🛡️</span> Core &amp; Sicherheit</div>
+        <span class="app-tag">core</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Authentifizierung:</strong> Sichere Anmeldung, Abmeldung &amp; Token-Passwort-Reset <span class="endpoint-badge">/anmelden/</span></li>
+        <li><strong>Zwei-Faktor-Authentifizierung:</strong> TOTP-Pflicht für Vorstände im Produktivbetrieb <span class="endpoint-badge">/anmelden/zwei-faktor/</span></li>
+        <li><strong>Zentrales Dashboard:</strong> Rollenindividuelles Cockpit für Finanzen, Spiele &amp; Anträge <span class="endpoint-badge">/dashboard/</span></li>
+        <li><strong>Globale Suche:</strong> Modulübergreifende Volltextsuche <span class="endpoint-badge">/suche/</span></li>
+        <li><strong>Progressive Web App:</strong> Service Worker, Standalone-Fenster &amp; Offline-Fallback <span class="endpoint-badge">/offline/</span></li>
+      </ul>
+    </div>
+
+    <!-- Mitgliederverwaltung -->
+    <div class="card" id="members">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">👥</span> Mitgliederverwaltung</div>
+        <span class="app-tag">members</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Stammdaten:</strong> Vollständige Verwaltung inkl. DWZ, Status (Aktiv/Passiv/Ausgetreten) &amp; Historisierung <span class="endpoint-badge">/mitglieder/</span></li>
+        <li><strong>Selbstbedienung:</strong> Mitglied sieht eigene Daten, Teams &amp; Beitragsstand <span class="endpoint-badge">/profil/</span></li>
+        <li><strong>Änderungswunsch-Workflow:</strong> Mitglieder reichen Stammdatenänderungen ein; Vorstand prüft &amp; gibt frei <span class="endpoint-badge">/mitglieder/wuensche/</span></li>
+        <li><strong>Filter &amp; CSV-Export:</strong> Tabellarische Auswertungen für Verwaltung und DSB <span class="endpoint-badge">/mitglieder/export.csv</span></li>
+        <li><strong>Austrittsverwaltung:</strong> Revisionssichere Beendigung ohne Finanzdatenverlust <span class="endpoint-badge">/mitglieder/&lt;id&gt;/austritt/</span></li>
+      </ul>
+    </div>
+
+    <!-- Beitragsverwaltung -->
+    <div class="card" id="dues">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">💳</span> Beiträge &amp; Finanzen</div>
+        <span class="app-tag">dues</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Beitragskategorien:</strong> Konfigurierbare Tarife (Vollzahler, Jugend, Familie, Ermäßigt) <span class="endpoint-badge">/beitraege/kategorien/</span></li>
+        <li><strong>Automatisierter Beitragslauf:</strong> Jährliche Forderungserstellung für alle aktiven Mitglieder per Knopfdruck <span class="endpoint-badge">/beitraege/lauf/</span></li>
+        <li><strong>SEPA-Mandate:</strong> Erfassung &amp; verschlüsselte IBAN-Speicherung (AES) <span class="endpoint-badge">/beitraege/mandate/</span></li>
+        <li><strong>Zahlungserfassung:</strong> Buchung von Überweisungen, Lastschriften &amp; Barzahlungen <span class="endpoint-badge">/beitraege/posten/&lt;id&gt;/zahlung/</span></li>
+        <li><strong>Revisionssicheres Storno:</strong> Korrektur ausschließlich per Gegenbuchung (GoBD/ADR-006)</li>
+        <li><strong>Mahnwesen:</strong> Offene-Posten-Übersicht &amp; PDF-Mahnbrief-Erstellung <span class="endpoint-badge">/beitraege/mahnwesen/</span></li>
+        <li><strong>Kassenbericht &amp; Transparenz:</strong> Aggregierte Jahresübersicht und persönliches Beitragskonto <span class="endpoint-badge">/mein-beitragskonto/</span></li>
+      </ul>
+    </div>
+
+    <!-- Spielbetrieb -->
+    <div class="card" id="teams">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">⚔️</span> Spielbetrieb &amp; Ligen</div>
+        <span class="app-tag">teams</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Mannschaften:</strong> Strukturierung aller Vereinsteams, Ligen und Spielklassen <span class="endpoint-badge">/mannschaften/</span></li>
+        <li><strong>Spieltagsplanung:</strong> Termine, Spiellokale, Heim-/Auswärtsspiele und Gegner <span class="endpoint-badge">/spiele/</span></li>
+        <li><strong>Aufstellungs-Manager:</strong> Mannschaftsführer erfassen Brettaufstellungen mit Fristenüberwachung <span class="endpoint-badge">/spiele/&lt;id&gt;/aufstellung/</span></li>
+        <li><strong>Ergebniserfassung:</strong> Einzelbrett-Eingabe mit automatischer Ermittlung von Brettpunkten &amp; Siegen</li>
+        <li><strong>Ligatabellen:</strong> Automatische Tabellenberechnung mit Rangfolge <span class="endpoint-badge">/ligen/</span></li>
+        <li><strong>iCal-Feed &amp; Einsätze:</strong> Abonnierbarer Kalender und persönliche Einsatzansicht <span class="endpoint-badge">/meine-einsaetze/</span></li>
+      </ul>
+    </div>
+
+    <!-- Turnierverwaltung -->
+    <div class="card" id="tournaments">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🏆</span> Turnierverwaltung</div>
+        <span class="app-tag">tournaments</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Turnierformate:</strong> Schweizer System, Rundenturniere, Schnellschach- &amp; Blitzturniere <span class="endpoint-badge">/turniere/verwalten/</span></li>
+        <li><strong>Teilnehmer &amp; Startgelder:</strong> Verwaltung von Mitgliedern und Gastspielern inkl. Zahlungsstatus</li>
+        <li><strong>Schweizer-System-Paarung:</strong> Automatische Paarungsgenerierung mit Farbausgleich &amp; Wiederholungsvermeidung <span class="endpoint-badge">/turniere/verwalten/&lt;id&gt;/runde/</span></li>
+        <li><strong>Wertungen:</strong> Automatische Rangliste mit Buchholz- und Sonneborn-Berger-Feinwertung</li>
+        <li><strong>Exporte:</strong> Druckansicht &amp; ChessResults-kompatibler CSV-Export <span class="endpoint-badge">/turniere/verwalten/&lt;id&gt;/export.csv</span></li>
+      </ul>
+    </div>
+
+    <!-- Kommunikation -->
+    <div class="card" id="comms">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📢</span> Kommunikation &amp; News</div>
+        <span class="app-tag">comms</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Redaktions-Workflow:</strong> Ankündigungen verfassen, prüfen, freigeben &amp; archivieren <span class="endpoint-badge">/ankuendigungen/</span></li>
+        <li><strong>Gruppen-E-Mail-Verteiler:</strong> Zielgerichteter Mailversand an Vorstand, Kapitäne oder aktive Mitglieder <span class="endpoint-badge">/ankuendigungen/mail/</span></li>
+        <li><strong>Opt-in-Schutz:</strong> Automatische Filterung nach datenschutzrechtlicher Einwilligung der Mitglieder</li>
+        <li><strong>Versandprotokolle:</strong> Vollständiger Nachweis aller versendeten Rundschreiben</li>
+      </ul>
+    </div>
+
+    <!-- Vereins-Kassenbuch -->
+    <div class="card" id="cashbook">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📒</span> Vereins-Kassenbuch</div>
+        <span class="app-tag">cashbook</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Einnahmen &amp; Ausgaben:</strong> Vollständiges Belegbuch für den laufenden Vereinsbetrieb (Material, Fahrten, Miete) <span class="endpoint-badge">/kasse/</span></li>
+        <li><strong>Live-Saldo:</strong> Automatische Saldoführung und getrennte Kassenbestände</li>
+        <li><strong>Revisionssicherheit:</strong> GoBD-konforme Stornierung per Gegenbuchung ohne Datenlöschung <span class="endpoint-badge">/kasse/&lt;id&gt;/storno/</span></li>
+        <li><strong>Jahresabschluss &amp; Export:</strong> Übersicht nach Buchungskategorien und CSV-Export für Steuerberater <span class="endpoint-badge">/kasse/jahresabschluss/</span></li>
+      </ul>
+    </div>
+
+    <!-- DSGVO & Compliance -->
+    <div class="card" id="dsgvo">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🔒</span> DSGVO &amp; Compliance</div>
+        <span class="app-tag">compliance</span>
+      </div>
+      <ul class="feature-list">
+        <li><strong>Art. 15 Datenauskunft:</strong> 1-Klick-Selbstauskunft als PDF und JSON-Export <span class="endpoint-badge">/mitglieder/&lt;id&gt;/auskunft.pdf</span></li>
+        <li><strong>Art. 30 Verarbeitungsverzeichnis:</strong> Maschinenlesbarer Export der Datenkategorien <span class="endpoint-badge">/datenschutz/verzeichnis.csv</span></li>
+        <li><strong>Lückenloses Audit-Log:</strong> Revisionssichere Protokollierung aller Logins, Zugriffe &amp; Änderungen <span class="endpoint-badge">/audit/</span></li>
+        <li><strong>Anonymisierungs-Automatik:</strong> Löschfristen für Stammdaten bei gesicherter 8-jähriger Finanzaufbewahrung (§ 147 AO)</li>
+        <li><strong>Zweckbindung Gastdaten:</strong> Isolierte Speicherung von Turniergastdaten ohne Übernahme in Mitgliederlisten</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>Schachclub Königsspringer Musterstadt e.V. – Interne Dokumentation &amp; Funktionsspezifikation</p>
+    <p style="margin-top: 0.35rem; font-size: 0.8rem;">Generiert auf Basis von PRD v1.4, ADRs und Django 5 Backend-Architektur.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>

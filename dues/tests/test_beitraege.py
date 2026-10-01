@@ -14,6 +14,7 @@ from core.models import AuditLog
 from dues.admin import DunningLetterAdmin, MembershipFeeAdmin, PaymentAdmin
 from dues.models import (
     DunningLetter,
+    FeeAmount,
     FeeCategory,
     MembershipFee,
     Payment,
@@ -39,8 +40,11 @@ def make_admin(username="vorstand"):
 class BeitragslaufTests(TestCase):
     def setUp(self):
         self.admin = make_admin()
-        self.erwachsene = FeeCategory.objects.create(name="Erwachsene", betrag=Decimal("90.00"))
-        self.jugend = FeeCategory.objects.create(name="Jugendliche", betrag=Decimal("45.00"))
+        self.erwachsene = FeeCategory.objects.create(name="Erwachsene")
+        self.jugend = FeeCategory.objects.create(name="Jugendliche")
+        for jahr in (2026, 2027):
+            FeeAmount.objects.create(kategorie=self.erwachsene, jahr=jahr, betrag=Decimal("90.00"))
+            FeeAmount.objects.create(kategorie=self.jugend, jahr=jahr, betrag=Decimal("45.00"))
         for index in range(3):
             Member.objects.create(
                 vorname=f"Anna{index}", nachname=f"Meier{index}",
@@ -285,7 +289,8 @@ class MandatTests(TestCase):
         self.assertContains(response, "gültige IBAN")
 
     def test_kategorie_toggle_und_loeschschutz(self):
-        kategorie = FeeCategory.objects.create(name="Familie", betrag=Decimal("130.00"))
+        kategorie = FeeCategory.objects.create(name="Familie")
+        FeeAmount.objects.create(kategorie=kategorie, jahr=2026, betrag=Decimal("130.00"))
         self.member.beitragskategorie = kategorie
         self.member.save()
         response = self.client.post(
@@ -349,7 +354,9 @@ class BerechtigungsUndFehlerpfadTests(TestCase):
         g_k, _ = Group.objects.get_or_create(name="kapitaen")
         self.kapitaen.groups.add(g_k)
 
-        self.kategorie = FeeCategory.objects.create(name="Erwachsene", betrag=Decimal("90.00"))
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=2026, betrag=Decimal("90.00"))
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=2027, betrag=Decimal("90.00"))
         self.member = Member.objects.create(
             vorname="Anna", nachname="Meier", eintrittsdatum=date(2020, 1, 1),
             beitragskategorie=self.kategorie,
@@ -488,7 +495,8 @@ class BeitragEndToEndIntegrationTests(TestCase):
     def test_komplette_beitragskette(self):
         admin = make_admin("kassenwart_e2e")
         self.client.force_login(admin)
-        kat = FeeCategory.objects.create(name="Erwachsene", betrag=Decimal("100.00"))
+        kat = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=kat, jahr=2026, betrag=Decimal("100.00"))
         anna = Member.objects.create(
             vorname="Anna", nachname="Acker", eintrittsdatum=date(2021, 1, 1), beitragskategorie=kat
         )
@@ -530,3 +538,83 @@ class BeitragEndToEndIntegrationTests(TestCase):
         csv_text = csv_resp.content.decode("utf-8-sig")
         self.assertIn("Acker;Anna;Erwachsene;100,00;100,00;0,00;Bezahlt", csv_text)
         self.assertIn("Berg;Bodo;Erwachsene;100,00;40,00;60,00;Teilweise bezahlt", csv_text)
+
+
+class JahresbetraegeTests(TestCase):
+    """Tests zu T7b / ADR-004: Getrennte Pflege der Jahresbeträge je Kategorie."""
+
+    def setUp(self):
+        self.admin = make_admin("vorstand_t7b")
+        self.erwachsene = FeeCategory.objects.create(name="Erwachsene")
+        self.amount_2026 = FeeAmount.objects.create(
+            kategorie=self.erwachsene, jahr=2026, betrag=Decimal("90.00")
+        )
+        self.amount_2027 = FeeAmount.objects.create(
+            kategorie=self.erwachsene, jahr=2027, betrag=Decimal("95.00")
+        )
+        self.member = Member.objects.create(
+            vorname="Clara", nachname="Caro", eintrittsdatum=date(2020, 1, 1),
+            beitragskategorie=self.erwachsene,
+        )
+
+    def test_jahresbetraege_getrennt_pflegbar_und_aenderung_isoliert(self):
+        # 2026 und 2027 getrennt gepflegt
+        self.assertEqual(self.erwachsene.betrag_fuer_jahr(2026), Decimal("90.00"))
+        self.assertEqual(self.erwachsene.betrag_fuer_jahr(2027), Decimal("95.00"))
+
+        # Änderung 2027 lässt 2026 unberührt
+        self.amount_2027.betrag = Decimal("105.00")
+        self.amount_2027.save()
+
+        self.assertEqual(self.erwachsene.betrag_fuer_jahr(2026), Decimal("90.00"))
+        self.assertEqual(self.erwachsene.betrag_fuer_jahr(2027), Decimal("105.00"))
+
+        # Beitragslauf erzeugt Posten mit jeweiligem Jahressatz
+        lauf_2026 = beitragslauf(2026)
+        self.assertEqual(lauf_2026["summe"], Decimal("90.00"))
+        fee_2026 = MembershipFee.objects.get(member=self.member, jahr=2026)
+        self.assertEqual(fee_2026.betrag, Decimal("90.00"))
+
+        lauf_2027 = beitragslauf(2027)
+        self.assertEqual(lauf_2027["summe"], Decimal("105.00"))
+        fee_2027 = MembershipFee.objects.get(member=self.member, jahr=2027)
+        self.assertEqual(fee_2027.betrag, Decimal("105.00"))
+
+    def test_lauf_ohne_satz_fuer_jahr_bricht_ab_und_erzeugt_nichts(self):
+        """Negativtest: Fehlt ein Satz für das Jahr, bricht der Lauf ab und legt nichts an."""
+        jugend = FeeCategory.objects.create(name="Jugendliche")
+        Member.objects.create(
+            vorname="Tim", nachname="Tester", eintrittsdatum=date(2022, 1, 1),
+            beitragskategorie=jugend,
+        )
+        # Für 2028 hat weder Erwachsene noch Jugend einen Satz
+        with self.assertRaises(ValidationError) as ctx:
+            beitragslauf(2028)
+        self.assertIn("2028", str(ctx.exception))
+        self.assertIn("Erwachsene", str(ctx.exception))
+        self.assertIn("Jugendliche", str(ctx.exception))
+        self.assertEqual(MembershipFee.objects.filter(jahr=2028).count(), 0)
+
+    def test_negativer_betrag_wird_abgelehnt(self):
+        """Negativtest: Negativer Betrag bei FeeAmount wird abgelehnt."""
+        fa = FeeAmount(kategorie=self.erwachsene, jahr=2029, betrag=Decimal("-10.00"))
+        with self.assertRaises(ValidationError):
+            fa.full_clean()
+
+    def test_doppelter_satz_fuer_selbes_jahr_wird_abgelehnt(self):
+        """Negativtest: Doppelter (Kategorie, Jahr) wird abgewiesen."""
+        with self.assertRaises(Exception):
+            FeeAmount.objects.create(
+                kategorie=self.erwachsene, jahr=2026, betrag=Decimal("99.00")
+            )
+
+    def test_ausgetretenes_mitglied_kann_keine_kategorie_haben(self):
+        """Negativtest: Ausgetretenes Mitglied mit Kategorie wird abgelehnt."""
+        m = Member(
+            vorname="Ehemalig", nachname="Ex", eintrittsdatum=date(2019, 1, 1),
+            austrittsdatum=date(2024, 12, 31), status=Member.Status.AUSGETRETEN,
+            beitragskategorie=self.erwachsene,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            m.full_clean()
+        self.assertIn("beitragskategorie", ctx.exception.message_dict)

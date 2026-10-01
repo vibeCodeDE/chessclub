@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from dues.models import FeeCategory, MembershipFee
+from dues.models import FeeAmount, FeeCategory, MembershipFee
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, Team
 
@@ -23,7 +23,8 @@ class VorstandsDashboardTests(TestCase):
     def setUp(self):
         self.admin = make_user("vorstand", "admin")
         self.client.force_login(self.admin)
-        self.kategorie = FeeCategory.objects.create(name="Erwachsene", betrag=Decimal("90.00"))
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=date.today().year, betrag=Decimal("90.00"))
         self.member = Member.objects.create(
             vorname="Anna", nachname="Meier", eintrittsdatum=date(2026, 1, 8),
             beitragskategorie=self.kategorie,
@@ -87,9 +88,8 @@ class KapitaenDashboardTests(TestCase):
         self.admin = make_user("vorstand", "admin")
         self.kapitaen = make_user("kapit1", "kapitaen")
         self.client.force_login(self.kapitaen)
-        self.kategorie = FeeCategory.objects.create(
-            name="Erwachsene", betrag=Decimal("90.00")
-        )
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=date.today().year, betrag=Decimal("90.00"))
         self.member = Member.objects.create(
             vorname="Anna", nachname="Meier",
             eintrittsdatum=date(2020, 1, 15), beitragskategorie=self.kategorie,

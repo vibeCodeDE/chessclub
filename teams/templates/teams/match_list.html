@@ -8,6 +8,13 @@
 <div class="page-head">
   <p class="lede">Termine, Gegner und Ergebnisse des Ligabetriebs.</p>
   <div class="page-actions">
+    <a class="btn secondary" href="{{ gesamt_feed_url }}"><svg class="icon icon-sm"><use href="#i-calendar"></use></svg> iCal-Feed</a>
+    {% if user_role == "admin" %}
+      <form method="post" action="{% url 'teams:gesamt_renew_ical_token' %}" style="display:inline">
+        {% csrf_token %}
+        <button class="btn secondary ghost text-danger" type="submit" onclick="return confirm('Globalen Kalender-Token wirklich erneuern? Bestehende Abonnements aller Ligaspiele werden ungültig.');" title="Token erneuern"><svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Feed-Token erneuern</button>
+      </form>
+    {% endif %}
     <a class="btn secondary" href="{% url 'teams:tabelle_list' %}"><svg class="icon icon-sm"><use href="#i-table"></use></svg> Tabellen</a>
     <a class="btn" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ligaspiel planen</a>
   </div>

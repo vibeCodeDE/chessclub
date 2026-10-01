@@ -180,3 +180,17 @@ class AuditLogAdminTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/admin/login/", response.url)
+
+    def test_member_admin_detail_view_wird_protokolliert(self):
+        """PRD N1.5: Aufruf der Mitglieds-Detailseite im Admin wird protokolliert."""
+        self.client.force_login(self.admin)
+        AuditLog.objects.all().delete()
+
+        response = self.client.get(f"/admin/members/member/{self.member.pk}/change/")
+        self.assertEqual(response.status_code, 200)
+
+        eintrag = AuditLog.objects.filter(aktion="Mitgliedsakte eingesehen").first()
+        self.assertIsNotNone(eintrag)
+        self.assertEqual(eintrag.benutzer, self.admin)
+        self.assertEqual(eintrag.member, self.member)
+        self.assertIn("Admin aufgerufen", eintrag.text)

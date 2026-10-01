@@ -12,7 +12,7 @@ from django.contrib.auth.models import Group, User
 from django.test import Client, TestCase
 
 from cashbook.models import CashEntry
-from dues.models import FeeCategory, MembershipFee, Payment
+from dues.models import FeeAmount, FeeCategory, MembershipFee, Payment
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, LineupEntry, Team
 from tournaments.models import Pairing, Participant, Tournament
@@ -39,7 +39,8 @@ class AjaxVertragTests(TestCase):
     def setUp(self):
         self.admin = make_user("vorstand", "admin")
         self.client.force_login(self.admin)
-        self.kategorie = FeeCategory.objects.create(name="Erwachsene", betrag=Decimal("90.00"))
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=date.today().year, betrag=Decimal("90.00"))
         self.member = Member.objects.create(
             vorname="Anna", nachname="Meier", eintrittsdatum=date(2020, 1, 1),
             beitragskategorie=self.kategorie,
@@ -155,7 +156,7 @@ class AjaxVertragTests(TestCase):
         self.assertEqual(daten["remove_selector"], f"[data-row='news-{post.pk}']")
         self.assertFalse(NewsPost.objects.filter(pk=post.pk).exists())
 
-    def test_kassenbuchung_anlegen_und_loeschen(self):
+    def test_kassenbuchung_anlegen_und_stornieren(self):
         antwort = ajax_post(self.client, "/kasse/neu/", {
             "art": CashEntry.Art.AUSGABE, "kategorie": CashEntry.Kategorie.MATERIAL,
             "betrag": "49.90", "datum": "2026-05-04", "beschreibung": "Turnieruhren", "belegnummer": "B-12",
@@ -164,13 +165,14 @@ class AjaxVertragTests(TestCase):
         buchung = CashEntry.objects.get(beschreibung="Turnieruhren")
         self.assertEqual(buchung.erfasst_von, self.admin)
 
-        antwort = ajax_post(self.client, f"/kasse/{buchung.pk}/loeschen/")
+        antwort = ajax_post(self.client, f"/kasse/{buchung.pk}/storno/", {"grund": "Fehlkauf"})
         self.assertTrue(als_json(antwort)["ok"])
         # Finanzdaten werden nicht hart gelöscht, sondern per Gegenbuchung storniert
         self.assertTrue(CashEntry.objects.filter(pk=buchung.pk).exists())
         self.assertTrue(buchung.ist_storniert)
         gegen = CashEntry.objects.get(storno_von=buchung)
         self.assertEqual(gegen.betrag, Decimal("-49.90"))
+        self.assertIn("Fehlkauf", gegen.beschreibung)
 
     def test_aenderungswunsch_freigeben(self):
         wunsch = ChangeRequest.objects.create(
@@ -204,7 +206,8 @@ class FormularFallbackTests(TestCase):
         self.client.force_login(self.admin)
 
     def test_zahlung_ohne_javascript(self):
-        kategorie = FeeCategory.objects.create(name="Ermäßigt", betrag=Decimal("60.00"))
+        kategorie = FeeCategory.objects.create(name="Ermäßigt")
+        FeeAmount.objects.create(kategorie=kategorie, jahr=2026, betrag=Decimal("60.00"))
         member = Member.objects.create(
             vorname="Bodo", nachname="Bauer", eintrittsdatum=date(2020, 1, 1),
             beitragskategorie=kategorie,

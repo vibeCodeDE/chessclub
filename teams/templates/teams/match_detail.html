@@ -91,7 +91,7 @@
     <div class="card-head"><h2>Ligatabelle {{ match.team.liga|default:"(ohne Liga)" }}</h2><a class="link-btn" href="{% url 'teams:tabelle_list' %}">Alle Tabellen</a></div>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Platz</th><th>Mannschaft</th><th class="num">Spiele</th><th class="num">MP</th><th class="num">BP</th><th class="num">Diff.</th></tr></thead>
+        <thead><tr><th>Platz</th><th>Mannschaft</th><th class="num">Spiele</th><th class="num">MP</th><th class="num">BP</th><th class="num">Diff.</th><th class="num">BH</th></tr></thead>
         <tbody>
           {% for zeile in tabelle %}
             <tr {% if zeile.name == match.gegner %}class="row-warn"{% endif %}>
@@ -101,6 +101,7 @@
               <td class="num mono">{{ zeile.mannschaftspunkte }}</td>
               <td class="num mono">{{ zeile.brettpunkte|floatformat:1 }}</td>
               <td class="num mono">{{ zeile.brettdifferenz|floatformat:1 }}</td>
+              <td class="num mono">{{ zeile.buchholz }}</td>
             </tr>
           {% endfor %}
         </tbody>

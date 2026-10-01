@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from core.models import AuditLog
+
 from .models import ChangeRequest, Member, MemberStatusChange
 
 
@@ -37,6 +39,18 @@ class MemberAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj._changed_by = request.user
         super().save_model(request, obj, form, change)
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        if request.method == "GET" and request.user.is_authenticated:
+            member = self.get_object(request, object_id)
+            if member:
+                AuditLog.objects.create(
+                    benutzer=request.user,
+                    aktion="Mitgliedsakte eingesehen",
+                    text=f"Stammdaten und Akte von {member} im Admin aufgerufen.",
+                    member=member,
+                )
+        return super().change_view(request, object_id, form_url, extra_context)
 
 
 @admin.register(ChangeRequest)

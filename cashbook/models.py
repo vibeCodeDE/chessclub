@@ -98,9 +98,14 @@ def storniere_kassenbuchung(buchung, *, benutzer=None, grund="", datum=None):
         raise ValidationError("Eine Storno-Gegenbuchung kann nicht erneut storniert werden.")
     if buchung.ist_storniert:
         raise ValidationError("Diese Kassenbuchung wurde bereits storniert.")
+    if not grund or not str(grund).strip():
+        raise ValidationError("Für ein Storno ist eine Begründung erforderlich.")
+    if benutzer is None:
+        raise ValidationError("Für ein Storno ist ein Erfasser (Benutzer) erforderlich.")
 
+    grund_clean = str(grund).strip()
     betrag = Decimal(str(buchung.betrag)).quantize(Decimal("0.01"))
-    zusatz = f" ({grund})" if grund else ""
+    zusatz = f" ({grund_clean})"
     beschreibung = f"Storno zu #{buchung.pk}: {buchung.beschreibung}{zusatz}"[:250]
     beleg = f"STORNO-{buchung.belegnummer or buchung.pk}"[:60]
     gegenbuchung = CashEntry.objects.create(

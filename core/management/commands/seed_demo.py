@@ -20,7 +20,7 @@ from django.utils import timezone
 from cashbook.models import CashEntry
 from comms.models import MailLog, NewsPost
 from core.models import AuditLog
-from dues.models import DunningLetter, FeeCategory, MembershipFee, Payment, SepaMandate
+from dues.models import DunningLetter, FeeAmount, FeeCategory, MembershipFee, Payment, SepaMandate
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, LineupEntry, Team
 from tournaments.models import Pairing, Participant, Tournament, TournamentRound
@@ -213,8 +213,12 @@ class Command(BaseCommand):
         kategorien = {}
         for name, beschreibung, betrag in KATEGORIEN:
             kategorie, _ = FeeCategory.objects.get_or_create(
-                name=name, defaults={"beschreibung": beschreibung, "betrag": Decimal(betrag)}
+                name=name, defaults={"beschreibung": beschreibung}
             )
+            for jahr in (2025, 2026, 2027):
+                FeeAmount.objects.get_or_create(
+                    kategorie=kategorie, jahr=jahr, defaults={"betrag": Decimal(betrag)}
+                )
             kategorien[name] = kategorie
         return kategorien
 

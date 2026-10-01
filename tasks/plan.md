@@ -74,7 +74,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Kategorien lassen sich anlegen, deaktivieren und löschen; eine vergebene Kategorie lässt sich nicht löschen; Mitglied ohne Kategorie wird beim Beitragslauf übersprungen, nicht mit 0 € gebucht.
   *Verify:* `pytest dues/` — **Negativtest:** negativer Betrag wird abgelehnt; Mitglied mit Status „ausgetritten" kann keiner Kategorie zugeordnet werden; Löschen einer vergebenen Kategorie wird verhindert. · *Files:* `dues/models.py`, `dues/admin.py`, `dues/forms.py` · *Größe:* S · *PRD:* M2.1 · *Release:* v1 · *Deps:* T5
 
-- [ ] **T7b: Jahresbeträge je Kategorie** *(Nachtrag, schließt ADR-004)*
+- [x] **T7b: Jahresbeträge je Kategorie** *(Nachtrag, schließt ADR-004)*
   `FeeAmount` (Kategorie × Jahr × Betrag) zurückführen; der Beitragslauf nimmt den Satz des Laufjahrs, fehlt er, bricht der Lauf mit klarer Meldung ab und legt **nichts** an. Kein Klartext-IBAN-Thema.
   *Acceptance:* 2026 und 2027 lassen sich getrennt pflegen; die Änderung von 2027 lässt 2026 unberührt; Beitragsposten behalten den Betrag als Momentaufnahme.
   *Verify:* `pytest dues/` — **Negativtest:** Lauf ohne Satz für das Jahr legt keinen Posten an (auch nicht teilweise); doppelter (Kategorie, Jahr) wird abgelehnt. · *Files:* `dues/models.py`, `dues/services.py`, Migration · *Größe:* S · *PRD:* M2.1, M2.2 · *Release:* v1 · *Deps:* T7, T8
@@ -91,7 +91,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Zahlung markiert den Posten als bezahlt; Teilzahlung bleibt offen; Überzahlung wird als Gutschrift sichtbar, nicht gekappt; die Kassenbuchung entsteht in derselben Transaktion.
   *Verify:* `pytest dues/` + `dues/tests/test_rollen.py` — **Negativtest:** Zahlung für ein Mitglied ohne Mandat bei Zahlungsart „SEPA-Einzug" wird abgelehnt; 403 für „mitglied"/„kapitaen" ohne Seiteneffekt; Betrag 0 abgelehnt. · *Files:* `dues/models.py`, `dues/services.py`, `dues/views.py`, `dues/crypto.py` · *Größe:* M · *PRD:* M2.3, M2.4 · *Release:* v1 · *Deps:* T8
 
-- [ ] **T9b: Storno von Zahlungen per Gegenbuchung** *(Nachtrag, schließt ADR-006)*
+- [x] **T9b: Storno von Zahlungen per Gegenbuchung** *(Nachtrag, schließt ADR-006)*
   `Payment.storno_von` (Selbstbezug), Gegenbuchung mit negativem Betrag und Verweis, Status des Postens wird neu berechnet, Audit-Eintrag mit Actor. Kein Hard-Delete, keine Lösch-Aktion im Admin.
   *Acceptance:* Storno einer Zahlung setzt den Posten auf den vorherigen Status; Originalbuchung bleibt lesbar; Kassenbuch enthält Original und Gegenbuchung.
   *Verify:* `pytest dues/` — **Negativtest:** Storno eines Stornos wird abgelehnt; Storno einer Zahlung mit Audit-Eintrag ist nur mit Actor erlaubt; Buchung ist im Admin nicht löschbar. · *Files:* `dues/models.py`, `dues/services.py`, `dues/views.py`, `dues/admin.py`, Migration · *Größe:* M · *PRD:* M2.3 · *Release:* v1 · *Deps:* T9
@@ -112,12 +112,12 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Nach Seed + Lauf zeigt die Beitrags-Kachel die echte offene Summe; ohne Daten bleibt die Anzeige bei 0 € statt zu crashen.
   *Verify:* `pytest core/tests/test_dashboard.py` · *Größe:* S · *PRD:* M7.1 · *Release:* v1 · *Deps:* T10
 
-- [ ] **T11b: Kassenbericht Beiträge (Jahresübersicht)**
+- [x] **T11b: Kassenbericht Beiträge (Jahresübersicht)**
   Reine Lese-Sicht für den Kassenbericht: Zahlungen je Mitglied für ein gewähltes Jahr, Jahressumme der Einnahmen aus Beiträgen, offene Posten zum Stichtag. Kein eigenes Buchungssystem — das bleibt S6.1/S6.2 (v1.1, T15). Die Auswertung `jahres_uebersicht()` und der Kassen-Jahresabschluss sind bereits da; es fehlt die **Mitgliedsliste je Jahr mit Zahlungen** und der CSV-Export dieser Sicht.
   *Acceptance:* Für Jahr X mit 10 Mitgliedern und 8 Zahlungen zeigt die Übersicht 8 Zeilen; die Jahressumme entspricht der im Test berechneten Modellsumme; ein Jahr ohne Daten zeigt „keine Buchungen" statt 0-€-Zeilen; der CSV-Export summiert identisch zur Anzeige.
   *Verify:* `pytest dues/` — **Negativtest:** Rolle „kapitaen" und „mitglied" erhalten 403; **Referenztest:** Jahressumme wird gegen eine im Test berechnete Modellsumme verglichen, nicht gegen einen festen Wert. · *Files:* `dues/views.py`, `dues/templates/` · *Größe:* S · *PRD:* M2.6 · *Release:* v1 · *Deps:* T10
 
-- [ ] **T12: Zugriffsprotokoll Detailansicht**
+- [x] **T12: Zugriffsprotokoll Detailansicht**
   Protokolliert den Aufruf einer Mitglieder-Detailansicht (Wer, Wann, welche Person) als Lese-„Zugriff" im `AuditLog` — schließt die Lücke zwischen PRD N1.5 („Zugriffe") und T5 (nur Änderungen + Logins). Der **JSON**-Export der Datenauskunft wird heute noch nicht protokolliert (HTML und PDF werden es) — das gehört in dieselbe Task.
   *Acceptance:* Detailaufruf erzeugt einen AuditLog-Eintrag; jeder Auskunfts-Export (HTML/PDF/JSON) wird protokolliert; Einträge sind nach 12 Monaten Löschfrist markierbar.
   *Verify:* `pytest core/` + `pytest members/` — **Negativtest:** Listenansicht erzeugt **keinen** Lese-Eintrag; Rolle „mitglied" darf die Detailseite eines fremden Mitglieds nicht öffnen (403); der JSON-Export ohne Eintrag im Log schlägt fehl. · *Files:* `members/views.py`, `core/views.py`, `core/models.py` · *Größe:* S · *PRD:* N1.5 · *Release:* v1 · *Deps:* T5
@@ -145,7 +145,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* 2 Mannschaften und 1 Ligaspiel angelegt und in der Liste sichtbar; Spiel erscheint in der Liste der eigenen Mannschaft; abgeschlossene Spiele lassen sich nicht mehr ändern.
   *Verify:* `pytest teams/` — **Negativtest:** Rollen „mitglied" und „kapitaen" erhalten 403 auf Anlegen/Bearbeiten; Änderung eines Spiels im Status „abgeschlossen" wird abgelehnt. · *Files:* `teams/models.py`, `teams/views.py` · *Größe:* S · *PRD:* M4.1, M4.2 · *Release:* v1 · *Deps:* T14
 
-- [ ] **T16b: iCal-Feed der Ligaspiele** *(v1.1)*
+- [x] **T16b: iCal-Feed der Ligaspiele** *(v1.1 — umgesetzt)*
   Abonnierbarer Kalender-Feed (`.ics`) der Ligaspiele je Mannschaft und gesamt, Zugriff über geheimen Token-Link; Token durch Admin erneuerbar (macht alte Links ungültig). Reine Funktion für die Feed-Erzeugung in `teams/services.py`, ohne Bibliothek (RFC 5545, wenige Felder).
   *Acceptance:* Feed enthält genau die Spiele der gewählten Mannschaft mit Datum, Gegner, Heim/Auswärts; Import in einen Kalenderclient zeigt die Termine; nach Token-Erneuerung liefert der alte Link 404.
   *Verify:* `pytest teams/` — **Negativtest:** ungültiger oder fehlender Token → 404 (kein Hinweis, ob die Mannschaft existiert); Feed enthält keine Aufstellungs- und keine Personendaten; abgesagte Spiele werden als `STATUS:CANCELLED` ausgegeben, nicht weggelassen; `assertNumQueries` für den Feed. · *Files:* `teams/services.py`, `teams/views.py` · *Größe:* S · *PRD:* S4.6 · *Release:* v1.1 · *Deps:* T16
@@ -155,7 +155,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Nur Kapitän/Admin kann aufstellen; Summe der Bretter = Mannschaftsergebnis; die Aufstellung bleibt ohne JavaScript speicherbar.
   *Verify:* `pytest teams/` — **Negativtest (PRD §3.8):** Kapitän einer **anderen** Mannschaft erhält 403; Rolle „mitglied" darf nicht aufstellen. · *Files:* `teams/views.py`, `teams/models.py`, `teams/templates/` · *Größe:* M · *PRD:* M4.3, M4.4 · *Release:* v1 · *Deps:* T16
 
-- [ ] **T18: Tabellenberechnung inkl. Buchholz** *(v1.1)*
+- [x] **T18: Tabellenberechnung inkl. Buchholz** *(v1.1)*
   Liga-Tabelle aus allen Ergebnissen (Satz 1/½/0, Buchholz als Tiebreak). `teams/services.py:tabelle()` summiert heute Mannschafts- und Brettpunkte und die Differenz, **eine Buchholz-Spalte fehlt** — die Tabelle ist damit unvollständig, nicht falsch.
   *Acceptance:* 4 Mannschaften × 3 Spiele → korrekte Reihenfolge inkl. Buchholz (Testdatensatz mit bekanntem Ergebnis); ungespielte Spiele zählen nicht.
   *Verify:* `pytest teams/` (Referenzrechnung; Umgang mit ungespielten/abgesagten Spielen als Negativfall) · *Files:* `teams/services.py`, `teams/templates/teams/tabelle_list.html` · *Größe:* S · *PRD:* S4.5 · *Release:* v1.1 · *Deps:* T17
@@ -179,8 +179,8 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* 8 Testspieler, 3 Runden: Paarungen ohne Doppel-Partien, Stand korrekt (Referenzrechnung).
   *Verify:* `pytest tournaments/` (Paarungs-Tests) — **Negativtest:** Spielerzahl ohne Bye-Regel → klare Fehlermeldung statt stummer Fehlpaarung. · *Files:* `tournaments/pairing.py`, `tournaments/views.py` · *Größe:* L · *PRD:* S3.4 · *Release:* v1.1 · *Deps:* T20
 
-- [ ] **T22: Turnierexport im ChessResults-Format** *(v1.1 — teilweise)*
-  Druckansicht und CSV-Export sind umgesetzt (`Rang;Name;Verein;DWZ/TWZ;Punkte;Buchholz;R1…Rn`). Was fehlt, ist die **ChessResults-Importstruktur** (Abschnitte `TRN`/`RAN`/`ARB` mit Trennzeichen und Kennungen), weil die Vereinsauswertung sonst manuell nachgezogen werden muss.
+- [x] **T22: Turnierexport im ChessResults-Format** *(v1.1 — umgesetzt)*
+  Druckansicht und CSV-Export nach ChessResults-/Swiss-Manager-Struktur mit den Abschnitten `[TRN]`, `[ARB]` und `[RAN]`, Semicolon-Trennzeichen und Kennungen `TRN`/`ARB`/`RAN`.
   *Acceptance:* CSV importiert ohne Nacharbeit in ChessResults (oder im dokumentierten Ersatzwerkzeug); Druckansicht A4-freundlich.
   *Verify:* `pytest tournaments/` + manueller Download — **Negativtest:** Nicht-Admin erhält 403 auf den CSV-Export; **Inhaltstest:** CSV enthält keine Privatanschriften/Telefonnummern, nur Turnierfelder. · *Files:* `tournaments/views.py`, Templates · *Größe:* S · *PRD:* S3.5 · *Release:* v1.1 · *Deps:* T20
 
@@ -193,10 +193,11 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Auskunft enthält alle personenbezogenen Felder; Anonymisierung löscht Kontaktdaten, behält die Finanzhistorie anonymisiert; Frist konfigurierbar.
   *Verify:* `pytest core/` + `python manage.py anonymize_former_members --dry-run` — **Integrationstest:** Vollzyklus Austritt → Frist abgelaufen → Command → alle Felder geprüft; **Negativtest:** `--dry-run` ändert nichts; nach Anonymisierung ist die Suche nach Name/E-Mail **leer**, die Finanzhistorie aber intakt. · *Files:* `core/views.py`, `core/dsgvo.py`, `core/pdf.py`, `core/management/commands/` · *Größe:* M · *PRD:* N1.2, N1.3, N1.4 · *Release:* v1 · *Deps:* T12
 
-- [ ] **T24: Deployment + Backup + Restore-Doku**
-  Produktions-Compose mit App und PostgreSQL, nächtliches `pg_dump`-Backup, `docs/deployment.md` inkl. Restore-Anleitung und Updatepfad sind vorhanden. **Offen und v1-relevant:** das Backup ist nur `gzip`-komprimiert, **nicht verschlüsselt** (PRD N2.1 verlangt verschlüsselt, [ADR-009](../docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md) sieht restic vor), es liegt im Bind-Mount `./backups` auf demselben Host, der Restore-Test ist eine leere Vorlage, ein TLS-Reverse-Proxy ist nicht als Compose-Dienst enthalten und der EU/DE-Hoststandort ist nicht nachgewiesen.
+- [x] **T24: Deployment + Backup + Restore-Doku**
+  Produktions-Compose mit App und PostgreSQL, Caddy TLS-Reverse-Proxy, verschlüsseltes nächtliches `pg_dump`-Backup (OpenSSL AES-256-CBC PBKDF2), `docs/deployment.md` inkl. Restore-Anleitung, Restore-Testprotokoll (< 4 h) und Updatepfad; EU/DE-Standortnachweis.
   *Acceptance:* Backup ist komprimiert **und verschlüsselt**, Passwort/Schlüssel liegt getrennt vom DB-Host; Restore-Test einmal erfolgreich durchgespielt (< 4 h) inklusive Entschlüsselung und Zeilenanzahl-Abgleich; `docs/deployment.md` nennt Server/Provider mit EU/DE-Standort; Update auf eine neue Image-Version läuft per dokumentiertem Ablauf ohne Datenverlust.
-  *Verify:* **Integrationstest:** Backup → leere DB → Restore → Daten da + Integritäts-Abgleich; **Negativtest:** korruptes Backup bzw. fehlender Schlüssel wird mit klarem Fehler abgewiesen, statt stillschweigend einen leeren Datenbestand zu schreiben. · *Files:* `docker-compose.prod.yml`, `docs/deployment.md` · *Größe:* M · *PRD:* N2.1, N2.4, N1.1 · *Release:* v1 · *Deps:* T23
+  *Verify:* **Integrationstest:** Backup → leere DB → Restore → Daten da + Integritäts-Abgleich; **Negativtest:** korruptes Backup bzw. fehlender Schlüssel wird mit klarem Fehler abgewiesen, statt stillschweigend einen leeren Datenbestand zu schreiben. · *Files:* `docker-compose.prod.yml`, `Caddyfile`, `tools/backup.sh`, `tools/restore.sh`, `docs/deployment.md`, `config/tests/test_deployment.py` · *Größe:* M · *PRD:* N2.1, N2.4, N1.1 · *Release:* v1 · *Deps:* T23
+
 
 - [ ] **T24b: Monitoring mit Uptime Kuma** *(v1.1)*
   Monitoring-Container in `docker-compose.prod.yml`: Prüfung der Health-Check-Route, Push-Monitor für das nächtliche Backup, Alarm per E-Mail an die Admin-Adresse. Anleitung in `docs/deployment.md`, Abschnitt „Monitoring".
@@ -218,12 +219,12 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Admin-Login erfordert 2FA; Gerät kann im Profil eingerichtet und gewechselt werden; Rollen „mitglied"/„kapitaen" bleiben ohne 2FA.
   *Verify:* `pytest core/tests/test_haertung.py` — **Negativtest:** Admin-Login ohne gültiges Token wird abgewiesen; ein Token außerhalb des Zeitfensters wird nicht akzeptiert. · *Files:* `core/twofa.py`, `core/auth_views.py`, `core/models.py` · *Größe:* S · *PRD:* N1.6 · *Release:* v1.1 · *Deps:* T25
 
-- [ ] **T15: Kassenbuch** *(v1.1 — umgesetzt, mit offenem Mangel)*
-  `CashEntry` (Einnahme/Ausgabe, Kategorie, Betrag, Datum, Notiz, Belegnummer), Liste + Jahresfilter, Jahresabschluss, CSV-Export für den Steuerberater. **Offener Mangel:** `cashbook:entry_delete` löscht Buchungen hart — das verletzt die Projektregel „Finanzdaten werden nie gelöscht" und [ADR-006](../docs/decisions/ADR-006-storno-per-gegenbuchung.md). → **T15b**.
+- [x] **T15: Kassenbuch** *(v1.1 — umgesetzt)*
+  `CashEntry` (Einnahme/Ausgabe, Kategorie, Betrag, Datum, Notiz, Belegnummer), Liste + Jahresfilter, Jahresabschluss, CSV-Export für den Steuerberater.
   *Acceptance:* Buchungen anlegen/filtern; Jahres-CSV summiert korrekt; **keine** Löschfunktion für Buchungen.
   *Verify:* `pytest cashbook/` — **Negativtest:** Nicht-Admin erhält 403 auf Liste + Export; **Inhaltstest:** CSV-Summe stimmt für gefiltertes Jahr (Vergleich mit Model-Berechnung). · *Files:* `cashbook/models.py`, `cashbook/views.py` · *Größe:* S · *PRD:* S6.1, S6.2 · *Release:* v1.1 · *Deps:* T14
 
-- [ ] **T15b: Kassenbuch stornieren statt löschen** *(Nachtrag, schließt ADR-006)*
+- [x] **T15b: Kassenbuch stornieren statt löschen** *(Nachtrag, schließt ADR-006)*
   Buchung wird nicht gelöscht, sondern mit einer Gegenbuchung (negativer Betrag, Verweis auf die Originalbuchung, Begründung, Actor) und Audit-Eintrag storniert; die Liste zeigt beide Zeilen. Die automatische Beitrags-Kassenbuchung aus T9 bleibt unangetastet.
   *Acceptance:* Der Jahresabschluss und der CSV-Export bleiben nachvollziehbar (Original + Gegenbuchung); ein Storno ist im Admin nicht rückgängig zu machen.
   *Verify:* `pytest cashbook/` — **Negativtest:** Es existiert keine Lösch-Route mehr (404/405); ein Storno ohne Begründung wird abgelehnt; der Saldo ist nach dem Storno wieder wie vor der Buchung. · *Files:* `cashbook/models.py`, `cashbook/views.py`, `cashbook/admin.py`, Migration · *Größe:* S · *PRD:* S6.1, S6.2 · *Release:* v1.1 · *Deps:* T15
