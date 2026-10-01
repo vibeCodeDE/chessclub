@@ -3,47 +3,68 @@
 Alles, was sich für den Verkauf ändert (Preise, Funktionsliste, FAQ), steht hier
 an einer Stelle – das Template enthält nur Darstellung.
 
-ENTWURF: Die Preise sind Platzhalter und vor dem Livegang festzulegen.
+Die Preise sind **festgelegt**, nicht mehr Entwurf. Grundlage und Kalkulation:
+ADR-014 (docs/decisions/ADR-014-preisgestaltung.md). Wer Preise, Laufzeit oder
+die Einrichtungsregel ändert, ändert zuerst das ADR.
 """
+
+# Endpreise gemäß § 19 UStG (Kleinunternehmerregelung): keine Umsatzsteuer im Preis.
+# Standard ist die Jahreszahlung; monatliche Zahlung kostet 20 % Aufschlag (gerundet).
+PREISHINWEIS = (
+    "Alle Preise sind Endpreise – es wird keine Umsatzsteuer berechnet "
+    "(Kleinunternehmerregelung gemäß § 19 UStG). Die Preise gelten bei "
+    "Jahreszahlung für eine Vertragslaufzeit von zwölf Monaten; bei monatlicher "
+    "Zahlung gilt ein Aufschlag von 20 %."
+)
 
 PREISSTUFEN = [
     {
         "name": "Start",
-        "fuer": "Kleine Vereine bis 50 Mitglieder",
-        "preis": "29",
+        "fuer": "Kleine Vereine bis 60 Mitglieder",
+        "preis": "19",
+        "jahr": "228",
+        "preis_monatlich": "23",
+        "einrichtung": "99 € einmalig",
         "hervorgehoben": False,
         "punkte": [
             "Mitglieder, Beiträge, Kassenbuch",
-            "Turniere und öffentliche Vereinsseite",
-            "Eigene Instanz, Hosting in Deutschland",
-            "Tägliche Backups",
+            "Turniere mit öffentlicher Anmeldung",
+            "Öffentliche Vereinsseite mit News und Terminen",
+            "Eigene Instanz, Hosting in Deutschland, tägliche Backups",
             "Support per E-Mail",
         ],
     },
     {
         "name": "Verein",
-        "fuer": "Bis 120 Mitglieder, mit Spielbetrieb",
-        "preis": "49",
+        "fuer": "Bis 150 Mitglieder, mit Spielbetrieb",
+        "preis": "35",
+        "jahr": "420",
+        "preis_monatlich": "42",
+        "einrichtung": "inklusive",
         "hervorgehoben": True,
         "punkte": [
             "Alles aus „Start“",
             "Mannschaften, Aufstellungen, Ligatabellen",
             "Rundbriefe per E-Mail an Gruppen",
             "Zwei-Faktor-Anmeldung für den Vorstand",
-            "Einrichtung und Datenübernahme inklusive",
+            "Datenübernahme aus Excel oder CSV inklusive",
+            "Vorstandsübergabe: eine Stunde Einweisung für die Nachfolge",
         ],
     },
     {
         "name": "Verband",
-        "fuer": "Große Vereine ab 120 Mitglieder",
-        "preis": "89",
+        "fuer": "Große Vereine mit 151 bis 400 Mitgliedern",
+        "preis": "69",
+        "jahr": "828",
+        "preis_monatlich": "82",
+        "einrichtung": "inklusive",
         "hervorgehoben": False,
         "punkte": [
             "Alles aus „Verein“",
-            "Bis zu 300 Mitglieder",
+            "Bis zu 400 Mitglieder",
             "Eigene Domain (portal.ihrverein.de)",
             "Persönliche Einweisung für den Vorstand",
-            "Bevorzugter Support",
+            "Bevorzugter Support und zweites Vorstandskonto",
         ],
     },
 ]
@@ -92,33 +113,72 @@ DATENSCHUTZ_PUNKTE = [
 
 SCHRITTE = [
     ("Kennenlernen", "Sie sehen die Software in einer Demo mit Beispieldaten. Kostenlos und unverbindlich, etwa 30 Minuten."),
-    ("Einrichten", "Wir legen Ihre eigene Instanz an, setzen Beitragssätze und Zugänge auf und übernehmen Ihre Mitgliederliste."),
+    ("Testen", "Sie bekommen eine eigene Instanz mit Ihren Vereinsdaten und arbeiten 30 Tage damit. Keine Zahlungsdaten, keine Kündigungsfrist."),
+    ("Einrichten", "Wir setzen Beitragssätze und Zugänge auf und übernehmen Ihre Mitgliederliste – in „Verein“ und „Verband“ ohne Aufpreis."),
     ("Loslegen", "Der Vorstand arbeitet von Tag eins im System. Die Mitglieder bekommen ihren Zugang per E-Mail."),
 ]
 
 FAQ = [
     (
+        "Was kostet die Software?",
+        "19, 35 oder 69 Euro im Monat, je nach Vereinsgröße. Das sind Endpreise; Umsatzsteuer fällt nicht an "
+        "(Kleinunternehmerregelung gemäß § 19 UStG). Die Preise gelten bei Jahreszahlung, etwa 228 Euro für die "
+        "Stufe „Start“ im ersten Jahr. Wer monatlich zahlen möchte, zahlt 20 % Aufschlag. Hinzu kommt einmalig "
+        "die Einrichtung: 99 Euro in der Stufe „Start“, in den beiden größeren Stufen ist sie inklusive.",
+    ),
+    (
+        "Können wir die Software vorher ausprobieren?",
+        "Ja. Sie bekommen 30 Tage lang eine eigene Instanz mit Demo-Daten, ohne Zahlungsdaten und ohne "
+        "Verpflichtung. Danach entscheiden Sie – oder wir löschen die Instanz.",
+    ),
+    (
+        "Wie lange läuft der Vertrag?",
+        "Zwölf Monate. Er verlängert sich um weitere zwölf Monate, wenn niemand kündigt; die Kündigungsfrist "
+        "beträgt einen Monat vor Ablauf. Der Preis gilt für die gesamte Laufzeit und wird für Bestandskunden "
+        "mindestens 24 Monate nicht erhöht.",
+    ),
+    (
+        "Wie bezahlen wir?",
+        "Per Rechnung, entweder als SEPA-Basislastschrift oder per Überweisung. Standard ist die jährliche "
+        "Zahlung, weil das zum Haushaltsjahr eines Vereins passt. Eine Kreditkarte brauchen Sie nicht.",
+    ),
+    (
+        "Was passiert mit unseren Daten, wenn wir kündigen?",
+        "Sie exportieren Ihre Daten jederzeit als CSV – auch während der Laufzeit. Nach Vertragsende bleibt die "
+        "Instanz vier Wochen zum Export erreichbar, danach löschen wir sie samt Backups.",
+    ),
+    (
+        "Wie kommen unsere vorhandenen Daten hinein?",
+        "Beim Einrichten übernehmen wir Ihre Mitgliederliste, zum Beispiel aus Excel oder CSV. In den Tarifen "
+        "„Verein“ und „Verband“ ist das inklusive, in „Start“ kostet es einmalig 99 Euro.",
+    ),
+    (
+        "Unser Verein wächst über die Stufengrenze hinaus. Und jetzt?",
+        "Die Grenzen sind Planungsgrenzen, keine harte Sperre. Wir sprechen vor dem nächsten Vertragsjahr über "
+        "den Wechsel in die passende Stufe; eine Nachzahlung für die laufende Laufzeit gibt es nicht.",
+    ),
+    (
+        "Gibt es Rabatte für mehrere Vereine?",
+        "Ja. Ab drei Instanzen eines Trägers – Spielgemeinschaft, Bezirk, Landesverband – geben wir 10 %, ab fünf "
+        "15 %. Außerdem schreiben wir werbenden und geworbenen Vereinen jeweils einen Monat gut.",
+    ),
+    (
         "Wo liegen unsere Daten?",
-        "Jeder Verein bekommt eine eigene Instanz mit eigener Datenbank bei einem Hoster in Deutschland. Die Daten verschiedener Vereine werden nicht gemischt.",
+        "Jeder Verein bekommt eine eigene Instanz mit eigener Datenbank bei einem Hoster in Deutschland. Die "
+        "Daten verschiedener Vereine werden nicht gemischt.",
     ),
     (
         "Brauchen wir einen Auftragsverarbeitungsvertrag?",
         "Ja, und wir stellen ihn bereit. Er gehört zu jedem Vertrag dazu.",
     ),
     (
-        "Wie kommen unsere vorhandenen Daten hinein?",
-        "Beim Einrichten übernehmen wir Ihre Mitgliederliste, zum Beispiel aus Excel oder CSV. Das ist in den Tarifen „Verein“ und „Verband“ enthalten.",
-    ),
-    (
         "Zieht die Software die Beiträge automatisch ein?",
-        "Nein. Sie verwaltet Mandate, Forderungen und Zahlungsstatus. Der Lastschrifteinzug läuft weiter über die Bank des Vereins. So behalten Sie die volle Kontrolle.",
-    ),
-    (
-        "Können wir kündigen?",
-        "Ja. Die Laufzeit ist monatlich, und Ihre Daten können Sie jederzeit als CSV exportieren.",
+        "Nein. Sie verwaltet Mandate, Forderungen und Zahlungsstatus. Der Lastschrifteinzug läuft weiter über die "
+        "Bank des Vereins. So behalten Sie die volle Kontrolle.",
     ),
     (
         "Funktioniert das auf dem Smartphone?",
-        "Ja. Die Oberfläche ist für kleine Bildschirme gebaut und lässt sich wie eine App auf dem Homescreen installieren.",
+        "Ja. Die Oberfläche ist für kleine Bildschirme gebaut und lässt sich wie eine App auf dem Homescreen "
+        "installieren.",
     ),
 ]

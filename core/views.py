@@ -186,6 +186,7 @@ def produkt_seite(request):
         "product_name": settings.PRODUCT_NAME,
         "product_contact": settings.PRODUCT_CONTACT,
         "preisstufen": produkt.PREISSTUFEN,
+        "preishinweis": produkt.PREISHINWEIS,
         "funktionen": produkt.FUNKTIONEN,
         "datenschutz_punkte": produkt.DATENSCHUTZ_PUNKTE,
         "schritte": produkt.SCHRITTE,
