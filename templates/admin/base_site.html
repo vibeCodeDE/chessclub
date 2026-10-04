@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"Schachklub Manager" }}{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=20261004">
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}">
+    <span aria-hidden="true" style="font-size: 1.25rem;">♞</span>
+    <strong>{{ club_name|default:"Schachclub" }}</strong>
+    <span style="opacity: 0.8; font-weight: 400; font-size: 0.85em; margin-left: 0.4rem;">Administration</span>
+  </a>
+</div>
+{% endblock %}
+
+{% block userlinks %}
+  <a href="{% url 'core:dashboard' %}" style="margin-right: 1.25rem; color: #f2e3be; font-weight: 500; text-decoration: none;">← Zum Vereins-Dashboard</a>
+  {{ block.super }}
+{% endblock %}
