@@ -6,3 +6,6 @@ gunicorn>=22.0
 pytest>=8.0
 pytest-django>=4.8
 cryptography>=42
+django-axes>=8.0
+django-debug-toolbar>=5.0
+django-extensions>=4.0

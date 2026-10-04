@@ -20,7 +20,14 @@ from django.utils import timezone
 from cashbook.models import CashEntry
 from comms.models import MailLog, NewsPost
 from core.models import AuditLog
-from dues.models import DunningLetter, FeeAmount, FeeCategory, MembershipFee, Payment, SepaMandate
+from dues.models import (
+    DunningLetter,
+    FeeAmount,
+    FeeCategory,
+    MembershipFee,
+    Payment,
+    SepaMandate,
+)
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, LineupEntry, Team
 from tournaments.models import Pairing, Participant, Tournament, TournamentRound

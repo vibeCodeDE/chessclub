@@ -1,9 +1,7 @@
 import gzip
-import io
 import os
 import subprocess
 from pathlib import Path
-from unittest.mock import patch
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -70,31 +68,31 @@ class DeploymentConfigurationTests(SimpleTestCase):
     def test_prod_compose_services_and_volumes(self):
         """docker-compose.prod.yml enthält db, app, caddy und backup sowie alle nötigen Volumes."""
         compose_text = (WURZEL / "docker-compose.prod.yml").read_text(encoding="utf-8")
-        
+
         # Services
         self.assertIn("db:", compose_text)
         self.assertIn("app:", compose_text)
         self.assertIn("caddy:", compose_text)
         self.assertIn("backup:", compose_text)
-        
+
         # Caddy TLS & Ports
         self.assertIn('"80:80"', compose_text)
         self.assertIn('"443:443"', compose_text)
         self.assertIn("caddy:2-alpine", compose_text)
-        
+
         # Volumes
         self.assertIn("caddy_data:", compose_text)
         self.assertIn("caddy_config:", compose_text)
         self.assertIn("static_files:", compose_text)
         self.assertIn("db_data:", compose_text)
-        
+
         # Backup Skriptbindung
         self.assertIn("/tools/backup.sh", compose_text)
 
     def test_caddyfile_configuration(self):
         """Caddyfile leitet auf app:8000 weiter, liefert statische Dateien aus und setzt Security-Header."""
         caddyfile = (WURZEL / "Caddyfile").read_text(encoding="utf-8")
-        
+
         self.assertIn("reverse_proxy app:8000", caddyfile)
         self.assertIn("/app/staticfiles", caddyfile)
         self.assertIn("Strict-Transport-Security", caddyfile)
@@ -108,7 +106,7 @@ class DeploymentConfigurationTests(SimpleTestCase):
     def test_env_prod_example_contains_all_keys(self):
         """Die Vorlage .env.prod.example enthält alle verpflichtenden Schlüssel."""
         env_example = (WURZEL / ".env.prod.example").read_text(encoding="utf-8")
-        
+
         self.assertIn("DJANGO_SECRET_KEY=", env_example)
         self.assertIn("IBAN_FERNET_KEY=", env_example)
         self.assertIn("BACKUP_ENCRYPTION_KEY=", env_example)
@@ -120,7 +118,7 @@ class DeploymentConfigurationTests(SimpleTestCase):
     def test_deployment_doc_requirements(self):
         """docs/deployment.md nennt EU/DE Hoststandort, Caddy, Restore-Protokoll und Updatepfad."""
         doc = (WURZEL / "docs/deployment.md").read_text(encoding="utf-8")
-        
+
         self.assertIn("DE/EU", doc)
         self.assertIn("Hetzner", doc)
         self.assertIn("Caddy", doc)

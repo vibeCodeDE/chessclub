@@ -12,14 +12,12 @@ Prüft automatisiert und nachvollziehbar:
 """
 
 import re
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
-
-from members.models import Member
-from tournaments.models import Tournament
 
 User = get_user_model()
 

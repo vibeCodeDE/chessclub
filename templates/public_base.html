@@ -16,6 +16,8 @@ nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
   <meta property="og:locale" content="de_DE">
   <meta property="og:title" content="{% block og_title %}{{ club_name }}{% endblock %}">
   <meta property="og:description" content="{% block og_description %}Schach in {{ club_location|default:'unserem Verein' }} – Klubabend, Mannschaften und Turniere.{% endblock %}">
+  <meta property="og:site_name" content="{{ club_name }}">
+  <meta property="og:image" content="{% block og_image %}{% static 'img/klubabend.jpg' %}{% endblock %}">
   <link rel="stylesheet" href="{% static 'css/site.css' %}?v=20261003">
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
   <meta name="theme-color" content="#192f27">
@@ -119,6 +121,10 @@ nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
   </div>
   <div class="container footer-bottom">
     <span>© {% now "Y" %} {{ club_name }}{% if club_founded %} · gegründet {{ club_founded }}{% endif %}</span>
+    <nav class="footer-legal-links" aria-label="Rechtliches">
+      <a href="{% url 'core:impressum' %}">Impressum</a>
+      <a href="{% url 'core:datenschutz' %}">Datenschutz</a>
+    </nav>
     <span>Keine Tracker, keine externen CDNs – alles läuft auf eigener Infrastruktur.</span>
   </div>
 </footer>

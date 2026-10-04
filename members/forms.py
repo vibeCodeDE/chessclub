@@ -119,3 +119,29 @@ class ChangeRequestForm(forms.Form):
                 "feld", "Für dieses Feld besteht bereits ein offener Änderungswunsch."
             )
         return cleaned
+
+
+class TrialInquiryForm(forms.Form):
+    """Schnupper- und Beitrittsanfrage über die öffentliche Vereinsseite."""
+
+    INTERESSE_CHOICES = [
+        ("schnuppern", "Klubabend & Schnupperpartie"),
+        ("jugend", "Jugend- / Schülertraining"),
+        ("mannschaft", "Ligabetrieb & Mannschaftsschach"),
+        ("allgemein", "Allgemeine Frage zur Mitgliedschaft"),
+    ]
+
+    name = forms.CharField(label="Dein Name", max_length=120)
+    email = forms.EmailField(label="E-Mail-Adresse")
+    interesse = forms.ChoiceField(
+        label="Interesse",
+        choices=INTERESSE_CHOICES,
+        initial="schnuppern",
+        required=False,
+    )
+    nachricht = forms.CharField(
+        label="Deine Nachricht (optional)",
+        widget=forms.Textarea(attrs={"rows": 3}),
+        required=False,
+    )
+

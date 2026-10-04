@@ -144,13 +144,13 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 - N1.3 Löschpflicht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Default 36 Monate); dabei Kontaktdaten + Stammdaten löschen/anonymisieren, Finanzhistorie (Beiträge, Zahlungen) anonymisiert erhalten (nur noch Mitglied-ID). Aufbewahrung der anonymisierten Finanzhistorie: **8 Jahre** nach § 147 AO; die GoBD verweist für die ordnungsgemäße Aufbewahrung darauf, ist aber nicht selbst die Fristquelle. Fristen vor Go-Live mit Steuerberater bestätigen
 - N1.4 Verzeichnis von Verarbeitungstätigkeiten: Maschinenlesbare Exportfunktion der Datenkategorien
 - N1.5 Protokollierung von Logins, Änderungen **und** Zugriffen auf Personendaten (mindestens 12 Monate). „Zugriff" = Aufruf einer Mitglieder-Detailansicht und Ausführung des Auskunfts-Exports; Listenansichten werden nicht einzeln protokolliert
-- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S)
+- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S), Brute-Force-Schutz für Logins (django-axes, ADR-015)
 - N1.7 Gastdaten aus öffentlichen Turnieranmeldungen (Name + E-Mail) gelten als Personendaten Dritter: sichtbar nur in der Turnierverwaltung, **nicht** in Mitgliederlisten/-suchen, mit Zweckbindung (nur Teilnehmerliste dieses Turniers) und dokumentierter Löschfrist nach Turnierende. Einwilligung: Hinweis auf der Anmeldeseite (Art. 6 Abs. 1 lit. b DSGVO — Durchführung des Turniers)
 
 ### 4.2 Sonstige NFR
 
 - N2.1 **Verfügbarkeit:** 99 % im Vereinsalltag; nächtliches automatisches Backup (pg_dump, komprimiert + **verschlüsselt** z. B. GPG/age — Schlüssel getrennt vom DB-Host gelagert, nicht im Repo), Wiederherstellungstest inkl. Entschlüsselung dokumentiert
-- N2.2 **Performance:** Seitenladen < 1 s im LAN/DSL; Suchergebnisse < 500 ms
+- N2.2 **Performance:** Seitenladen < 1 s im LAN/DSL; Suchergebnisse < 500 ms; N+1-Query-Prüfung in der Entwicklung via django-debug-toolbar (ADR-015)
 - N2.3 **Bedienbarkeit & Barrierefreiheit (Universal Access):** Tablet-tauglich (Aufstellung am Spieltag); volle Barrierefreiheit nach **WCAG 2.1 Stufe AA** (Ziel AAA bei Textkontrasten ≥ 7:1); vollständige Tastaturbedienbarkeit mit sichtbaren Focus-Ringen (`:focus-visible`); semantische HTML5-Struktur mit ARIA-Landmarks; Screenreader-freundliche Formular-Labels und Fehlermeldungen; altersgerechte Typografie (Schriftgröße ≥ 16 px, Zeilenabstand 1.5, Zoom bis 200 % ohne Überlappung); Touch-Ziele ≥ 44 × 44 px (WCAG 2.5.5) für fehlerfreie Bedienung am Smartphone und durch ältere Mitglieder
 - N2.4 **Wartbarkeit:** Updatepfad per `docker compose pull`; Datenmigrationen versioniert
 - N2.5 **Beobachtbarkeit:** strukturierte Logs, Fehlerbenachrichtigung an Admin-E-Mail
@@ -230,3 +230,4 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v1.4 | 2026-09-29 | Ergänzungen aus Stack-Review: neu S4.6 (iCal-Feed, T16b) und N2.8 (Monitoring, T24b), beide v1.1; Technikentscheidungen in ADR-008 (HTMX/Alpine, T10b) und ADR-009 (Caddy/restic/Uptime Kuma, T24). N2.1 bleibt unverändert (restic erfüllt „verschlüsselt“) |
 | v1.5 | 2026-09-30 | Neu §3.9 (S9.1–S9.4): öffentliche Vereinsseite in der Designsprache der Referenz-ZIP; Abgrenzung zum internen Design in [ADR-013](decisions/ADR-013-oeffentliche-designsprache.md). Alle vier Anforderungen gehen an T28 |
 | v1.6 | 2026-10-04 | Schärfung für universelle Zugänglichkeit, Inklusion für alle Altersklassen (6–80+ Jahre) und Barrierefreiheit (WCAG 2.1 AA/AAA, Touch-Targets ≥ 44px, Textskalierung bis 200 %, Tastaturfokus) in §1, §4.2 (N2.3, N2.6) und §7 |
+| v1.7 | 2026-10-05 | Integration von django-axes (Brute-Force-Schutz, N1.6) und django-debug-toolbar (Dev-Profiling & N+1-Prüfung, N2.2) gemäß ADR-015 |

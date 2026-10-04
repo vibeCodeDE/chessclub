@@ -61,6 +61,45 @@ def public_detail(request, pk):
     )
 
 
+def public_ical(request, pk):
+    """iCal-Kalendereintrag für ein öffentliches Turnier herunterladen."""
+    turnier = get_object_or_404(Tournament, pk=pk, oeffentlich=True)
+    club = getattr(settings, "CLUB_NAME", "Schachverein")
+    club_short = getattr(settings, "CLUB_SHORT", "schach")
+    now_utc = timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    datum_str = turnier.datum.strftime("%Y%m%d")
+
+    def _esc(t):
+        if not t:
+            return ""
+        return str(t).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        f"PRODID:-//{_esc(club)}//Turnier//DE",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        f"UID:turnier-{turnier.pk}@{club_short}.local",
+        f"DTSTAMP:{now_utc}",
+        f"DTSTART;VALUE=DATE:{datum_str}",
+        f"DTEND;VALUE=DATE:{datum_str}",
+        f"SUMMARY:{_esc(turnier.name)}",
+        f"DESCRIPTION:{_esc(turnier.beschreibung or turnier.name)}",
+    ]
+    if turnier.ort:
+        lines.append(f"LOCATION:{_esc(turnier.ort)}")
+    lines.extend([
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ])
+    content = "\r\n".join(lines) + "\r\n"
+    response = HttpResponse(content, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = f'inline; filename="turnier_{turnier.pk}.ics"'
+    return response
+
+
 # ------------------------------------------------------------------- Verwaltung
 @role_required(ADMIN_GROUP)
 def manage_list(request):

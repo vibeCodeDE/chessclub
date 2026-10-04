@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.test import TestCase
 
 from cashbook.models import CashEntry, jahresabschluss
@@ -603,7 +604,7 @@ class JahresbetraegeTests(TestCase):
 
     def test_doppelter_satz_fuer_selbes_jahr_wird_abgelehnt(self):
         """Negativtest: Doppelter (Kategorie, Jahr) wird abgewiesen."""
-        with self.assertRaises(Exception):
+        with self.assertRaises(IntegrityError):
             FeeAmount.objects.create(
                 kategorie=self.erwachsene, jahr=2026, betrag=Decimal("99.00")
             )

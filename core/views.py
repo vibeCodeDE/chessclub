@@ -145,10 +145,20 @@ def home(request):
         .select_related("team")
         .order_by("datum")[:5]
     )
+    letzte_spiele = (
+        LeagueMatch.objects.filter(datum__lt=heute, status="gespielt")
+        .select_related("team")
+        .order_by("-datum", "-uhrzeit")[:3]
+    )
+    from teams.models import LeagueCalendarFeed
+    feed_token = LeagueCalendarFeed.get_token()
+
     kontext = {
         "news": news,
         "turniere": turniere,
         "spiele": spiele,
+        "letzte_spiele": letzte_spiele,
+        "ical_token": feed_token,
         "mitglieder_aktiv": Member.objects.filter(status=Member.Status.AKTIV).count(),
         "mannschaften": Team.objects.filter(aktiv=True).count(),
         "naechstes_turnier": turniere[0] if turniere else None,
@@ -180,9 +190,34 @@ def verein(request):
         .select_related("team")
         .order_by("datum", "uhrzeit")[:8]
     )
+    letzte_spiele = (
+        LeagueMatch.objects.filter(datum__lt=heute, status="gespielt")
+        .select_related("team")
+        .order_by("-datum", "-uhrzeit")[:4]
+    )
+    mannschaften = (
+        Team.objects.filter(aktiv=True)
+        .select_related("kapitaen")
+        .prefetch_related("matches")
+    )
+
+    from teams.services import tabelle
+    ligen_tabellen = {}
+    for team in mannschaften:
+        if team.liga and team.liga not in ligen_tabellen:
+            tab = tabelle(team.liga)
+            if tab:
+                ligen_tabellen[team.liga] = tab
+
+    from teams.models import LeagueCalendarFeed
+    feed_token = LeagueCalendarFeed.get_token()
+
     kontext = {
         "spiele": spiele,
-        "mannschaften": Team.objects.filter(aktiv=True).prefetch_related("matches"),
+        "letzte_spiele": letzte_spiele,
+        "mannschaften": mannschaften,
+        "ligen_tabellen": ligen_tabellen,
+        "ical_token": feed_token,
         "mitglieder_aktiv": Member.objects.filter(status=Member.Status.AKTIV).count(),
         "jahre_tradition": _jahre_seit_gruendung(heute),
         "heute": heute,

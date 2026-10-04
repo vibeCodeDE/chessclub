@@ -48,6 +48,7 @@
             {% if turnier.anmeldeschluss %}
               <span><svg aria-hidden="true"><use href="#i-clock"></use></svg> Anmeldung bis {{ turnier.anmeldeschluss|date:"j. F Y" }}</span>
             {% endif %}
+            <a class="tournament-ical-link" href="{% url 'tournaments:public_ical' turnier.pk %}" download="turnier_{{ turnier.pk }}.ics" title="Termin speichern (.ics)"><svg aria-hidden="true"><use href="#i-calendar"></use></svg> .ics</a>
           </div>
         </div>
         <a class="round-arrow" href="{% url 'tournaments:public_detail' turnier.pk %}" aria-label="{{ turnier.name }} ansehen und anmelden">

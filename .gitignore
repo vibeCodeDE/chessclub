@@ -15,3 +15,8 @@ coverage/
 backups/
 .env.prod
 .coverage
+.claude/
+.codex/
+.cursor/
+.impeccable/
+.superpowers/

@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import DunningLetter, FeeAmount, FeeCategory, MembershipFee, Payment, SepaMandate
+from .models import (
+    DunningLetter,
+    FeeAmount,
+    FeeCategory,
+    MembershipFee,
+    Payment,
+    SepaMandate,
+)
 
 
 class FeeAmountInline(admin.TabularInline):

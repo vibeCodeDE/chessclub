@@ -43,6 +43,9 @@ def anmelden(request):
         ziel = request.POST.get("next") or request.GET.get("next") or ""
         if _braucht_zwei_faktor(user):
             request.session[SESSION_SCHLUESSEL] = user.pk
+            request.session["_2fa_backend"] = getattr(
+                user, "backend", "django.contrib.auth.backends.ModelBackend"
+            )
             request.session["_2fa_next"] = ziel
             return redirect("core:zwei_faktor")
         login(request, user)
@@ -83,7 +86,10 @@ def zwei_faktor(request):
             fehler = "Der Code stimmt nicht. Bitte den aktuellen Code aus der App eingeben."
 
         if fehler is None:
-            login(request, user)
+            backend = request.session.pop(
+                "_2fa_backend", "django.contrib.auth.backends.ModelBackend"
+            ) or "django.contrib.auth.backends.ModelBackend"
+            login(request, user, backend=backend)
             request.session.pop(SESSION_SCHLUESSEL, None)
             ziel = request.session.pop("_2fa_next", "")
             messages.success(request, "Anmeldung bestätigt.")

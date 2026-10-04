@@ -8,6 +8,7 @@ urlpatterns = [
     # öffentlich
     path("turniere/", views.public_list, name="public_list"),
     path("turniere/<int:pk>/", views.public_detail, name="public_detail"),
+    path("turniere/<int:pk>/kalender.ics", views.public_ical, name="public_ical"),
     # Verwaltung
     path("turniere/verwalten/", views.manage_list, name="manage_list"),
     path("turniere/verwalten/neu/", views.manage_create, name="manage_create"),

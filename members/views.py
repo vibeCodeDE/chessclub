@@ -15,7 +15,7 @@ from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_required
 from core.ui import fehler, is_ajax, ok, paginate
 from dues.models import FeeCategory, MembershipFee, Payment
 
-from .forms import ChangeRequestForm, MemberForm, MemberStatusForm
+from .forms import ChangeRequestForm, MemberForm, MemberStatusForm, TrialInquiryForm
 from .models import ChangeRequest, Member, clean_member_value
 
 
@@ -270,12 +270,45 @@ def member_export(request):
 
 
 def join_info(request):
-    """Öffentliche Beitrittsinfo mit Beitragssätzen (PRD M1.6)."""
+    """Öffentliche Beitrittsinfo mit Beitragssätzen und Schnupper-Anfrage (PRD M1.6)."""
     kategorien = FeeCategory.objects.filter(aktiv=True)
+    if request.method == "POST":
+        form = TrialInquiryForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"]
+            email = form.cleaned_data["email"]
+            interesse = dict(TrialInquiryForm.INTERESSE_CHOICES).get(
+                form.cleaned_data["interesse"], ""
+            )
+            nachricht = form.cleaned_data.get("nachricht", "")
+            subject = f"Neue Schnupper-Anfrage: {name} ({interesse})"
+            body = (
+                f"Name: {name}\nE-Mail: {email}\nInteresse: {interesse}\n\n"
+                f"Nachricht:\n{nachricht}"
+            )
+            from django.conf import settings
+            from django.core.mail import send_mail
+
+            contact = getattr(settings, "CLUB_CONTACT", "vorstand@example.org")
+            send_mail(subject, body, contact, [contact], fail_silently=True)
+            messages.success(
+                request,
+                "Vielen Dank! Wir haben deine Schnupper-Anfrage erhalten und melden uns in Kürze per E-Mail bei dir.",
+            )
+            return redirect("members:join_info")
+        else:
+            messages.error(request, "Bitte überprüfe deine Eingaben im Formular.")
+    else:
+        form = TrialInquiryForm()
+
     return render(
         request,
         "members/join_info.html",
-        {"kategorien": kategorien, "aktive_mitglieder": Member.objects.filter(status=Member.Status.AKTIV).count()},
+        {
+            "kategorien": kategorien,
+            "form": form,
+            "aktive_mitglieder": Member.objects.filter(status=Member.Status.AKTIV).count(),
+        },
     )
 
 

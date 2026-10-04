@@ -107,8 +107,25 @@
         </p>
       {% endif %}
 
+      <div class="inquiry-box">
+        <h3>Schnuppertraining unverbindlich anfragen</h3>
+        <p>Du möchtest vorbeikommen oder hast eine Frage? Schreib uns einfach:</p>
+        <form class="club-form" method="post" novalidate>
+          {% csrf_token %}
+          <div class="form-row">
+            {% include "includes/public_field.html" with field=form.name %}
+            {% include "includes/public_field.html" with field=form.email %}
+          </div>
+          {% include "includes/public_field.html" with field=form.interesse %}
+          {% include "includes/public_field.html" with field=form.nachricht %}
+          <button class="form-submit" type="submit">
+            Schnupperanfrage senden <svg aria-hidden="true"><use href="#i-check"></use></svg>
+          </button>
+        </form>
+      </div>
+
       <a class="button button-dark" href="mailto:{{ club_contact }}" data-no-loading>
-        Aufnahme anfragen <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+        Oder direkt per E-Mail anfragen <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
       </a>
 
       <div class="membership-login">

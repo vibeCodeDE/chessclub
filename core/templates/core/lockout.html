@@ -1,0 +1,22 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Zugang vorübergehend gesperrt · {{ club_short }}{% endblock %}
+
+{% block card %}
+<span class="brand-mark" aria-hidden="true">♞</span>
+<h1>Zugang gesperrt</h1>
+<p class="lede">{{ club_name }}</p>
+
+<div class="public-alert error" role="alert">
+  <svg aria-hidden="true"><use href="#i-alert"></use></svg>
+  <div>
+    <strong>Zu viele fehlgeschlagene Anmeldeversuche.</strong><br>
+    Aus Sicherheitsgründen wurde der Zugang vorübergehend gesperrt. Bitte versuche es später erneut oder wende dich an den Vorstand.
+  </div>
+</div>
+
+<div class="auth-foot">
+  <a href="{% url 'core:login' %}">Zurück zur Anmeldung</a><br>
+  Bei anhaltenden Problemen wende dich an den Vereinsvorstand unter <a href="mailto:{{ club_contact }}">{{ club_contact }}</a>.
+</div>
+{% endblock %}

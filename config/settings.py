@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "axes",
     "core",
     "members",
     "dues",
@@ -36,7 +37,54 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.SicherheitsHeaderMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# Brute-Force-Schutz für Anmeldungen (PRD N1.6, ADR-015)
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # 1 Stunde Sperre nach 5 Fehlversuchen
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = "core/lockout.html"
+
+# Entwicklungs-Profiling (django-debug-toolbar, PRD N2.2, ADR-015):
+# Nur aktiv, wenn DEBUG=True gesetzt ist und das Paket installiert ist.
+if DEBUG:
+    try:
+        import debug_toolbar  # noqa: F401
+
+        INSTALLED_APPS.append("debug_toolbar")
+        MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    except ImportError:
+        pass
+
+    try:
+        import django_extensions  # noqa: F401
+
+        INSTALLED_APPS.append("django_extensions")
+    except ImportError:
+        pass
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+    "localhost",
+]
+
+
+def show_debug_toolbar(request):
+    """Toolbar nur bei DEBUG anzeigen und nicht für asynchrone AJAX-Fragmente."""
+    from django.conf import settings as _s
+
+    return bool(_s.DEBUG) and request.headers.get("x-requested-with") != "XMLHttpRequest"
+
+
+DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK": "config.settings.show_debug_toolbar",
+}
 
 ROOT_URLCONF = "config.urls"
 

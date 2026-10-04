@@ -182,9 +182,25 @@
             </p>
           {% endfor %}
         </div>
-        <a class="fixtures-link" href="{% url 'core:verein' %}#spielplan">
-          Kompletten Spielplan ansehen <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
-        </a>
+        {% if letzte_spiele %}
+          <div class="fixtures-recent">
+            <span class="recent-label">LETZTE ERGEBNISSE</span>
+            {% for spiel in letzte_spiele %}
+              <div class="recent-item">
+                <span class="recent-teams">{{ spiel.team.name }} {{ spiel.ergebnis_heim|default:"0" }}:{{ spiel.ergebnis_gast|default:"0" }} {{ spiel.gegner }}</span>
+                <span class="recent-date">{{ spiel.datum|date:"d.m." }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <div class="fixtures-actions">
+          <a class="fixtures-link" href="{% url 'core:verein' %}#spielplan">
+            Kompletten Spielplan ansehen <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+          </a>
+          <a class="fixtures-ical-link" href="{% url 'teams:ical_gesamt' token=ical_token %}" download="ligaspiele.ics" title="Spielplan als Kalender abonnieren (.ics)">
+            <svg aria-hidden="true"><use href="#i-calendar"></use></svg> .ics
+          </a>
+        </div>
       </aside>
     </div>
   </div>

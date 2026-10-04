@@ -219,6 +219,11 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Admin-Login erfordert 2FA; Gerät kann im Profil eingerichtet und gewechselt werden; Rollen „mitglied"/„kapitaen" bleiben ohne 2FA.
   *Verify:* `pytest core/tests/test_haertung.py` — **Negativtest:** Admin-Login ohne gültiges Token wird abgewiesen; ein Token außerhalb des Zeitfensters wird nicht akzeptiert. · *Files:* `core/twofa.py`, `core/auth_views.py`, `core/models.py` · *Größe:* S · *PRD:* N1.6 · *Release:* v1.1 · *Deps:* T25
 
+- [x] **T26b: Brute-Force-Schutz (django-axes) und Dev-Tooling (django-debug-toolbar, django-extensions)** *(v1.1 — umgesetzt)*
+  Brute-Force-Schutz für Logins (`/anmelden/`, `/admin/`) nach 5 Fehlversuchen mit 1 Stunde Sperre und barrierefreier deutscher Sperrseite (`core/lockout.html`) gemäß [ADR-015](../docs/decisions/ADR-015-brute-force-schutz-und-dev-profiling.md). Entwicklungs-Profiling mit `django-debug-toolbar` (N+1-Query-Prüfung, SQL-Budgets) und Entwicklungs-Tools mit `django-extensions` (`shell_plus`, `show_urls`, `validate_templates`) aktiv bei `DEBUG=True`, vollkommen abgeschaltet in Produktion (`DEBUG=False`).
+  *Acceptance:* 5 Fehlversuche sperren den Zugang mit HTTP 429 und Lockout-Template; erfolgreiche Anmeldung setzt den Zähler zurück; `/__debug__/` ist in Produktion 404 und nicht erreichbar; `validate_templates` meldet 0 Syntaxfehler; 2FA-Vervollständigung funktioniert mit mehreren Auth-Backends.
+  *Verify:* `pytest core/tests/test_axes_and_toolbar.py` — **Negativtest:** 6. Versuch nach 5 Fehlern liefert 429; `/__debug__/` bei `DEBUG=False` liefert 404; Dev-Tools in Produktion nicht aktiv. · *Files:* `requirements.txt`, `config/settings.py`, `config/urls.py`, `config/settings_test.py`, `core/auth_views.py`, `core/templates/core/lockout.html`, `core/tests/test_axes_and_toolbar.py`, `docs/decisions/ADR-015-brute-force-schutz-und-dev-profiling.md` · *Größe:* S · *PRD:* N1.6, N2.2 · *Release:* v1.1 · *Deps:* T26
+
 - [x] **T15: Kassenbuch** *(v1.1 — umgesetzt)*
   `CashEntry` (Einnahme/Ausgabe, Kategorie, Betrag, Datum, Notiz, Belegnummer), Liste + Jahresfilter, Jahresabschluss, CSV-Export für den Steuerberater.
   *Acceptance:* Buchungen anlegen/filtern; Jahres-CSV summiert korrekt; **keine** Löschfunktion für Buchungen.
@@ -258,7 +263,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T28 öffentliche Designsprache
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
 - **Out of scope (K):** DSB-Meldeformate (K3.6), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
@@ -276,10 +281,10 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | N1.1 | T24 (Hoststandort + kein CDN/Tracker) |
 | N1.2 / N1.3 / N1.4 | T23 |
 | N1.5 | T5 (Logins/Änderungen) + T12 (Detail-Zugriffe) |
-| N1.6 | T26 *(v1.1 — im PRD als S geführt)* |
+| N1.6 | T26 + T26b *(v1.1 — im PRD als S geführt)* |
 | N1.7 | T19 |
 | N2.1 / N2.4 | T24 |
-| N2.2 / N2.3 | T25b |
+| N2.2 / N2.3 | T25b + T26b |
 | N2.8 | T24b *(v1.1 — im PRD als S geführt)* |
 | N2.5 | T25 |
 | N2.6 / N2.7 | T1 / T27 |

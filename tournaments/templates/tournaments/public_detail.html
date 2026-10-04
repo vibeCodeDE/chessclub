@@ -56,6 +56,7 @@
         <div>
           <span>DATUM</span>
           <strong>{{ turnier.datum|date:"l, j. F Y" }}</strong>
+          <a class="fact-action-link" href="{% url 'tournaments:public_ical' turnier.pk %}" download="turnier_{{ turnier.pk }}.ics" title="In Kalender eintragen (.ics)"><svg aria-hidden="true"><use href="#i-calendar"></use></svg> .ics Kalender</a>
         </div>
       </div>
       <div class="fact-row">
@@ -126,6 +127,10 @@
               Verbindlich anmelden <svg aria-hidden="true"><use href="#i-check"></use></svg>
             </button>
             <p class="form-note">Die Anmeldung ist kostenlos online; das Startgeld wird am Turniertag kassiert.</p>
+            <p class="form-privacy-note">
+              <svg aria-hidden="true"><use href="#i-shield"></use></svg>
+              <span><strong>Datenschutz (Art. 6 Abs. 1 lit. b DSGVO):</strong> Deine Angaben (Name, E-Mail{% if form.verein %}, Verein{% endif %}) werden ausschließlich zur Organisation und Durchführung dieses Turniers verwendet und nach Turnierende gelöscht.</span>
+            </p>
           </form>
         {% else %}
           <div class="closed-notice">

@@ -101,7 +101,11 @@
         <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> LIGABETRIEB</div>
         <h2 id="schedule-title" class="section-title">Der nächste <em>Spielplan.</em></h2>
       </div>
-      <p class="section-aside">Alle Paarungen der kommenden Wochen – Änderungen behält sich die Staffelleitung vor.</p>
+      <div class="section-aside">
+        <a class="button button-sm button-dark" href="{% url 'teams:ical_gesamt' token=ical_token %}" download="ligaspiele.ics" title="Alle Ligaspiele als Kalender abonnieren (.ics)">
+          <svg aria-hidden="true"><use href="#i-calendar"></use></svg> Spielplan abonnieren (.ics)
+        </a>
+      </div>
     </div>
     {% if spiele %}
       <div class="schedule-table">
@@ -135,6 +139,67 @@
       <p class="empty-message">
         Sobald die Staffeleinteilung steht, findest du hier alle Begegnungen der Mannschaften.
       </p>
+    {% endif %}
+
+    {% if letzte_spiele %}
+      <div class="recent-results-block">
+        <div class="section-heading-row ranking-heading">
+          <div>
+            <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> ERGEBNISSE</div>
+            <h3 class="league-title">Letzte Spieltage</h3>
+          </div>
+        </div>
+        <div class="recent-results-grid">
+          {% for spiel in letzte_spiele %}
+            <div class="recent-result-card">
+              <span class="recent-result-meta">{{ spiel.team.name }} · {{ spiel.datum|date:"j. M Y" }}</span>
+              <strong class="recent-result-score">
+                {{ spiel.heimspiel|yesno:"Heim,Auswärts" }}: {{ spiel.ergebnis_heim|default:"0" }} : {{ spiel.ergebnis_gast|default:"0" }} vs. {{ spiel.gegner }}
+              </strong>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if ligen_tabellen %}
+      <div class="league-tables-block">
+        {% for liga_name, tabelle_daten in ligen_tabellen.items %}
+          <div class="league-table-group">
+            <div class="section-heading-row ranking-heading">
+              <div>
+                <div class="eyebrow section-eyebrow"><span class="small-rule" aria-hidden="true"></span> LIGATABELLE</div>
+                <h3 class="league-title">{{ liga_name }}</h3>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="ranking-table">
+                <caption>Tabelle {{ liga_name }}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Mannschaft</th>
+                    <th scope="col" class="num">Spiele</th>
+                    <th scope="col" class="num">MP</th>
+                    <th scope="col" class="num">BP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for zeile in tabelle_daten %}
+                    <tr{% if zeile.eigene_mannschaft %} class="highlight-row"{% endif %}>
+                      <td>{{ zeile.rang }}</td>
+                      <td class="main">{{ zeile.name }}{% if zeile.eigene_mannschaft %} ★{% endif %}</td>
+                      <td class="num">{{ zeile.spiele }}</td>
+                      <td class="num">{{ zeile.mannschaftspunkte }}</td>
+                      <td class="num">{{ zeile.brettpunkte|floatformat:1 }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
     {% endif %}
   </section>
 

@@ -249,3 +249,84 @@ class BildbestandTests(TestCase):
                 ziel = pathlib.Path(settings.BASE_DIR) / "static/img" / datei
                 self.assertTrue(ziel.exists(), f"{datei} fehlt in static/img/")
                 self.assertGreater(ziel.stat().st_size, 10_000, f"{datei} wirkt leer")
+
+
+class OeffentlicheSeitenErweiterungenTests(TestCase):
+    """Prüft die Verbesserungen an den öffentlichen Seiten (Rechtliches, iCal, Spielbetrieb, Schnuppern)."""
+
+    def test_fusszeile_verlinkt_impressum_und_datenschutz(self):
+        """DDG §5 & DSGVO Art. 13: Impressum und Datenschutz sind von allen öffentlichen Seiten erreichbar."""
+        for pfad in ("/", "/verein/", "/turniere/", "/mitglied-werden/", "/aktuelles/"):
+            with self.subTest(pfad=pfad):
+                inhalt = self.client.get(pfad).content.decode()
+                self.assertIn(reverse("core:impressum"), inhalt)
+                self.assertIn(reverse("core:datenschutz"), inhalt)
+
+    def test_turnier_anmeldung_zeigt_dsgvo_transparenzhinweis(self):
+        """PRD N1.7: Gastdaten-Hinweis auf der Anmeldeseite gem. Art. 6 Abs. 1 lit. b DSGVO."""
+        turnier = Tournament.objects.create(
+            name="Sommerturnier",
+            datum="2026-11-20",
+            oeffentlich=True,
+            status=Tournament.Status.ANMELDUNG,
+        )
+        inhalt = self.client.get(f"/turniere/{turnier.pk}/").content.decode()
+        self.assertIn("Art. 6 Abs. 1 lit. b DSGVO", inhalt)
+        self.assertIn("Turnierende gelöscht", inhalt)
+
+    def test_turnier_ical_download(self):
+        """Turniere können als .ics-Datei in den eigenen Kalender geladen werden."""
+        turnier = Tournament.objects.create(
+            name="Open 2026",
+            datum="2026-12-05",
+            oeffentlich=True,
+            status=Tournament.Status.ANMELDUNG,
+        )
+        res = self.client.get(f"/turniere/{turnier.pk}/kalender.ics")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res["Content-Type"], "text/calendar; charset=utf-8")
+        self.assertIn("Open 2026", res.content.decode())
+
+    def test_nicht_oeffentliches_turnier_ical_bleibt_404(self):
+        """Negativtest: Kalender-Download für nicht-öffentliche Turniere ist gesperrt."""
+        geheim = Tournament.objects.create(
+            name="Internes Turnier", datum="2026-12-06", oeffentlich=False
+        )
+        res = self.client.get(f"/turniere/{geheim.pk}/kalender.ics")
+        self.assertEqual(res.status_code, 404)
+
+    def test_vereinsseite_bietet_ical_spielplan_abo(self):
+        """PRD S4.6: Spielplan-Abo als iCal-Link auf der Vereinsseite."""
+        inhalt = self.client.get("/verein/").content.decode()
+        self.assertIn(".ics", inhalt)
+        self.assertIn("ical/gesamt/", inhalt)
+
+    def test_schnupper_anfrage_erfolgreich_gesendet(self):
+        """Interessierte können über das Webformular ein Probespiel anfragen."""
+        res = self.client.post(
+            "/mitglied-werden/",
+            {
+                "name": "Erika Muster",
+                "email": "erika@example.org",
+                "interesse": "schnuppern",
+                "nachricht": "Ich würde gerne dienstags vorbeikommen.",
+            },
+            follow=True,
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Schnupper-Anfrage erhalten")
+
+    def test_schnupper_anfrage_ohne_email_wird_abgewiesen(self):
+        """Negativtest: Ohne gültige E-Mail wird die Anfrage abgewiesen."""
+        res = self.client.post(
+            "/mitglied-werden/",
+            {
+                "name": "Erika Muster",
+                "email": "",
+                "interesse": "schnuppern",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertNotContains(res, "Schnupper-Anfrage erhalten")
+        self.assertContains(res, "has-error")
+
