@@ -17,6 +17,7 @@
 <body>
 {% include "includes/sprite.html" %}
 <div class="loading-bar" data-loading-bar aria-hidden="true"></div>
+<a class="skip-link" href="#main-content">Zum Hauptinhalt springen</a>
 
 <div class="app app-shell">
   <aside class="sidebar" id="sidebar" aria-label="Hauptnavigation">
@@ -114,7 +115,7 @@
       </div>
     </header>
 
-    <main class="content main-content">
+    <main class="content main-content" id="main-content">
       {% block page_actions %}{% endblock %}
       {% if messages %}
         <div data-flash-messages>

@@ -93,13 +93,21 @@
 - **Verworfen:** `MemberQuerySet.delete()` (Soft-Delete auch für `queryset.delete()`), der partielle `UniqueConstraint` auf offene Wünsche und die Superuser-Rolle in `core/roles.py` – Feature-Arbeit aus einem überholten Zweigstand, der eigene Migrationen und andere Nummern mitbringt. Bewusst **nicht** übernommen; als eigene Task zu planen.
 - **Beleg:** `docker compose exec app pytest` → 343 Tests grün, 172 Subtests; `ruff check .` ohne Befund; `makemigrations --check` ohne offene Migration; `check --deploy` mit gesetzten Pflichtvariablen ohne ERROR.
 
+### T25b: NFR-Nachweis — Performance, Barrierefreiheit (WCAG 2.1 AA) und universelle Zugänglichkeit (2026-10-04)
+
+- **Umsetzung:**
+  1. `core/tests/test_a11y.py` erstellt (10 dedizierte automatisierte Tests für `lang="de"`, unblockiertes Viewport-Scaling bis 200 %, Skip-Links auf allen Hüllen, `:focus-visible` in allen Stylesheets, semantische HTML5-Landmarks, Überschriften-Hierarchie `<h1>`, ARIA-Attribute und Label-Zuordnung bei Formularen).
+  2. Skip-Links (`.skip-link` in `app.css`, `site.css`) und IDs (`#main-content`, `#inhalt`, `#auth-card`) auf allen Hüllen (`base.html`, `public_base.html`, `auth_base.html`) durchgängig integriert.
+  3. `docs/nfr-pruefung.md` als systematischer Prüfbericht mit Messwerten (alle 5 Kernflächen < 180 ms), Methodik, Kontrastwerten (Fließtext 11.8:1 / 14.1:1, AAA) und Responsive-Ergebnissen (360 px bis 4K) angelegt.
+  4. `docs/prd.md` auf v1.6 aktualisiert mit geschärften Anforderungen für alle Generationen (Schüler bis Senioren 80+ Jahre).
+- **Beleg:** `docker compose exec app pytest` → **404 passed, 205 subtests passed** in 33 s (100% grün).
+
 ---
 
 ## Nächste Schritte
 
-1. [T25b](plan.md) NFR-Nachweis auf der Zielhardware, WCAG-Durchgang, `docs/nfr-pruefung.md`
-2. [T28](plan.md) öffentlicher Teil — umgesetzt; offen bleiben nur die echten Vereinsfotos und das **interne Design** (Dashboard/Verwaltung), das separat geliefert wird
-3. **Abnahme** durch den Vorstand gegen `docs/abnahme.md`
+1. [T24b](plan.md) Monitoring mit Uptime Kuma (v1.1)
+2. **Pilotbetrieb & Abnahme** durch den Testverein mit den erstellten Mustern (`docs/einfuehrung_testverein.md`, `docs/abnahme.md`)
 
 **Danach (v1.1):** T18 · T22 · T24b
 

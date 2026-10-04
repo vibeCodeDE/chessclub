@@ -22,9 +22,10 @@ damit der Weg in den internen Bereich durchgängig wirkt.
 <body class="auth-page">
 {% include "includes/sprite.html" %}
 <div class="loading-bar" data-loading-bar aria-hidden="true"></div>
+<a class="skip-link" href="#auth-card">Zum Anmeldebereich springen</a>
 
 <div class="auth-shell">
-  <div class="auth-card">
+  <div class="auth-card" id="auth-card">
     {% block card %}{% endblock %}
     <p class="auth-back">
       <a href="{% url 'core:home' %}">

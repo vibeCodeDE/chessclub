@@ -1,24 +1,24 @@
 # PRD: Schachvereins-Software
 
-**Status:** Freigegeben v1.4 (Ergänzungen S4.6, N2.8) — Änderungen siehe §9
-**Datum:** 2026-09-28
+**Status:** Freigegeben v1.6 (Universelle Zugänglichkeit, Barrierefreiheit WCAG 2.1 AA/AAA, Design-Exzellenz) — Änderungen siehe §9
+**Datum:** 2026-10-04
 
 ---
 
 ## 1. Ziel & Zielgruppe
 
-**Was bauen wir?** Eine selbst gehostete Web-Software für einen Schachverein (< 200 Mitglieder), die die Vereinsverwaltung zentral abbildet: Mitglieder, Beiträge, Turniere, Spielbetrieb, Kommunikation und Buchhaltung.
+**Was bauen wir?** Eine selbst gehostete Web-Software für einen Schachverein (< 200 Mitglieder), die die Vereinsverwaltung zentral abbildet: Mitglieder, Beiträge, Turniere, Spielbetrieb, Kommunikation und Buchhaltung — mit überragendem, zeitlosem Design und universeller Zugänglichkeit für alle Generationen.
 
-**Für wen?**
+**Für wen?** Schachvereine zeichnen sich durch eine besonders heterogene Mitgliedschaft aus (Schüler/Jugendliche ab 6 Jahren, aktive Turnierspieler, ehrenamtliche Funktionäre und Seniorinnen/Senioren bis 80+ Jahre). Die Software ist so gestaltet, dass sie für alle Nutzergruppen ohne technische Hürden intuitiv und barrierefrei bedienbar ist.
 
 | Persona | Rolle | Hauptbedürfnis |
 |---|---|---|
-| Vorstand (Kassenwart, Schriftführer, 1. Vorsitzender) | Admin | Volle Übersicht, DSGVO-konforme Verwaltung, wenig Aufwand |
-| Mannschaftskapitän | Mitarbeiter | Aufstellung melden, Ergebnisse erfassen |
-| Mitglied | Leser/Bearbeiter eigener Daten | Beitragsstand, Anmeldung zu Turnieren, eigene Daten einsehen |
-| Öffentlichkeit (optional) | Gast | Turniertermine, Ergebnisse, Beitrittsinfo |
+| Vorstand (Kassenwart, Schriftführer, 1. Vorsitzender) | Admin | Volle Übersicht, DSGVO-konforme Verwaltung, minimaler manueller Aufwand |
+| Mannschaftskapitän | Mitarbeiter | Schnelle Aufstellung am Spieltag, unkomplizierte Ergebniserfassung (auch mobil am Brett) |
+| Mitglied (Jugendliche bis Senioren) | Leser/Bearbeiter eigener Daten | Glasklarer Beitragsstand, einfache 1-Klick-Turnieranmeldung, eigene Daten barrierefrei einsehen |
+| Öffentlichkeit & Gastspieler | Gast | Öffentliche Termine, Turniere, Ergebnisse und Beitrittsinformationen barrierearm zugänglich |
 
-**Erfolg bedeutet:** Der Vorstand kann Mitglieder, Beiträge und Turniere ohne Excel-Dateien und ohne Zusatztools pflegen; alle Daten liegen DSGVO-konform auf eigener Infrastruktur.
+**Erfolg bedeutet:** Der Vorstand kann Mitglieder, Beiträge und Turniere ohne Excel-Dateien und ohne Zusatztools pflegen; alle Daten liegen DSGVO-konform auf eigener Infrastruktur; alle Generationen des Vereins nutzen das System gerne und ohne Barrieren.
 
 ---
 
@@ -151,10 +151,10 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 
 - N2.1 **Verfügbarkeit:** 99 % im Vereinsalltag; nächtliches automatisches Backup (pg_dump, komprimiert + **verschlüsselt** z. B. GPG/age — Schlüssel getrennt vom DB-Host gelagert, nicht im Repo), Wiederherstellungstest inkl. Entschlüsselung dokumentiert
 - N2.2 **Performance:** Seitenladen < 1 s im LAN/DSL; Suchergebnisse < 500 ms
-- N2.3 **Bedienbarkeit:** Tablet-tauglich (Aufstellung am Spieltag), Barrierefreiheit mind. WCAG 2.1 AA bei Kernflächen
+- N2.3 **Bedienbarkeit & Barrierefreiheit (Universal Access):** Tablet-tauglich (Aufstellung am Spieltag); volle Barrierefreiheit nach **WCAG 2.1 Stufe AA** (Ziel AAA bei Textkontrasten ≥ 7:1); vollständige Tastaturbedienbarkeit mit sichtbaren Focus-Ringen (`:focus-visible`); semantische HTML5-Struktur mit ARIA-Landmarks; Screenreader-freundliche Formular-Labels und Fehlermeldungen; altersgerechte Typografie (Schriftgröße ≥ 16 px, Zeilenabstand 1.5, Zoom bis 200 % ohne Überlappung); Touch-Ziele ≥ 44 × 44 px (WCAG 2.5.5) für fehlerfreie Bedienung am Smartphone und durch ältere Mitglieder
 - N2.4 **Wartbarkeit:** Updatepfad per `docker compose pull`; Datenmigrationen versioniert
 - N2.5 **Beobachtbarkeit:** strukturierte Logs, Fehlerbenachrichtigung an Admin-E-Mail
-- N2.6 **Mobil:** Alle Kernflächen funktionieren ab 360 px Breite (Responsive, Mobile-First-Layout); Navigation als Burger-Menü; Tabellen scrollbar statt zerbrochen
+- N2.6 **Mobil & Responsiv:** Alle Kernflächen funktionieren nahtlos ab 360 px bis 4K (Responsive, Mobile-First-Layout); Navigation als leicht bedienbares Burger-Menü; Tabellen horizontal scrollbar statt zerbrochen
 - N2.7 **Installierbarkeit (PWA):** App lässt sich auf Homescreen/Startmenü installieren (Web-App-Manifest + Service Worker), öffnet sich in eigenem Fenster ohne Browser-Chrome, Icons für iOS/Android; Basis-Offline-Anzeige der Startseite/letzten News
 - N2.8 **Monitoring (S):** Erreichbarkeit der App und ausbleibendes Backup werden überwacht und per E-Mail gemeldet (z. B. Uptime Kuma, ADR-009); keine Personendaten in den Meldungen
 
@@ -195,11 +195,12 @@ Meilensteine heißen **MS1–MS7**, damit sie nicht mit den Anforderungs-IDs (M1
 - Beitragslauf für 150 Mitglieder in < 10 Minuten erstellt und exportiert
 - Keine Excel-Dateien mehr für Mitglieder oder Beiträge als primäre Quelle
 - Turnierergebnisse nach letzten Runden in < 2 Minuten erfasst und veröffentlicht
-- Startseite und Anmeldung funktionieren auf dem Smartphone (getestet auf 360 px) und lassen sich als App auf dem Homescreen installieren
+- Startseite und Turnieranmeldung funktionieren reibungslos auf dem Smartphone (getestet ab 360 px) und lassen sich als PWA auf dem Homescreen installieren
+- Universelle Zugänglichkeit: Kernflächen (Login, Dashboard, Mitgliederliste, Aufstellung, Turnieranmeldung) erfüllen WCAG 2.1 Stufe AA ohne schwerwiegende Verstöße; alle interaktiven Elemente mit Tastatur erreichbar und visuell fokussiert
 - Auskunftsanfrage eines Mitglieds: ein Klick → vollständiges PDF
 - Wiederherstellung aus Backup erfolgreich getestet innerhalb von 4 h
 - Kassenbericht für den Vorstand ohne Nachbearbeitung erstellbar
-- Kernflächen (Login, Dashboard, Mitgliederliste, Aufstellung, Turnieranmeldung) ohne schwerwiegende WCAG-2.1-AA-Verstöße bedienbar; Kernseiten < 1 s auf dem Vereinsserver gemessen
+- Performance: Kernseiten laden im Vereinsserver-Test in < 1 s
 - Update auf eine neue Version per dokumentiertem `docker compose pull`-Ablauf möglich, ohne Datenverlust
 
 ---
@@ -226,5 +227,6 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 |---|---|---|
 | v1.2 | 2026-09-28 | Review-Feedback: Priorisierung v1/v1.1, DSGVO-Anforderungen geschärft (N1.5, N1.7), Berechtigungsmatrix §3.8, Backup-Verschlüsselung |
 | v1.3 | 2026-09-29 | Redaktionell: Meilensteine als MS1–MS7 umbenannt und an den v1/v1.1-Schnitt angepasst; Tippfehler in N1.3 behoben; §3.8-Verweisliste korrigiert (T19 ist kein Export-Task). Keine inhaltliche Anforderungsänderung |
-| v1.5 | 2026-09-30 | Neu §3.9 (S9.1–S9.4): öffentliche Vereinsseite in der Designsprache der Referenz-ZIP; Abgrenzung zum internen Design in [ADR-013](decisions/ADR-013-oeffentliche-designsprache.md). Alle vier Anforderungen gehen an T28 |
 | v1.4 | 2026-09-29 | Ergänzungen aus Stack-Review: neu S4.6 (iCal-Feed, T16b) und N2.8 (Monitoring, T24b), beide v1.1; Technikentscheidungen in ADR-008 (HTMX/Alpine, T10b) und ADR-009 (Caddy/restic/Uptime Kuma, T24). N2.1 bleibt unverändert (restic erfüllt „verschlüsselt“) |
+| v1.5 | 2026-09-30 | Neu §3.9 (S9.1–S9.4): öffentliche Vereinsseite in der Designsprache der Referenz-ZIP; Abgrenzung zum internen Design in [ADR-013](decisions/ADR-013-oeffentliche-designsprache.md). Alle vier Anforderungen gehen an T28 |
+| v1.6 | 2026-10-04 | Schärfung für universelle Zugänglichkeit, Inklusion für alle Altersklassen (6–80+ Jahre) und Barrierefreiheit (WCAG 2.1 AA/AAA, Touch-Targets ≥ 44px, Textskalierung bis 200 %, Tastaturfokus) in §1, §4.2 (N2.3, N2.6) und §7 |
