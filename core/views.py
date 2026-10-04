@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -24,10 +25,13 @@ from teams.models import LeagueMatch, Team
 from tournaments.models import Tournament
 
 
-@role_required(ADMIN_GROUP)
+@login_required
 def dsgvo_auskunft(request, pk):
-    """Druckbare Datenauskunft für ein Mitglied (PRD N1.2)."""
+    """Druckbare Datenauskunft für ein Mitglied (PRD N1.2, Berechtigungsmatrix §3.8)."""
     member = get_object_or_404(Member, pk=pk)
+    rolle = role_of(request.user)
+    if rolle != ADMIN_GROUP and member.user != request.user:
+        raise PermissionDenied
     daten = datenauskunft(member)
     AuditLog.objects.create(
         benutzer=request.user,
@@ -42,12 +46,15 @@ def dsgvo_auskunft(request, pk):
     )
 
 
-@role_required(ADMIN_GROUP)
+@login_required
 def dsgvo_pdf(request, pk):
-    """Vollständige Datenauskunft als PDF (PRD N1.2, ein Klick)."""
+    """Vollständige Datenauskunft als PDF (PRD N1.2, Berechtigungsmatrix §3.8)."""
     from core.pdf import datenauskunft_pdf
 
     member = get_object_or_404(Member, pk=pk)
+    rolle = role_of(request.user)
+    if rolle != ADMIN_GROUP and member.user != request.user:
+        raise PermissionDenied
     daten = datenauskunft(member)
     AuditLog.objects.create(
         benutzer=request.user,
@@ -62,10 +69,13 @@ def dsgvo_pdf(request, pk):
     return antwort
 
 
-@role_required(ADMIN_GROUP)
+@login_required
 def dsgvo_export(request, pk):
-    """Maschinenlesbare Auskunft (JSON) zum Herunterladen (PRD N1.2/N1.4)."""
+    """Maschinenlesbare Auskunft (JSON) zum Herunterladen (PRD N1.2/N1.4, Berechtigungsmatrix §3.8)."""
     member = get_object_or_404(Member, pk=pk)
+    rolle = role_of(request.user)
+    if rolle != ADMIN_GROUP and member.user != request.user:
+        raise PermissionDenied
     daten = datenauskunft(member)
     AuditLog.objects.create(
         benutzer=request.user,
@@ -247,7 +257,8 @@ def dashboard(request):
     """Rollenabhängige Übersicht (PRD M7.1)."""
     rolle = role_of(request.user)
     heute = timezone.localdate()
-    jahr = heute.year
+    jahr_param = request.GET.get("jahr", "").strip()
+    jahr = int(jahr_param) if jahr_param.isdigit() else heute.year
 
     if rolle in {ADMIN_GROUP, KAPITAEN_GROUP}:
         return _dashboard_vorstand(request, rolle, heute, jahr)
@@ -265,9 +276,15 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
     )
     kommende_turniere = Tournament.objects.filter(datum__gte=heute).order_by("datum")[:4]
 
+    verfuegbare_jahre = sorted(
+        set(MembershipFee.objects.values_list("jahr", flat=True)) | {heute.year},
+        reverse=True,
+    )
+
     kontext = {
         "rolle": rolle,
         "jahr": jahr,
+        "verfuegbare_jahre": verfuegbare_jahre,
         "kommende_spiele": kommende_spiele,
         "kommende_turniere": kommende_turniere,
         "heute": heute,
@@ -281,12 +298,15 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
         return render(request, "core/dashboard.html", kontext)
 
     uebersicht = jahres_uebersicht(jahr)
-    faellige = (
-        MembershipFee.objects.filter(jahr=jahr)
+    offene_posten = list(
+        MembershipFee.objects.filter(
+            jahr=jahr,
+            status__in=[MembershipFee.Status.OFFEN, MembershipFee.Status.TEILWEISE],
+        )
         .select_related("member")
-        .order_by("member__nachname")[:200]
+        .prefetch_related("zahlungen")
+        .order_by("member__nachname", "member__vorname")[:6]
     )
-    offene_posten = [fee for fee in faellige if fee.ist_offen][:6]
     offene_wuensche = ChangeRequest.objects.filter(
         status=ChangeRequest.Status.EINGEREICHT
     ).select_related("member")[:5]
@@ -307,13 +327,18 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
         s=Sum("betrag")
     )["s"] or Decimal("0.00")
 
-    # Kleine Verlaufsreihe fürs Beitrags-Aufkommen (letzte 6 Monate)
+    # Optimierte Verlaufsreihe fürs Beitrags-Aufkommen (letzte 6 Monate in 1 Query)
+    monat_start_verlauf = (heute.replace(day=1) - timedelta(days=160)).replace(day=1)
+    monatssummen = {
+        (e["datum__year"], e["datum__month"]): e["s"]
+        for e in Payment.objects.filter(datum__gte=monat_start_verlauf)
+        .values("datum__year", "datum__month")
+        .annotate(s=Sum("betrag"))
+    }
     verlauf = []
     for i in range(5, -1, -1):
         monat = (heute.replace(day=1) - timedelta(days=i * 30)).replace(day=1)
-        s = Payment.objects.filter(
-            datum__year=monat.year, datum__month=monat.month
-        ).aggregate(s=Sum("betrag"))["s"] or Decimal("0.00")
+        s = monatssummen.get((monat.year, monat.month), Decimal("0.00"))
         verlauf.append({"label": monat.strftime("%b"), "wert": float(s)})
     max_wert = max([punkt["wert"] for punkt in verlauf] + [1.0])
     for punkt in verlauf:
@@ -387,6 +412,16 @@ def audit_list(request):
     benutzer_id = request.GET.get("benutzer", "").strip()
     if benutzer_id.isdigit():
         protokoll = protokoll.filter(benutzer_id=benutzer_id)
+    suche = request.GET.get("q", "").strip()
+    if suche:
+        protokoll = protokoll.filter(
+            Q(text__icontains=suche)
+            | Q(member__nachname__icontains=suche)
+            | Q(member__vorname__icontains=suche)
+            | Q(feld__icontains=suche)
+            | Q(alt_wert__icontains=suche)
+            | Q(neu_wert__icontains=suche)
+        )
     aktionen = (
         AuditLog.objects.values_list("aktion", flat=True).distinct().order_by("aktion")
     )
@@ -397,6 +432,7 @@ def audit_list(request):
         "aktion": aktion,
         "aktionen": aktionen,
         "benutzer_id": benutzer_id,
+        "q": suche,
     }
     return render(request, "core/audit_list.html", kontext)
 

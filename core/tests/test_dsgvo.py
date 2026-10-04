@@ -142,6 +142,34 @@ class DatenauskunftTests(TestCase):
                 self.assertEqual(response.status_code, 403)
                 self.assertEqual(AuditLog.objects.count(), 0)
 
+    def test_mitglied_darf_eigene_auskunft_herunterladen(self):
+        """PRD §3.8: Auskunfts-Export (DSGVO) – Mitglied: nur eigene Person."""
+        user = User.objects.create_user("eigenes_mitglied", password="x")
+        group, _ = Group.objects.get_or_create(name="mitglied")
+        user.groups.add(group)
+        self.member.user = user
+        self.member.save()
+        self.client.force_login(user)
+
+        # HTML
+        resp = self.client.get(f"/mitglieder/{self.member.pk}/auskunft/")
+        self.assertEqual(resp.status_code, 200)
+
+        # PDF
+        resp_pdf = self.client.get(f"/mitglieder/{self.member.pk}/auskunft.pdf")
+        self.assertEqual(resp_pdf.status_code, 200)
+        self.assertEqual(resp_pdf["Content-Type"], "application/pdf")
+
+        # JSON
+        resp_json = self.client.get(f"/mitglieder/{self.member.pk}/auskunft.json")
+        self.assertEqual(resp_json.status_code, 200)
+        self.assertEqual(resp_json["Content-Type"], "application/json; charset=utf-8")
+
+        # Protokolliert
+        self.assertTrue(
+            AuditLog.objects.filter(aktion="Datenauskunft erstellt", member=self.member, benutzer=user).exists()
+        )
+
     def test_kapitaen_erhaelt_403_auf_auskunft(self):
         user = User.objects.create_user("k1", password="x")
         group, _ = Group.objects.get_or_create(name="kapitaen")

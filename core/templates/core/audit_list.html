@@ -7,14 +7,17 @@
 {% block content %}
 <div class="card">
   <form class="filters" method="get">
+    <label class="visually-hidden" for="q">Suche</label>
+    <input class="grow" type="search" id="q" name="q" value="{{ q }}" placeholder="Protokoll durchsuchen (Name, Text, Feld)…">
     <label class="visually-hidden" for="aktion">Aktion</label>
-    <select id="aktion" name="aktion" onchange="this.form.submit()">
+    <select id="aktion" name="aktion">
       <option value="">Alle Aktionen</option>
       {% for a in aktionen %}
         <option value="{{ a }}" {% if a == aktion %}selected{% endif %}>{{ a }}</option>
       {% endfor %}
     </select>
     <button class="btn small secondary" type="submit">Filtern</button>
+    {% if q or aktion or benutzer_id %}<a class="btn small ghost" href="{% url 'core:audit_list' %}">Zurücksetzen</a>{% endif %}
     <span class="grow"></span>
     <span class="muted">{{ protokoll.paginator.count }} Einträge</span>
   </form>

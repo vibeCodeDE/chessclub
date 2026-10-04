@@ -61,6 +61,17 @@ class MemberListTests(TestCase):
         self.assertContains(response, "Schmidt")
         self.assertNotContains(response, "Meier")
 
+    def test_filter_by_kategorie_keine(self):
+        from dues.models import FeeCategory
+        kat = FeeCategory.objects.create(name="Jugend")
+        make_member("MitgliedMitKat", "HatKategorie", beitragskategorie=kat)
+        make_member("MitgliedOhneKat", "OhneKategorie", beitragskategorie=None)
+
+        response = self.client.get("/mitglieder/", {"kategorie": "keine"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "OhneKategorie")
+        self.assertNotContains(response, "HatKategorie")
+
     def test_search_matches_name_and_email(self):
         make_member("Anna", "Meier", email="anna@example.org")
         make_member("Bernd", "Schmidt", email="bernd@example.org")

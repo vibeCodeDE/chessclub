@@ -45,6 +45,7 @@
     <label class="visually-hidden" for="kategorie">Kategorie</label>
     <select id="kategorie" name="kategorie">
       <option value="">Alle Kategorien</option>
+      <option value="keine" {% if kategorie == "keine" %}selected{% endif %}>Ohne Kategorie ({{ ohne_kategorie_count }})</option>
       {% for k in kategorien %}
         <option value="{{ k.pk }}" {% if kategorie == k.pk|stringformat:"s" %}selected{% endif %}>{{ k.name }}</option>
       {% endfor %}

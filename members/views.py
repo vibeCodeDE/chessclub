@@ -39,7 +39,9 @@ def _filtered_members(query, status, kategorie=""):
         )
     if status:
         members = members.filter(status=status)
-    if kategorie.isdigit():
+    if kategorie == "keine":
+        members = members.filter(beitragskategorie__isnull=True)
+    elif kategorie.isdigit():
         members = members.filter(beitragskategorie_id=int(kategorie))
     return members
 
@@ -60,6 +62,9 @@ def member_list(request):
         "aktiv_count": Member.objects.filter(status=Member.Status.AKTIV).count(),
         "passiv_count": Member.objects.filter(status=Member.Status.PASSIV).count(),
         "ausgetreten_count": Member.objects.filter(status=Member.Status.AUSGETRETEN).count(),
+        "ohne_kategorie_count": Member.objects.filter(
+            status=Member.Status.AKTIV, beitragskategorie__isnull=True
+        ).count(),
         "status_form": MemberStatusForm(),
     }
     return render(request, "members/member_list.html", kontext)

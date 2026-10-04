@@ -16,6 +16,11 @@
     <a class="button button-secondary" href="{% url 'members:profil' %}">
       <svg class="icon icon-sm"><use href="#i-user"></use></svg> Mein Profil
     </a>
+    {% if member %}
+      <a class="button button-secondary" href="{% url 'core:dsgvo_pdf' member.pk %}">
+        <svg class="icon icon-sm"><use href="#i-download"></use></svg> Datenauskunft (PDF)
+      </a>
+    {% endif %}
     <a class="button button-primary" href="{% url 'dues:mein_konto' %}">
       <svg class="icon icon-sm"><use href="#i-wallet"></use></svg> Mein Beitragskonto
     </a>

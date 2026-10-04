@@ -24,6 +24,16 @@
   </div>
   <div class="page-heading-actions">
     {% if rolle == "admin" %}
+      {% if verfuegbare_jahre|length > 1 %}
+        <form method="get" class="dashboard-year-select" style="display:inline-flex;align-items:center;margin-right:6px">
+          <label for="jahr-select" class="visually-hidden">Jahr</label>
+          <select id="jahr-select" name="jahr" onchange="this.form.submit()" class="input-select small" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border,#d1d5db);font-size:13px;background:var(--card,#fff);color:inherit">
+            {% for j in verfuegbare_jahre %}
+              <option value="{{ j }}" {% if j == jahr %}selected{% endif %}>Beitragsjahr {{ j }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      {% endif %}
       <a class="btn secondary button button-secondary" href="{% url 'dues:export' %}?jahr={{ jahr }}">
         <svg class="icon icon-sm"><use href="#i-download"></use></svg> Exportieren
       </a>
@@ -44,6 +54,16 @@
 
 {% block content %}
 {% if rolle == "admin" %}
+{% if ohne_kategorie > 0 %}
+  <div class="alert alert-warning" role="alert" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <span>
+      <strong>Handlungsbedarf:</strong> {{ ohne_kategorie }} aktive{{ ohne_kategorie|pluralize:"s Mitglied, Mitglieder" }} ohne Beitragskategorie — wird beim Beitragslauf übersprungen.
+    </span>
+    <a href="{% url 'members:member_list' %}?kategorie=keine&status=aktiv" class="btn small button button-secondary" style="margin:0">
+      Jetzt zuordnen <svg class="icon icon-sm" style="width:12px;height:12px"><use href="#i-arrow-right"></use></svg>
+    </a>
+  </div>
+{% endif %}
 <div class="stats-grid">
   <section class="stat-card">
     <div class="stat-label">
@@ -339,7 +359,7 @@
       </div>
       <div class="task-list">
         {% for wunsch in offene_wuensche %}
-          <a class="task-row" href="{% url 'members:change_request_list' %}">
+          <div class="task-row" data-row="wunsch-{{ wunsch.pk }}" style="display:flex;align-items:center;gap:10px">
             <span class="task-icon {% if wunsch.feld == 'email' %}email{% elif wunsch.feld == 'adresse' %}address{% else %}phone{% endif %}">
               <svg class="icon icon-sm">
                 {% if wunsch.feld == 'email' %}
@@ -351,12 +371,25 @@
                 {% endif %}
               </svg>
             </span>
-            <span>
-              <strong>{{ wunsch.get_feld_display }} ändern</strong>
-              <small>{{ wunsch.member }} <span class="middle-dot">·</span> {{ wunsch.get_feld_display }}: „{{ wunsch.wunschwert }}“</small>
+            <span style="flex:1;min-width:0">
+              <a href="{% url 'members:change_request_list' %}" style="color:inherit;text-decoration:none;display:block">
+                <strong>{{ wunsch.get_feld_display }} ändern</strong>
+                <small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ wunsch.member }} <span class="middle-dot">·</span> {{ wunsch.get_feld_display }}: „{{ wunsch.wunschwert }}“</small>
+              </a>
             </span>
-            <svg class="icon icon-sm" style="color:#a6af9b"><use href="#i-arrow-right"></use></svg>
-          </a>
+            <form method="post" action="{% url 'members:change_request_approve' wunsch.pk %}" style="display:inline;margin:0">
+              {% csrf_token %}
+              <button type="submit" class="btn small button button-primary"
+                      data-optimistic="remove-row"
+                      data-url="{% url 'members:change_request_approve' wunsch.pk %}"
+                      data-confirm="Wunsch von {{ wunsch.member }} wirklich freigeben?"
+                      title="Wunsch freigeben"
+                      aria-label="Wunsch von {{ wunsch.member }} freigeben"
+                      style="padding:3px 8px;font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px">
+                <svg class="icon icon-sm" style="width:11px;height:11px"><use href="#i-check"></use></svg> Freigeben
+              </button>
+            </form>
+          </div>
         {% empty %}
           <div class="empty-state small" style="padding:20px 10px">
             <span class="empty-icon"><svg class="icon" style="color:#92a976"><use href="#i-check"></use></svg></span>

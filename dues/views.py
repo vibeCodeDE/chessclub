@@ -65,9 +65,9 @@ def overview(request):
             | Q(kategorie_name__icontains=suche)
         )
     if status == "offen":
-        posten = [fee for fee in posten if fee.ist_offen]
+        posten = posten.filter(status__in=[MembershipFee.Status.OFFEN, MembershipFee.Status.TEILWEISE])
     elif status == "bezahlt":
-        posten = [fee for fee in posten if not fee.ist_offen]
+        posten = posten.filter(status=MembershipFee.Status.BEZAHLT)
     jahre = sorted(
         set(MembershipFee.objects.values_list("jahr", flat=True)) | {timezone.localdate().year},
         reverse=True,

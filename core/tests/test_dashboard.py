@@ -196,6 +196,20 @@ class AuditSeitenTests(TestCase):
         self.assertContains(response, "Stammdaten geändert")
         self.assertContains(response, "030 999")
 
+    def test_audit_liste_suchfilter(self):
+        admin = make_user("vorstand", "admin")
+        self.client.force_login(admin)
+        m1 = Member.objects.create(vorname="Spezifisch", nachname="Findling", eintrittsdatum=date(2020, 1, 1))
+        m2 = Member.objects.create(vorname="Anderer", nachname="Person", eintrittsdatum=date(2020, 1, 1))
+        from core.models import AuditLog
+        AuditLog.objects.create(benutzer=admin, aktion="Test1", text="Geheimer Treffer", member=m1)
+        AuditLog.objects.create(benutzer=admin, aktion="Test2", text="Uninteressant", member=m2)
+
+        resp = self.client.get("/audit/", {"q": "Findling"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Geheimer Treffer")
+        self.assertNotContains(resp, "Uninteressant")
+
     def test_globale_suche_findet_treffer(self):
         admin = make_user("vorstand", "admin")
         Member.objects.create(vorname="Anna", nachname="Suchmeier", eintrittsdatum=date(2020, 1, 1))
@@ -204,3 +218,50 @@ class AuditSeitenTests(TestCase):
         self.assertContains(response, "Suchmeier")
         response = self.client.get("/suche/", {"q": "gibtesnicht"})
         self.assertContains(response, "0 Treffer")
+
+
+class DashboardErweiterungenTests(TestCase):
+    def setUp(self):
+        self.admin = make_user("vorstand", "admin")
+        self.client.force_login(self.admin)
+        self.kategorie = FeeCategory.objects.create(name="Erwachsene")
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=2026, betrag=Decimal("90.00"))
+
+    def test_ohne_kategorie_alert_erscheint(self):
+        # Mitglied ohne Kategorie
+        Member.objects.create(vorname="Ohne", nachname="Kat", eintrittsdatum=date(2026, 1, 1))
+        resp = self.client.get("/dashboard/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Handlungsbedarf")
+        self.assertContains(resp, "ohne Beitragskategorie")
+        self.assertContains(resp, "kategorie=keine")
+
+    def test_dashboard_jahr_parameter(self):
+        FeeAmount.objects.create(kategorie=self.kategorie, jahr=2025, betrag=Decimal("80.00"))
+        m = Member.objects.create(vorname="Max", nachname="Alt", eintrittsdatum=date(2024, 1, 1), beitragskategorie=self.kategorie)
+        MembershipFee.objects.create(member=m, jahr=2025, kategorie_name="Erwachsene", betrag=Decimal("80.00"), faellig_am=date(2025, 1, 31))
+
+        resp = self.client.get("/dashboard/", {"jahr": "2025"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context["jahr"], 2025)
+        self.assertContains(resp, "Beitragsjahr 2025")
+
+    def test_kein_n_plus_eins_bei_vielen_posten(self):
+        # 15 Mitglieder anlegen, um sicherzustellen, dass Queries nicht linear wachsen
+        for i in range(15):
+            m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
+            MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
+
+        # Die View führt exakt 33 Queries aus (konstant, da kein N+1 pro Mitglied/Posten)
+        with self.assertNumQueries(33):
+            resp = self.client.get("/dashboard/")
+            self.assertEqual(resp.status_code, 200)
+
+        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 33 (kein N+1)
+        for i in range(15, 25):
+            m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
+            MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
+
+        with self.assertNumQueries(33):
+            resp = self.client.get("/dashboard/")
+            self.assertEqual(resp.status_code, 200)
