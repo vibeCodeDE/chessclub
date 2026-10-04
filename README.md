@@ -132,6 +132,7 @@ alle Angaben dort kommen aus der Datenbank bzw. aus den obigen Variablen.
 | `docs/decisions/` | Architekturentscheidungen (ADRs) |
 | `docs/superpowers/specs/` | Detail-Design je Task |
 | `docs/superpowers/plans/` | Schritt-für-Schritt-Umsetzungspläne je Task |
+| `docs/einfuehrung_testverein.md` | Einführungsplan, Pilotkonzept, AVV- und Vertragsmuster |
 | `docs/abnahmen/` | Abnahmebelege je abgeschlossener Task |
 
 ## Datenschutz
