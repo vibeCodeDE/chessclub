@@ -222,6 +222,24 @@ CLUB_NIGHT_HOURS = os.environ.get("CLUB_NIGHT_HOURS", "Donnerstags ab 19:00 Uhr"
 CLUB_YOUTH_HOURS = os.environ.get("CLUB_YOUTH_HOURS", "")    # z. B. "Donnerstags 17:30 – 19:00 Uhr"
 CLUB_DESCRIPTION = os.environ.get("CLUB_DESCRIPTION", "")    # Kurztext für den Footer
 
+# SEPA-Lastschriften (pain.008 / ADR-017 / PRD S2.7)
+# Gläubiger-Identifikationsnummer (z. B. DE98ZZZ09999999999)
+SEPA_CREDITOR_ID = os.environ.get("SEPA_CREDITOR_ID", "DE98ZZZ09999999999")
+# Vereins-IBAN für den Lastschrifteinzug
+SEPA_CREDITOR_IBAN = os.environ.get("SEPA_CREDITOR_IBAN", "DE89370400440532013000")
+# Optional: Vereins-BIC
+SEPA_CREDITOR_BIC = os.environ.get("SEPA_CREDITOR_BIC", "")
+# Name des Gläubigers (Standard: CLUB_NAME)
+SEPA_CREDITOR_NAME = os.environ.get("SEPA_CREDITOR_NAME", "")
+
+# DSB-Schnittstelle (ADR-016 / K3.6): Wertungsportal-API & DWZ-Sync
+DSB_VKZ = os.environ.get("DSB_VKZ", "")                       # Vereinskennziffer, z. B. "C0101"
+DSB_API_TOKEN = os.environ.get("DSB_API_TOKEN", "")           # Zugangsschlüssel
+DSB_API_BASE_URL = os.environ.get(
+    "DSB_API_BASE_URL", "https://www.schachbund.de/wertungsportal-api/vereinsliste"
+)
+DSB_CACHE_TIMEOUT = int(os.environ.get("DSB_CACHE_TIMEOUT", "86400"))  # 24 h serverseitiges Caching
+
 # Produkt-Landingpage (/produkt/): Name und Kontakt für den Verkauf als Dienstleistung.
 PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Schachclub-Manager")
 PRODUCT_CONTACT = os.environ.get("PRODUCT_CONTACT", "hallo@schachclub-manager.example")

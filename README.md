@@ -126,6 +126,7 @@ alle Angaben dort kommen aus der Datenbank bzw. aus den obigen Variablen.
 | `docs/prd.md` | Anforderungen, Berechtigungsmatrix (§3.8), Release-Schnitt v1/v1.1 |
 | `docs/abnahme.md` | Abnahme-Checkliste: Erfolgskriterien, Meilensteine, DSGVO |
 | `docs/deployment.md` | Installation, TLS, Backup, Restore, Updates |
+| `docs/ersteinrichtung.md` | Leitfaden und Reihenfolge für die erstmalige Datenbefüllung |
 | `docs/wartung.md` | Kurzanleitung für wiederkehrende Aufgaben |
 | `tasks/plan.md` | Implementierungsplan mit Tasks, Acceptance, Traceability; **einzige Quelle für den Task-Status** |
 | `tasks/todo.md` | Fortschrittsprotokoll mit Verifikationsbelegen, nächste Schritte |

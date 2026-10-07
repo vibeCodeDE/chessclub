@@ -26,6 +26,9 @@ docker compose -f docker-compose.prod.yml exec app python manage.py createsuperu
 docker compose -f docker-compose.prod.yml exec app python manage.py seed_demo   # optional: Demo-Daten
 ```
 
+> **Fachliche Ersteinrichtung:** Nach Abschluss der technischen Installation erfolgt die fachliche
+> Erstbefüllung der Vereinsdaten anhand des Leitfadens [`docs/ersteinrichtung.md`](ersteinrichtung.md).
+
 `.env.prod` (niemals ins Git einchecken):
 
 | Variable | Bedeutung | Beispiel |

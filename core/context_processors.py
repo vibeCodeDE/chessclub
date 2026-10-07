@@ -25,6 +25,7 @@ NAV_STRUKTUR = [
         "Verein",
         [
             ("members:member_list", "Mitglieder", "users", {"admin"}, None),
+            ("members:dsb_sync", "DSB-Abgleich", "refresh", {"admin"}, None),
             ("members:change_request_list", "Änderungswünsche", "edit", {"admin"}, "wuensche"),
             ("comms:news_list", "Ankündigungen", "megaphone", {"admin"}, "entwuerfe"),
             ("comms:mail_list", "E-Mail-Versand", "mail", {"admin"}, None),

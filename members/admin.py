@@ -21,14 +21,16 @@ class MemberAdmin(admin.ModelAdmin):
     list_display = (
         "nachname",
         "vorname",
+        "dwz_formatiert",
+        "zps_nummer",
         "status",
         "beitragskategorie",
         "ort",
         "eintrittsdatum",
         "email",
     )
-    list_filter = ("status", "beitragskategorie")
-    search_fields = ("vorname", "nachname", "email", "ort")
+    list_filter = ("status", "beitragskategorie", "spielberechtigung")
+    search_fields = ("vorname", "nachname", "email", "ort", "zps_nummer", "pkz")
     ordering = ("nachname", "vorname")
     inlines = [MemberStatusChangeInline]
 

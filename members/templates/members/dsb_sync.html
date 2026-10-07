@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}DSB- / DWZ-Synchronisation{% endblock %}
+{% block page_title %}DSB- / DWZ-Synchronisation{% endblock %}
+{% block crumbs %}
+<div class="crumbs">
+  <a href="{% url 'members:member_list' %}">Mitglieder</a> › Verbandsabgleich (DSB)
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <div>
+    <h1>DSB- / DWZ-Synchronisation</h1>
+    <p class="lede">
+      {% if report.verein %}<strong>{{ report.verein }}</strong> (VKZ: {{ report.vkz }}) · {% endif %}Automatischer Wertungszahlen-Abgleich mit dem offiziellen DSB-Wertungsportal. Erkennung von DWZ-Änderungen und Mitglieder-Drift.
+    </p>
+  </div>
+  <div class="page-actions">
+    {% if config_ok %}
+      <form method="post" action="{% url 'members:dsb_sync' %}" style="display:inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="refresh">
+        <button class="btn secondary" type="submit">
+          <svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Verbandsdaten neu laden
+        </button>
+      </form>
+      {% if report.dwz_abweichungen %}
+        <form method="post" action="{% url 'members:dsb_sync' %}" style="display:inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="sync_all">
+          <button class="btn" type="submit">
+            <svg class="icon icon-sm"><use href="#i-check"></use></svg> Alle DWZ-Werte übernehmen ({{ report.dwz_abweichungen|length }})
+          </button>
+        </form>
+      {% endif %}
+    {% endif %}
+    <a class="btn ghost" href="{% url 'members:member_list' %}">Zur Mitgliederliste</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if not config_ok %}
+  <div class="alert alert-warn mt-2">
+    <strong>DSB-Schnittstelle noch nicht eingerichtet:</strong>
+    In der Konfiguration fehlen <code>DSB_VKZ</code> (Vereinskennziffer) oder <code>DSB_API_TOKEN</code> (Zugangsschlüssel).
+    Vereine können ihren Zugangsschlüssel kostenlos beim DSB-Wertungsportal anfordern
+    und in den Umgebungsvariablen hinterlegen.
+  </div>
+{% endif %}
+
+{% if error_message %}
+  <div class="alert alert-danger mt-2">
+    <strong>Fehler beim Abruf der Verbandsdaten:</strong> {{ error_message }}
+  </div>
+{% endif %}
+
+<div class="grid cols-4">
+  <div class="stat">
+    <div class="stat-head">
+      <span class="stat-label">Verbandsbestand</span>
+      <span class="stat-icon"><svg class="icon"><use href="#i-globe"></use></svg></span>
+    </div>
+    <div class="stat-value">{{ report.total_verband }}</div>
+    <div class="stat-foot">VKZ: {{ report.vkz|default:vkz|default:"–" }} {% if report.from_cache %}· (gecacht){% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head">
+      <span class="stat-label">Vereinsbestand</span>
+      <span class="stat-icon"><svg class="icon"><use href="#i-users"></use></svg></span>
+    </div>
+    <div class="stat-value">{{ report.total_verein }}</div>
+    <div class="stat-foot">Aktive &amp; geführte Mitglieder</div>
+  </div>
+  <div class="stat {% if report.dwz_abweichungen %}accent-warn{% else %}accent-success{% endif %}">
+    <div class="stat-head">
+      <span class="stat-label">DWZ-Änderungen</span>
+      <span class="stat-icon"><svg class="icon"><use href="#i-chart"></use></svg></span>
+    </div>
+    <div class="stat-value">{{ report.dwz_abweichungen|length }}</div>
+    <div class="stat-foot">{% if report.dwz_abweichungen %}Abweichungen zur Vereins-DB{% else %}Alle DWZ aktuell{% endif %}</div>
+  </div>
+  <div class="stat {% if report.fehlt_im_verband or report.status_abweichungen %}accent-danger{% endif %}">
+    <div class="stat-head">
+      <span class="stat-label">Mitglieder-Drift</span>
+      <span class="stat-icon"><svg class="icon"><use href="#i-alert"></use></svg></span>
+    </div>
+    <div class="stat-value">{{ report.fehlt_im_verband|length|add:report.status_abweichungen|length }}</div>
+    <div class="stat-foot">{{ report.fehlt_im_verband|length }} im Verband fehlend</div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="tabs">
+    <a class="is-active" href="#dwz-drift">
+      DWZ-Änderungen {% if report.dwz_abweichungen %}<span class="chip chip-warn">{{ report.dwz_abweichungen|length }}</span>{% endif %}
+    </a>
+    <a href="#fehlt-verband">
+      Fehlt im Verband {% if report.fehlt_im_verband %}<span class="chip chip-danger">{{ report.fehlt_im_verband|length }}</span>{% endif %}
+    </a>
+    <a href="#fehlt-verein">
+      Fehlt im Verein {% if report.fehlt_im_verein %}<span class="chip">{{ report.fehlt_im_verein|length }}</span>{% endif %}
+    </a>
+    <a href="#status-drift">
+      Status-Abweichungen {% if report.status_abweichungen %}<span class="chip chip-warn">{{ report.status_abweichungen|length }}</span>{% endif %}
+    </a>
+    <a href="#synchrone">
+      Synchrone Mitglieder ({{ report.synchrone_mitglieder|length }})
+    </a>
+  </div>
+
+  <!-- Tab 1: DWZ-Abweichungen -->
+  <div class="card-body" id="dwz-drift">
+    <div class="card-head" style="padding:0 0 1rem 0">
+      <div>
+        <h2>DWZ- und Wertungszahlen-Abweichungen</h2>
+        <span class="sub">Unterschiede zwischen den aktuellen Zahlen im DSB-Portal und unserer Datenbank</span>
+      </div>
+      {% if report.dwz_abweichungen %}
+        <form method="post" action="{% url 'members:dsb_sync' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="sync_all">
+          <button class="btn small" type="submit">Alle übernehmen</button>
+        </form>
+      {% endif %}
+    </div>
+
+    {% if report.dwz_abweichungen %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Mitglied</th>
+              <th>Pass / ZPS</th>
+              <th>DWZ bisher</th>
+              <th>DWZ neu (Verband)</th>
+              <th class="right">Aktion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.dwz_abweichungen %}
+              <tr>
+                <td>
+                  <strong><a href="{% url 'members:member_detail' row.member.pk %}">{{ row.member }}</a></strong>
+                  {% if row.dsb_player.titel %}<span class="chip">{{ row.dsb_player.titel }}</span>{% endif %}
+                </td>
+                <td class="mono cell-sub">{{ row.member.zps_nummer|default:row.dsb_player.zps|default:"–" }}</td>
+                <td>
+                  {% if row.dwz_alt %}
+                    {{ row.dwz_alt }}-{{ row.index_alt|default:"0" }}
+                  {% else %}
+                    <span class="cell-sub">– keine –</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <strong style="color:var(--color-primary)">
+                    {% if row.dwz_neu %}
+                      {{ row.dwz_neu }}-{{ row.index_neu|default:"0" }}
+                    {% else %}
+                      –
+                    {% endif %}
+                  </strong>
+                </td>
+                <td class="right">
+                  <form method="post" action="{% url 'members:dsb_sync' %}" style="display:inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="sync_member">
+                    <input type="hidden" name="member_id" value="{{ row.member.pk }}">
+                    <button class="btn small" type="submit">Übernehmen</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% include "includes/empty_state.html" with icon="check" titel="Keine DWZ-Abweichungen" text="Alle DWZ-Zahlen und Indizes stimmen mit dem aktuellen Stand des DSB-Wertungsportals überein." small=True %}
+    {% endif %}
+  </div>
+
+  <!-- Tab 2: Fehlt im Verband -->
+  <div class="card-body" id="fehlt-verband" style="display:none">
+    <div class="card-head" style="padding:0 0 1rem 0">
+      <div>
+        <h2>Im Verein aktiv, fehlt im Verband</h2>
+        <span class="sub">Diese Mitglieder sind in der Vereinssoftware erfasst, aber noch nicht in der offiziellen DSB-Vereinsliste gemeldet.</span>
+      </div>
+    </div>
+    {% if report.fehlt_im_verband %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Mitglied</th>
+              <th>Status</th>
+              <th>Eintrittsdatum</th>
+              <th>Kontakt</th>
+              <th class="right">Aktion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in report.fehlt_im_verband %}
+              <tr>
+                <td><strong><a href="{% url 'members:member_detail' m.pk %}">{{ m }}</a></strong></td>
+                <td><span class="badge badge-{{ m.status }}">{{ m.get_status_display }}</span></td>
+                <td>{{ m.eintrittsdatum|date:"d.m.Y" }}</td>
+                <td class="cell-sub">{{ m.email|default:m.ort|default:"–" }}</td>
+                <td class="right">
+                  <a class="btn small secondary" href="{% url 'members:member_detail' m.pk %}">Akte ansehen</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% include "includes/empty_state.html" with icon="users" titel="Vollständig gemeldet" text="Alle aktiven Vereinsmitglieder sind in der DSB-Verbandsliste enthalten." small=True %}
+    {% endif %}
+  </div>
+
+  <!-- Tab 3: Fehlt im Verein -->
+  <div class="card-body" id="fehlt-verein" style="display:none">
+    <div class="card-head" style="padding:0 0 1rem 0">
+      <div>
+        <h2>In DSB-Liste geführt, fehlt in Vereinsdatenbank</h2>
+        <span class="sub">Spieler, die beim Verband für diesen Verein gemeldet sind, aber nicht als aktives Mitglied geführt werden.</span>
+      </div>
+    </div>
+    {% if report.fehlt_im_verein %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>PKZ / Pass</th>
+              <th>DWZ</th>
+              <th>Verbands-Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sp in report.fehlt_im_verein %}
+              <tr>
+                <td><strong>{{ sp.nachname }}, {{ sp.vorname }}</strong></td>
+                <td class="mono cell-sub">{{ sp.pkz|default:sp.zps|default:"–" }}</td>
+                <td>{% if sp.dwz %}{{ sp.dwz }}-{{ sp.dwz_index|default:"0" }}{% else %}–{% endif %}</td>
+                <td><span class="badge badge-neutral">{{ sp.status|title }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% include "includes/empty_state.html" with icon="check" titel="Keine überzähligen Verbandsspieler" text="Keine unbekannten Spieler in der DSB-Verbandsliste gefunden." small=True %}
+    {% endif %}
+  </div>
+
+  <!-- Tab 4: Status-Abweichungen -->
+  <div class="card-body" id="status-drift" style="display:none">
+    <div class="card-head" style="padding:0 0 1rem 0">
+      <div>
+        <h2>Status-Abweichungen</h2>
+        <span class="sub">Mitglieder mit abweichendem Mitgliedschafts- oder Spielberechtigungsstatus</span>
+      </div>
+    </div>
+    {% if report.status_abweichungen %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Mitglied</th>
+              <th>Status im Verein</th>
+              <th>Status im Verband</th>
+              <th class="right">Aktion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in report.status_abweichungen %}
+              <tr>
+                <td><strong><a href="{% url 'members:member_detail' s.member.pk %}">{{ s.member }}</a></strong></td>
+                <td><span class="badge badge-{{ s.member.status }}">{{ s.status_verein }}</span></td>
+                <td><span class="badge badge-warn">{{ s.status_verband }}</span></td>
+                <td class="right">
+                  <a class="btn small secondary" href="{% url 'members:member_detail' s.member.pk %}">Prüfen</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% include "includes/empty_state.html" with icon="check" titel="Keine Status-Abweichungen" text="Die Statusangaben stimmen zwischen Verein und Verband überein." small=True %}
+    {% endif %}
+  </div>
+
+  <!-- Tab 5: Synchrone Mitglieder -->
+  <div class="card-body" id="synchrone" style="display:none">
+    <div class="card-head" style="padding:0 0 1rem 0">
+      <div>
+        <h2>Synchrone Mitglieder ({{ report.synchrone_mitglieder|length }})</h2>
+        <span class="sub">DWZ, Index und Status stimmen vollständig überein</span>
+      </div>
+    </div>
+    {% if report.synchrone_mitglieder %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Mitglied</th>
+              <th>Pass / ZPS</th>
+              <th>DWZ</th>
+              <th>FIDE-ID</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.synchrone_mitglieder %}
+              <tr>
+                <td><a href="{% url 'members:member_detail' row.member.pk %}">{{ row.member }}</a></td>
+                <td class="mono cell-sub">{{ row.member.zps_nummer|default:"–" }}</td>
+                <td>{% if row.member.dwz %}{{ row.member.dwz_formatiert }}{% else %}–{% endif %}</td>
+                <td class="mono cell-sub">{{ row.member.fide_id|default:"–" }}</td>
+                <td><span class="badge badge-{{ row.member.status }}">{{ row.member.get_status_display }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% include "includes/empty_state.html" with icon="clock" titel="Keine synchronen Mitglieder" text="Noch keine abgeglichenen Mitglieder." small=True %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const tabs = document.querySelectorAll(".tabs a");
+  const bodies = {
+    "#dwz-drift": document.getElementById("dwz-drift"),
+    "#fehlt-verband": document.getElementById("fehlt-verband"),
+    "#fehlt-verein": document.getElementById("fehlt-verein"),
+    "#status-drift": document.getElementById("status-drift"),
+    "#synchrone": document.getElementById("synchrone")
+  };
+
+  tabs.forEach(function(tab) {
+    tab.addEventListener("click", function(e) {
+      e.preventDefault();
+      const target = tab.getAttribute("href");
+      tabs.forEach(t => t.classList.remove("is-active"));
+      tab.classList.add("is-active");
+
+      Object.keys(bodies).forEach(function(key) {
+        if (bodies[key]) {
+          bodies[key].style.display = (key === target) ? "block" : "none";
+        }
+      });
+    });
+  });
+});
+</script>
+{% endblock %}

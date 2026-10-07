@@ -43,6 +43,12 @@ class MemberForm(StyledFormMixin, forms.ModelForm):
             "austrittsdatum",
             "beitragskategorie",
             "email_opt_in",
+            "zps_nummer",
+            "pkz",
+            "dwz",
+            "dwz_index",
+            "fide_id",
+            "spielberechtigung",
         ]
         widgets = {
             "eintrittsdatum": forms.DateInput(format="%Y-%m-%d"),

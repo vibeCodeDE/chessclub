@@ -8,6 +8,7 @@ urlpatterns = [
     path("profil/", views.profil, name="profil"),
     path("mitglied-werden/", views.join_info, name="join_info"),
     path("mitglieder/", views.member_list, name="member_list"),
+    path("mitglieder/dsb-sync/", views.dsb_sync_view, name="dsb_sync"),
     path("mitglieder/neu/", views.member_create, name="member_create"),
     path("mitglieder/export.csv", views.member_export, name="member_export"),
     path(

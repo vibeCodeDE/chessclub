@@ -1,6 +1,8 @@
 # Wartung – Kurzanleitung für die Vorstandschaft (T22)
 
 Diese Anleitung erklärt die wiederkehrenden Aufgaben **ohne Entwicklerwissen**.
+*(Zur erstmaligen Befüllung des Vereinsbestands siehe den Leitfaden [docs/ersteinrichtung.md](ersteinrichtung.md).)*
+
 Alle Befehle laufen im Projektordner auf dem Vereinsserver.
 
 ```bash

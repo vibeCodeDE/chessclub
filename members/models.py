@@ -16,6 +16,10 @@ class Member(models.Model):
         PASSIV = "passiv", "Passiv"
         AUSGETRETEN = "ausgetreten", "Ausgetreten"
 
+    class Spielberechtigung(models.TextChoices):
+        ERST = "erst", "Erstmitgliedschaft"
+        ZWEIT = "zweit", "Zweitmitgliedschaft (Gast)"
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         verbose_name="Benutzerkonto",
@@ -53,6 +57,29 @@ class Member(models.Model):
         default=True,
         help_text="Opt-in für Gruppen-E-Mails (PRD M5.2).",
     )
+    # ADR-016: Bundeseinheitliche Verbandskennungen und Wertungszahlen
+    zps_nummer = models.CharField(
+        "ZPS-Nummer",
+        max_length=20,
+        blank=True,
+        help_text="ZPS-Passnummer (z. B. C0101-042).",
+    )
+    pkz = models.CharField(
+        "PKZ",
+        max_length=20,
+        blank=True,
+        help_text="Personenkennziffer im DSB-System.",
+    )
+    dwz = models.PositiveIntegerField("DWZ", null=True, blank=True)
+    dwz_index = models.PositiveIntegerField("DWZ-Index", null=True, blank=True)
+    fide_id = models.PositiveIntegerField("FIDE-ID", null=True, blank=True)
+    spielberechtigung = models.CharField(
+        "Spielberechtigung",
+        max_length=20,
+        choices=Spielberechtigung.choices,
+        default=Spielberechtigung.ERST,
+        blank=True,
+    )
     anonymisiert_am = models.DateTimeField(
         "Anonymisiert am",
         null=True,
@@ -65,6 +92,15 @@ class Member(models.Model):
 
     def __str__(self):
         return f"{self.nachname}, {self.vorname}"
+
+    @property
+    def dwz_formatiert(self):
+        """Formatierte DWZ mit Index, z. B. '1850-45'."""
+        if self.dwz is None:
+            return ""
+        if self.dwz_index is not None:
+            return f"{self.dwz}-{self.dwz_index}"
+        return str(self.dwz)
 
     def clean(self):
         super().clean()

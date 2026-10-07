@@ -97,6 +97,12 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Storno einer Zahlung setzt den Posten auf den vorherigen Status; Originalbuchung bleibt lesbar; Kassenbuch enthält Original und Gegenbuchung.
   *Verify:* `pytest dues/` — **Negativtest:** Storno eines Stornos wird abgelehnt; Storno einer Zahlung mit Audit-Eintrag ist nur mit Actor erlaubt; Buchung ist im Admin nicht löschbar. · *Files:* `dues/models.py`, `dues/services.py`, `dues/views.py`, `dues/admin.py`, Migration · *Größe:* M · *PRD:* M2.3 · *Release:* v1 · *Deps:* T9
 
+- [x] **T9c: SEPA-XML-Export (pain.008)** *(v1.1)*
+  Standardisierter SEPA-XML-Download (pain.008.001.02) für offene Beitragsposten mit aktivem SEPA-Mandat zur manuellen Abgabe im Online-Banking (Sparkasse, Volksbank etc.).
+  *Design:* [ADR-017](../docs/decisions/ADR-017-sepa-xml-export-pain-008.md) und [Spec](../docs/superpowers/specs/2026-10-07-t9c-sepa-xml-export.md). Reines stdlib `xml.etree.ElementTree` ohne Netzwerk-Imports (ADR-002 bleibt intakt), flüchtige Entschlüsselung im RAM (ADR-010), EPC-Zeichensatzbereinigung, AuditLog-Protokollierung ohne Klartext-IBANs (DSGVO N1.5), O(1)-Query-Budget.
+  *Acceptance:* Kassenwart klickt auf SEPA-XML-Export für das gewählte Beitragsjahr; XML-Datei entspricht pain.008.001.02 mit korrekter Kontrollsumme, Transaktionsanzahl, Gläubiger-ID und Mandatsdaten; Posten ohne Mandat oder bereits bezahlt werden übersprungen; AuditLog erfasst den Export; Nicht-Admins werden abgewiesen.
+  *Verify:* `pytest dues/tests/test_sepa_export.py` + `pytest dues/tests/test_rollen.py` — **Negativtest:** Rollen „mitglied“ und „kapitaen“ erhalten 403; Beitragsjahr ohne offene Mandatsposten bricht mit klarer Meldung ab; widerrufene Mandate und bezahlte Posten werden nicht eingezogen; `assertNumQueries` prüft O(1)-Budget; `test_keine_bank_api.py` bleibt grün. · *Files:* `dues/services.py`, `dues/views.py`, `dues/urls.py`, `dues/templates/dues/overview.html`, `config/settings.py`, `.env.prod.example` · *Größe:* S · *PRD:* S2.7 · *Release:* v1.1 · *Deps:* T9
+
 - [x] **T10: Mahnwesen + Beitrags-Export**
   Offene-Beitragsübersicht mit 1./2. Mahnung, Mahnbrief als druckbares HTML, CSV-Export der Jahresbeiträge. Stufe streng +1 (max. 2), kein Mahnen eines bezahlten Postens, Prüfungen im Service.
   *Design:* Mahnbrief als druckbares HTML ([ADR-007](../docs/decisions/ADR-007-mahnbrief-als-druckbares-html.md)); Vereinsdaten aus den Settings ([ADR-012](../docs/decisions/ADR-012-vereinsprofil-in-den-settings.md)). Regelbasis in `dues/services.py` (`mahnung_erstellen`, `mahntext`).
@@ -155,6 +161,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   Kapitän trägt Aufstellung ein (Reihenfolge Mitglieder); Ergebnis je Brett (1/0/½) → Mannschaftsergebnis automatisch; Live-Brettpunkte im Browser.
   *Acceptance:* Nur Kapitän/Admin kann aufstellen; Summe der Bretter = Mannschaftsergebnis; die Aufstellung bleibt ohne JavaScript speicherbar.
   *Verify:* `pytest teams/` — **Negativtest (PRD §3.8):** Kapitän einer **anderen** Mannschaft erhält 403; Rolle „mitglied" darf nicht aufstellen. · *Files:* `teams/views.py`, `teams/models.py`, `teams/templates/` · *Größe:* M · *PRD:* M4.3, M4.4 · *Release:* v1 · *Deps:* T16
+
 
 - [x] **T18: Tabellenberechnung inkl. Buchholz** *(v1.1)*
   Liga-Tabelle aus allen Ergebnissen (Satz 1/½/0, Buchholz als Tiebreak). `teams/services.py:tabelle()` summiert heute Mannschafts- und Brettpunkte und die Differenz, **eine Buchholz-Spalte fehlt** — die Tabelle ist damit unvollständig, nicht falsch.
@@ -259,14 +266,23 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   `tournaments/templates/tournaments/public_*`, `members/templates/members/join_info.html`, `core/views.py`,
   `core/urls.py`, `static/js/public.js`, `static/sw.js`, `static/img/` · *Größe:* L · *PRD:* S9.1, S9.2, S9.3, S9.4 · *Release:* v1.1 · *Deps:* T13, T19
 
-**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T15b, T16b, T18, T22, T24b.
+- [x] **T29: DSB- / DWZ-Synchronisation & Drift Detection** *(v1.1 — umgesetzt)*
+  Anbindung an die offizielle JSON-Schnittstelle des DSB-Wertungsportals (`https://www.schachbund.de/wertungsportal-api/vereinsliste`):
+  Serverseitiges Caching (24 h), Drift Detection (fehlt im Verband, fehlt im Verein, Status- und DWZ-Abweichungen),
+  Übernahme aktualisierter DWZ/DWZ-Indizes und Verbandskennungen (`zps_nummer`, `pkz`, `fide_id`, `spielberechtigung`),
+  AuditLog-Protokollierung und UI-Übersicht `/mitglieder/dsb-sync/`.
+  *Design:* [ADR-016](../docs/decisions/ADR-016-dsb-schnittstellen-architektur.md), reiner Fachservice `members.services.dsb_sync` ohne HTTP-Abhängigkeit.
+  *Acceptance:* Verbandsdaten werden gecacht abgerufen; Drift-Erkennung identifiziert DWZ-Abweichungen, fehlende Verbands- und Vereinsmitglieder sowie Statusdiskrepanzen; DWZ-Werte lassen sich einzeln oder gesammelt übernehmen; AuditLog erfasst Abgleiche und Wertänderungen; Nicht-Admins werden abgewiesen.
+  *Verify:* `pytest members/tests/test_dsb_sync.py` — **Negativtest:** Fehlende Konfiguration wirft `DSBConfigError`; Netzwerk- und JSON-Fehler sauber abgefangen; Rollen „mitglied" und „kapitaen" erhalten 403; `assertNumQueries` prüft O(1)-Query-Budget. · *Files:* `members/models.py`, `members/services/dsb_sync.py`, `members/views.py`, `members/urls.py`, `members/templates/members/dsb_sync.html`, `members/tests/test_dsb_sync.py` · *Größe:* M · *PRD:* K3.6 · *Release:* v1.1 · *Deps:* T3, T5
+
+**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29.
 
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6)
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
-- **Out of scope (K):** DSB-Meldeformate (K3.6 — konzipiert in [ADR-016](../docs/decisions/ADR-016-dsb-schnittstellen-architektur.md)), SMS/Erinnerungen (K5.4), DATEV (K6.3)
+- **Out of scope (K):** nuLiga-Mutations-Export / TRF16 (ADR-016 Säule 3), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
 **Traceability-Check (bei jedem Checkpoint):** Jede M- und N-ID aus `docs/prd.md` ist genau einer Task zugeordnet — v1-Task, außer N1.6 (2FA) und N2.8 (Monitoring), die im PRD als S geführt werden und daher T26 bzw. T24b (v1.1) zugeordnet sind. T10b ist reine Technik ohne PRD-ID.
 
@@ -274,6 +290,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 |---|---|
 | M1.1–M1.6 | T3 (Stammdaten/Liste/CSV), T2 (Rollen), T4 (Selbstbedienung) |
 | M2.1 / M2.2 / M2.3 / M2.4 / M2.5 / M2.6 | T7 (+T7b) / T8 / T9 (+T9b) / T9 / T10 / T11b |
+| S2.7 | T9c *(v1.1 / ADR-017)* |
 | M3.1 / M3.2 / M3.3 | T19 / T19 / T20 |
 | M4.1 / M4.2 / M4.3 / M4.4 | T16 / T16 / T17 / T17 |
 | S4.6 | T16b *(v1.1)* |
@@ -290,6 +307,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | N2.5 | T25 |
 | N2.6 / N2.7 | T1 / T27 |
 | S9.1–S9.4 | T28 *(v1.1)* |
+| K3.6 | T29 *(v1.1 / ADR-016)* |
 
 ## Risks and Mitigations
 

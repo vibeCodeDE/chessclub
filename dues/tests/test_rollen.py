@@ -12,7 +12,7 @@ from decimal import Decimal
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from dues.models import FeeAmount, FeeCategory, MembershipFee
+from dues.models import FeeAmount, FeeCategory, MembershipFee, SepaMandate
 from members.models import Member
 
 
@@ -53,6 +53,14 @@ class RollenTests(TestCase):
             kategorie_name=cls.kategorie.name,
             betrag=Decimal("90.00"),
             faellig_am=date(2026, 1, 31),
+        )
+        SepaMandate.objects.create(
+            member=cls.eigenes,
+            referenz="MND-ROLLEN-01",
+            iban="DE89370400440532013000",
+            kontoinhaber="Anna Meier",
+            erteilt_am=date(2025, 1, 1),
+            status=SepaMandate.Status.AKTIV,
         )
         # Zweiter Posten an einem anderen Mitglied: eigener Jahrgang und eigene
         # Kategorie, damit der Negativtest eindeutig ist.
@@ -104,6 +112,17 @@ class RollenTests(TestCase):
             with self.subTest(rolle=user.groups.get().name):
                 self.wechsle(user)
                 antwort = self.client.get("/beitraege/export.csv")
+                self.assertEqual(antwort.status_code, 200 if erlaubt else 403)
+
+    def test_sepa_export_nur_vorstand(self):
+        for user, erlaubt in (
+            (self.mitglied, False),
+            (self.kapitaen, False),
+            (self.admin, True),
+        ):
+            with self.subTest(rolle=user.groups.get().name):
+                self.wechsle(user)
+                antwort = self.client.get("/beitraege/sepa-export.xml?jahr=2026")
                 self.assertEqual(antwort.status_code, 200 if erlaubt else 403)
 
     def test_kassenbericht_nur_vorstand(self):

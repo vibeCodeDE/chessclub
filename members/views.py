@@ -459,3 +459,104 @@ def change_request_reject(request, pk):
         return ok(message=nachricht, remove_selector=f"[data-row='wunsch-{pk}']")
     messages.info(request, nachricht)
     return redirect("members:change_request_list")
+
+
+@role_required(ADMIN_GROUP)
+def dsb_sync_view(request):
+    """Verbandsabgleich mit dem DSB-Wertungsportal und Drift Detection (ADR-016 / K3.6)."""
+    from django.conf import settings
+    from members.services.dsb_sync import (
+        DSBSyncError,
+        detect_drift,
+        fetch_dsb_vereinsliste,
+        sync_dwz_for_member,
+        sync_dwz_from_report,
+    )
+
+    vkz = getattr(settings, "DSB_VKZ", "").strip()
+    token = getattr(settings, "DSB_API_TOKEN", "").strip()
+    config_ok = bool(vkz and token)
+    dsb_data = None
+    from_cache = False
+    error_message = None
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+
+        if not config_ok:
+            messages.error(
+                request,
+                "DSB-Schnittstelle ist noch nicht konfiguriert (DSB_VKZ oder DSB_API_TOKEN fehlt).",
+            )
+            return redirect("members:dsb_sync")
+
+        try:
+            if action == "refresh":
+                dsb_data, from_cache = fetch_dsb_vereinsliste(force=True)
+                AuditLog.objects.create(
+                    benutzer=request.user,
+                    aktion="DSB-Daten aktualisiert",
+                    text=f"Frische Verbandsdaten vom DSB-Wertungsportal abgerufen (VKZ: {vkz}).",
+                )
+                messages.success(request, "Verbandsdaten erfolgreich vom DSB-Portal aktualisiert.")
+                return redirect("members:dsb_sync")
+
+            elif action == "sync_all":
+                dsb_data, from_cache = fetch_dsb_vereinsliste()
+                report = detect_drift(dsb_data=dsb_data, from_cache=from_cache)
+                count = sync_dwz_from_report(report, benutzer=request.user)
+                messages.success(
+                    request,
+                    (
+                        f"DWZ und Verbandskennungen für {count} Mitglied(er) erfolgreich übernommen."
+                        if count > 0
+                        else "Alle DWZ-Werte sind bereits aktuell."
+                    ),
+                )
+                return redirect("members:dsb_sync")
+
+            elif action == "sync_member":
+                member_id = request.POST.get("member_id")
+                member = get_object_or_404(Member, pk=member_id)
+                dsb_data, from_cache = fetch_dsb_vereinsliste()
+                report = detect_drift(dsb_data=dsb_data, from_cache=from_cache)
+                target_drift = next(
+                    (item for item in report.dwz_abweichungen if item["member"].id == member.id),
+                    None,
+                )
+                if target_drift:
+                    sync_dwz_for_member(member, target_drift["dsb_player"], benutzer=request.user)
+                    AuditLog.objects.create(
+                        benutzer=request.user,
+                        aktion="DSB-Abgleich durchgeführt",
+                        text=f"DWZ für {member} übernommen: {member.dwz_formatiert}.",
+                        member=member,
+                    )
+                    messages.success(
+                        request,
+                        f"DWZ für {member} erfolgreich übernommen ({member.dwz_formatiert}).",
+                    )
+                else:
+                    messages.info(request, f"Keine DWZ-Abweichung für {member} gefunden.")
+                return redirect("members:dsb_sync")
+
+        except DSBSyncError as exc:
+            messages.error(request, f"Fehler beim DSB-Abgleich: {exc}")
+            return redirect("members:dsb_sync")
+
+    if config_ok:
+        try:
+            dsb_data, from_cache = fetch_dsb_vereinsliste()
+        except DSBSyncError as exc:
+            error_message = str(exc)
+
+    report = detect_drift(dsb_data=dsb_data, from_cache=from_cache)
+
+    context = {
+        "report": report,
+        "config_ok": config_ok,
+        "vkz": vkz,
+        "error_message": error_message,
+    }
+    return render(request, "members/dsb_sync.html", context)
+

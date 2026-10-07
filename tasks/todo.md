@@ -101,7 +101,33 @@
   2. Skip-Links (`.skip-link` in `app.css`, `site.css`) und IDs (`#main-content`, `#inhalt`, `#auth-card`) auf allen Hüllen (`base.html`, `public_base.html`, `auth_base.html`) durchgängig integriert.
   3. `docs/nfr-pruefung.md` als systematischer Prüfbericht mit Messwerten (alle 5 Kernflächen < 180 ms), Methodik, Kontrastwerten (Fließtext 11.8:1 / 14.1:1, AAA) und Responsive-Ergebnissen (360 px bis 4K) angelegt.
   4. `docs/prd.md` auf v1.6 aktualisiert mit geschärften Anforderungen für alle Generationen (Schüler bis Senioren 80+ Jahre).
-- **Beleg:** `docker compose exec app pytest` → **404 passed, 205 subtests passed** in 33 s (100% grün).
+### T29: DSB- / DWZ-Synchronisation und Drift Detection (2026-10-07)
+
+- **Problem:** DWZ-Zahlen ändern sich laufend; Spielleiter mussten DWZ und ZPS-Passnummern manuell nachschlagen.
+- **Umsetzung (gemäß ADR-016 / K3.6):**
+  1. **Datenmodell (`Member`):** Bundeseinheitliche Verbandskennungen und Wertungszahlen ergänzt (`zps_nummer`, `pkz`, `dwz`, `dwz_index`, `fide_id`, `spielberechtigung`), Hilfseigenschaft `dwz_formatiert`, Migration `members/migrations/0005_member_dwz_member_dwz_index_member_fide_id_and_more.py`.
+  2. **Fachservice (`members/services/dsb_sync.py`):** Reiner Service ohne HTTP-Kontext für den Abruf der offiziellen JSON-Schnittstelle des DSB-Wertungsportals (`https://www.schachbund.de/wertungsportal-api/vereinsliste`), 24-stündiges serverseitiges Caching (Ratenbegrenzung zum Schutz der Verbandsserver), standardkonforme Normalisierung und Matching-Logik (PKZ, ZPS, Name).
+  3. **Diskrepanzerkennung (Drift Detection):** Systematischer Abgleich von Vereins- und Verbandsdaten (`detect_drift`):
+     - *DWZ-Abweichungen:* automatische Erkennung veralteter DWZ/DWZ-Indizes.
+     - *Fehlt im Verband:* im Verein aktive Mitglieder, die in der Verbandsliste fehlen (Portalmeldung ausstehend).
+     - *Fehlt im Verein:* im Verband geführte Spieler, die im Verein fehlen oder als ausgetreten geführt werden.
+     - *Status-Abweichungen:* Diskrepanzen zwischen Vereins- und Verbandsstatus (z. B. Verein aktiv vs. Verband passiv).
+     - *Synchrone Mitglieder:* vollständig übereinstimmende Datensätze.
+  4. **Wertungszahlen-Übernahme (`sync_dwz_from_report`, `sync_dwz_for_member`):** Idempotente Übernahme geänderter DWZ, Indizes und Kennungen per Einzel- oder Sammelaktion, AuditLog-Protokollierung mit Akteur und Detailwerten.
+  5. **UI & Navigation:** Neue Verwaltungsfläche `/mitglieder/dsb-sync/` mit Tabs, Status-Kacheln und Schnellübernahme-Buttons, Verlinkung im Navigationsmenü und der Mitgliederliste, Anzeige von DWZ und Verbandsdaten im Mitgliederdetail und Admin.
+- **Beleg:** `docker compose exec app pytest members/tests/test_dsb_sync.py` → 16 passed in 5.34s; `docker compose exec app pytest` → **444 passed, 210 subtests passed** in 38.00s (100% grün).
+
+### T9c: SEPA-XML-Export (pain.008) für Beitragsläufe (2026-10-07)
+
+- **Problem & Kontext:** Nach ADR-002 gibt es bewusst keine Bank-API (kein FinTS/EBICS), um Zugangsdaten und Risiken zu vermeiden. Das manuelle Abtippen von Dutzenden oder Hunderten Lastschriften im Online-Banking ist zeitintensiv und fehleranfällig.
+- **Umsetzung (gemäß ADR-017 / S2.7):**
+  1. **Standardisiertes SEPA-Format:** ISO 20022 `pain.008.001.02` (EPC SEPA Core Direct Debit, B2C, `RCUR`) mit vollständigem Group Header (`GrpHdr`), Zahlungsinformation (`PmtInf`), Gläubigeridentifikation (`CdtrSchmeId`) und Einzeltransaktionen (`DrctDbtTxInf`).
+  2. **Fachservice (`dues/services.py`):** `erstelle_sepa_xml` und `sepa_sanitize` als reine Funktionen ohne HTTP-Abhängigkeit; XML-Generierung rein per Standardbibliothek (`xml.etree.ElementTree`) ohne Fremdpakete oder Netzwerkbibliotheken (ADR-002 und `test_keine_bank_api.py` garantiert eingehalten).
+  3. **Kryptografie & DSGVO (ADR-010 / N1.5):** IBANs bleiben in der Datenbank Fernet-verschlüsselt; flüchtige Entschlüsselung ausschließlich im RAM während des Exports; lückenlose Protokollierung jedes Downloads im `AuditLog` (Aktion: `SEPA-XML-Export`) mit Jahr, Postenanzahl und Gesamtsumme ohne Klartext-IBANs.
+  4. **Query-Effizienz & Filterung:** O(1)-Query-Budget via `select_related("member", "member__sepa_mandat")` und `prefetch_related("zahlungen")`. Posten ohne Mandat, mit widerrufenem Mandat, ohne offene Beträge oder im Status `bezahlt`/`erlassen` werden automatisch ausgeschlossen; bei Teilzahlungen wird nur der offene Restbetrag eingezogen.
+  5. **UI & Konfiguration:** Dialog `#sepa-dialog` und Export-Button `SEPA-XML {jahr}` in `dues/templates/dues/overview.html`, Route `/beitraege/sepa-export.xml`, Gläubigereinstellungen `SEPA_CREDITOR_ID`, `SEPA_CREDITOR_IBAN`, `SEPA_CREDITOR_BIC` in `config/settings.py` und `.env.prod.example`.
+- **Beleg:** `docker compose exec app pytest dues/tests/test_sepa_export.py dues/tests/test_rollen.py` → **25 passed, 39 subtests passed** in 4.14s; Gesamttestlauf `docker compose exec app pytest` → **454 passed, 213 subtests passed** in 37.94s (100% grün).
+
 
 ---
 

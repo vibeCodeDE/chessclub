@@ -11,6 +11,9 @@
     <a class="btn secondary" href="{% url 'dues:export' %}?jahr={{ jahr }}">
       <svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV {{ jahr }}
     </a>
+    <button class="btn secondary" type="button" data-dialog-open="#sepa-dialog">
+      <svg class="icon icon-sm"><use href="#i-download"></use></svg> SEPA-XML {{ jahr }}
+    </button>
     <a class="btn secondary" href="{% url 'dues:kassenbericht' %}?jahr={{ jahr }}">
       <svg class="icon icon-sm"><use href="#i-chart"></use></svg> Kassenbericht
     </a>
@@ -149,6 +152,38 @@
       <div class="modal-foot">
         <button class="btn secondary" type="button" data-dialog-close>Abbrechen</button>
         <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Lauf starten</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="dialog modal-backdrop" id="sepa-dialog" data-dialog>
+  <div class="modal">
+    <div class="modal-head">
+      <h3>SEPA-Lastschriftdatei erzeugen (pain.008)</h3>
+      <button class="icon-btn" type="button" data-dialog-close aria-label="Schließen"><svg class="icon"><use href="#i-x"></use></svg></button>
+    </div>
+    <form method="get" action="{% url 'dues:sepa_export' %}">
+      <input type="hidden" name="jahr" value="{{ jahr }}">
+      <div class="modal-body">
+        <p>Erzeugt eine standardisierte SEPA-Lastschriftdatei (<code>pain.008.001.02</code>) für alle offenen Beitragsposten mit aktivem SEPA-Mandat im Beitragsjahr <strong>{{ jahr }}</strong>.</p>
+        <p class="muted">Die heruntergeladene XML-Datei können Sie direkt im Online-Banking Ihrer Hausbank (Sparkasse, Volksbank etc.) als Sammellastschrift einreichen.</p>
+        <div class="form-grid cols-1 mt-1">
+          <div class="field">
+            <label for="id_ausfuehrung_am">Gewünschter Ausführungstermin (Fälligkeit)</label>
+            <input type="date" id="id_ausfuehrung_am" name="ausfuehrung_am">
+            <span class="help">Optional. Standard: 2 Tage nach Erzeugung.</span>
+          </div>
+          <div class="field">
+            <label for="id_verwendungszweck">Verwendungszweck</label>
+            <input type="text" id="id_verwendungszweck" name="verwendungszweck" placeholder="Mitgliedsbeitrag {{ jahr }} - [Mitglied]">
+            <span class="help">Optional. Standard: Mitgliedsbeitrag {{ jahr }} - [Vorname Nachname].</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" type="button" data-dialog-close>Abbrechen</button>
+        <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-download"></use></svg> SEPA-Datei erzeugen</button>
       </div>
     </form>
   </div>

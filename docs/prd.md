@@ -53,7 +53,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M1.5 Listen: Filter/Suche, CSV-Export (kein Altbestand vorhanden → kein Import nötig)
 - M1.6 Sonstige Personen: Förderer/ehemalige Mitglieder als passive Einträge
 
-### 3.2 Beitragsverwaltung (M)
+### 3.2 Beitragsverwaltung (M/S)
 
 - M2.1 Beitragssätze konfigurierbar (z. B. Erwachsene, Jugendliche, Familien, ermäßigt)
 - M2.2 Jährliche Beitragsläufe: automatische Rechnungsstellung für alle aktiven Mitglieder
@@ -61,6 +61,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M2.4 Zahlungserfassung: Überweisung, SEPA-Einzug und Barzahlung manuell buchen (Zahlungsart je Buchung)
 - M2.5 Mahnwesen: automatische offene-Beitrags-Übersicht, Mahnbrief als PDF
 - M2.6 Kassenbuch-Sicht (Beiträge): Zahlungen je Mitglied, Jahresübersicht für den Kassenbericht — reine Lese-Sicht auf die Beitragsdaten, siehe Abgrenzung in §3.6
+- S2.7 SEPA-XML-Export: Erzeugung und Download einer standardisierten SEPA-Lastschriftdatei (pain.008.001.02) für offene Beitragsposten mit aktivem SEPA-Mandat zur manuellen Abgabe im Online-Banking (keine Bank-API, siehe [ADR-017](decisions/ADR-017-sepa-xml-export-pain-008.md))
 
 ### 3.3 Turniere & Ergebnisse (M/S)
 
@@ -103,7 +104,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 
 ### 3.8 Berechtigungsmatrix (M)
 
-Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Aufstellung), T19 (Turnieranmeldung/Gastdaten) und **alle** Export-/Übersichtstasks (T10, T11b, T15, T22, T23); jede Zeile erhält einen Negativtest.
+Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Aufstellung), T19 (Turnieranmeldung/Gastdaten) und **alle** Export-/Übersichtstasks (T9c, T10, T11b, T15, T22, T23); jede Zeile erhält einen Negativtest.
 
 | Funktion | Admin (Vorstand) | Kapitän | Mitglied | Gast |
 |---|---|---|---|---|
@@ -116,7 +117,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 | Turnier verwalten | ja | nein | nein | nein |
 | Turnieranmeldung | ja | ja | ja | ja (bis Anmeldeschluss, mit Name + E-Mail) |
 | Gastdaten aus Turnieranmeldung einsehen / löschen | ja | nein | nein | nein (Gast hat keinen Login; Korrektur/Löschung über die Turnierverwaltung) |
-| Beiträge / Zahlungen / Mahnungen | ja | nein | nur eigener Beitragsstand | nein |
+| Beiträge / Zahlungen / Mahnungen / SEPA-Export | ja | nein | nur eigener Beitragsstand | nein |
 | Kassenbuch | ja | nein | nein | nein |
 | News verwalten | ja | nein | nein | nein |
 | News lesen (Startseite + Archiv) | ja | ja | ja | ja |
@@ -232,3 +233,5 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v1.6 | 2026-10-04 | Schärfung für universelle Zugänglichkeit, Inklusion für alle Altersklassen (6–80+ Jahre) und Barrierefreiheit (WCAG 2.1 AA/AAA, Touch-Targets ≥ 44px, Textskalierung bis 200 %, Tastaturfokus) in §1, §4.2 (N2.3, N2.6) und §7 |
 | v1.7 | 2026-10-05 | Integration von django-axes (Brute-Force-Schutz, N1.6) und django-debug-toolbar (Dev-Profiling & N+1-Prüfung, N2.2) gemäß ADR-015 |
 | v1.8 | 2026-10-07 | Spezifikation der DSB-Schnittstellen-Architektur (K3.6) als Drei-Säulen-Modell (DWZ-Read-Sync, nuLiga-Mutations-Export, TRF/DeWIS) in [ADR-016](decisions/ADR-016-dsb-schnittstellen-architektur.md) |
+| v1.9 | 2026-10-07 | Umsetzung der DSB-/DWZ-Synchronisation und Drift Detection (ADR-016, K3.6) in Task T29 |
+| v2.0 | 2026-10-07 | SEPA-XML-Export (pain.008.001.02, S2.7) für Beitragsläufe gemäß ADR-017 / T9c |

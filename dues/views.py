@@ -1,6 +1,7 @@
 """Beitragsverwaltung: Übersicht, Beitragslauf, Zahlungen, Mahnwesen, Mandate."""
 
 import csv
+from datetime import date
 from decimal import Decimal
 
 from django.contrib import messages
@@ -12,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
 from core.ui import fehler, is_ajax, ok, paginate
 from members.models import Member
@@ -33,6 +35,7 @@ from .models import (
 )
 from .services import (
     beitragslauf,
+    erstelle_sepa_xml,
     mahntext,
     mahnung_erstellen,
     zahlung_erfassen,
@@ -442,6 +445,51 @@ def export(request):
                 fee.mahnstufe,
             ]
         )
+    return response
+
+
+@role_required(ADMIN_GROUP)
+def sepa_export(request):
+    """Erzeugt und liefert eine standardisierte SEPA-XML-Lastschriftdatei (PRD S2.7, ADR-017)."""
+    jahr = _jahr_aus_request(request)
+    ausfuehrung_str = request.GET.get("ausfuehrung_am", "").strip()
+    ausfuehrung_am = None
+    if ausfuehrung_str:
+        try:
+            ausfuehrung_am = date.fromisoformat(ausfuehrung_str)
+        except ValueError:
+            pass
+
+    verwendungszweck = request.GET.get("verwendungszweck", "").strip() or None
+
+    try:
+        xml_bytes, meta = erstelle_sepa_xml(
+            jahr=jahr,
+            ausfuehrung_am=ausfuehrung_am,
+            verwendungszweck=verwendungszweck,
+        )
+    except ValidationError as exc:
+        msg = (
+            exc.message
+            if hasattr(exc, "message")
+            else ", ".join(exc.messages)
+            if hasattr(exc, "messages")
+            else str(exc)
+        )
+        messages.error(request, msg)
+        return redirect(f"/beitraege/?jahr={jahr}")
+
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="SEPA-XML-Export",
+        text=(
+            f"SEPA-Lastschriftdatei (pain.008) für Beitragsjahr {jahr} erzeugt: "
+            f"{meta['anzahl_posten']} Posten, Summe {meta['gesamtsumme']:.2f} €."
+        ),
+    )
+
+    response = HttpResponse(xml_bytes, content_type="application/xml; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="sepa-lastschrift-{jahr}.xml"'
     return response
 
 

@@ -8,6 +8,7 @@ urlpatterns = [
     path("beitraege/", views.overview, name="overview"),
     path("beitraege/lauf/", views.run_beitragslauf, name="run_lauf"),
     path("beitraege/export.csv", views.export, name="export"),
+    path("beitraege/sepa-export.xml", views.sepa_export, name="sepa_export"),
     path("beitraege/kategorien/", views.category_list, name="category_list"),
     path("beitraege/kategorien/<int:pk>/bearbeiten/", views.category_update, name="category_update"),
     path("beitraege/kategorien/<int:pk>/status/", views.category_toggle, name="category_toggle"),

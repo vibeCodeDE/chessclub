@@ -8,6 +8,9 @@
 <div class="page-head">
   <p class="lede">Stammdaten, Status und Beitragskategorie pflegen – Austritte werden historisiert, nie gelöscht.</p>
   <div class="page-actions">
+    <a class="btn secondary" href="{% url 'members:dsb_sync' %}">
+      <svg class="icon icon-sm"><use href="#i-refresh"></use></svg> DSB-Abgleich
+    </a>
     <a class="btn secondary" href="{% url 'members:member_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
       <svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV
     </a>
@@ -81,7 +84,11 @@
                 <span class="avatar-sm {% if member.status == 'ausgetreten' %}gold{% endif %}">{{ member.nachname|slice:":1" }}{{ member.vorname|slice:":1" }}</span>
                 <span>
                   <span class="name"><a href="{% url 'members:member_detail' member.pk %}">{{ member }}</a></span>
-                  <span class="cell-sub">{{ member.geburtsdatum|date:"d.m.Y"|default:"Geburtsdatum fehlt" }}</span>
+                  <span class="cell-sub">
+                    {{ member.geburtsdatum|date:"d.m.Y"|default:"Geburtsdatum fehlt" }}
+                    {% if member.dwz %} · DWZ {{ member.dwz_formatiert }}{% endif %}
+                    {% if member.zps_nummer %} · Pass {{ member.zps_nummer }}{% endif %}
+                  </span>
                 </span>
               </div>
             </td>

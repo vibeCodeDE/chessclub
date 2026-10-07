@@ -36,6 +36,9 @@ services:
       CLUB_NIGHT_HOURS: "Donnerstags ab 19:00 Uhr"
       CLUB_YOUTH_HOURS: "Donnerstags 17:30 – 19:00 Uhr"
       CLUB_DESCRIPTION: "Schach für alle – vom ersten Bauernzug bis zur Ligapartie."
+      # DSB-Schnittstelle (ADR-016 / K3.6)
+      DSB_VKZ: "61313"
+      DSB_API_TOKEN: "adae738aedc07673efababb154b4e36595a2198c"
     volumes:
       - .:/app
     depends_on:

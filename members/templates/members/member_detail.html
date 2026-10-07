@@ -80,6 +80,18 @@
         <li><span class="grow"><span class="meta">Austrittsdatum</span><span class="title">{{ member.austrittsdatum|date:"d.m.Y"|default:"–" }}</span></span></li>
       </dl>
     </div>
+    <h3 style="margin-top:1.5rem;font-size:1.1rem;color:var(--text-heading)">Verbandsdaten (DSB)</h3>
+    <div class="grid cols-2">
+      <dl class="list">
+        <li><span class="grow"><span class="meta">DWZ</span><span class="title">{% if member.dwz %}<strong>{{ member.dwz_formatiert }}</strong>{% else %}– keine DWZ –{% endif %}</span></span></li>
+        <li><span class="grow"><span class="meta">ZPS-Nummer</span><span class="title">{{ member.zps_nummer|default:"–" }}</span></span></li>
+        <li><span class="grow"><span class="meta">PKZ (DSB)</span><span class="title">{{ member.pkz|default:"–" }}</span></span></li>
+      </dl>
+      <dl class="list">
+        <li><span class="grow"><span class="meta">FIDE-ID</span><span class="title">{{ member.fide_id|default:"–" }}</span></span></li>
+        <li><span class="grow"><span class="meta">Spielberechtigung</span><span class="title">{{ member.get_spielberechtigung_display }}</span></span></li>
+      </dl>
+    </div>
   </div>
 </div>
 
