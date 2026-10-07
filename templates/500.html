@@ -1,0 +1,32 @@
+{% load static %}<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Serverfehler (500) – Schachverein</title>
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+  {% include "includes/sprite.html" %}
+  <div class="container">
+    <div class="not-found-page">
+      <div class="not-found-inner">
+        <span class="not-found-symbol" aria-hidden="true">♚</span>
+        <h1>Technischer <em>Fehler.</em></h1>
+        <p>
+          Auf dem Vereinsserver ist ein unerwarteter Fehler aufgetreten.
+          Die Systemadministration wurde automatisch informiert. Bitte versuche es in Kürze erneut.
+        </p>
+        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+          <a class="button button-dark" href="/">
+            <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Zur Startseite
+          </a>
+          <button class="button button-lime" type="button" onclick="location.reload()">
+            Seite neu laden
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

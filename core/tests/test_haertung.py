@@ -124,3 +124,33 @@ class SicherheitsHeaderTests(TestCase):
         self.assertIn("default-src 'self'", csp)
         self.assertIn("frame-ancestors 'none'", csp)
         self.assertNotIn("unsafe-eval", csp)
+
+
+class FehlerseitenTests(TestCase):
+    def test_404_seite_rendert_passend(self):
+        response = self.client.get("/eine-seite-die-es-nicht-gibt/")
+        self.assertEqual(response.status_code, 404)
+        self.assertTemplateUsed(response, "404.html")
+        self.assertContains(response, "Dieser Zug ging", status_code=404)
+
+    def test_403_seite_rendert_passend(self):
+        from django.core.exceptions import PermissionDenied
+        from django.test import RequestFactory
+        from django.views.defaults import permission_denied
+
+        request = RequestFactory().get("/geheim/")
+        response = permission_denied(request, PermissionDenied("Keine Berechtigung"))
+        self.assertEqual(response.status_code, 403)
+        self.assertIn(b"Zugriff", response.content)
+        self.assertIn(b"nicht gestattet", response.content)
+
+    def test_500_seite_rendert_ohne_kontextfehler(self):
+        from django.test import RequestFactory
+        from django.views.defaults import server_error
+
+        request = RequestFactory().get("/fehler/")
+        response = server_error(request)
+        self.assertEqual(response.status_code, 500)
+        self.assertIn(b"Serverfehler", response.content)
+        self.assertIn(b"Technischer", response.content)
+

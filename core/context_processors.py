@@ -91,7 +91,8 @@ def _badges(role):
 
 
 def nav(request):
-    role = role_of(request.user)
+    user = getattr(request, "user", None)
+    role = role_of(user)
     badges = _badges(role)
     sektionen = []
     for titel, eintraege in NAV_STRUKTUR:

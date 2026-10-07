@@ -26,24 +26,32 @@
       Object.entries(data).forEach(([key, value]) => body.append(key, value));
     }
     if (!body.has("csrfmiddlewaretoken")) body.append("csrfmiddlewaretoken", csrfToken());
-    const response = await fetch(url, {
-      method: "POST",
-      body: body,
-      headers: {
-        "X-Requested-With": "fetch",
-        Accept: "application/json",
-        "X-CSRFToken": csrfToken(),
-      },
-      credentials: "same-origin",
-    });
-    let payload = null;
     try {
-      payload = await response.json();
-    } catch (error) {
-      payload = { ok: false, message: "Unerwartete Antwort des Servers." };
+      const response = await fetch(url, {
+        method: "POST",
+        body: body,
+        headers: {
+          "X-Requested-With": "fetch",
+          Accept: "application/json",
+          "X-CSRFToken": csrfToken(),
+        },
+        credentials: "same-origin",
+      });
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        payload = { ok: false, message: "Unerwartete Antwort des Servers." };
+      }
+      if (!response.ok && payload && payload.ok === undefined) payload.ok = false;
+      return { ok: response.ok, payload: payload, response: response };
+    } catch (networkError) {
+      return {
+        ok: false,
+        payload: { ok: false, message: "Netzwerkfehler: Bitte Internetverbindung prüfen." },
+        response: null,
+      };
     }
-    if (!response.ok && payload && payload.ok === undefined) payload.ok = false;
-    return { ok: response.ok, payload: payload, response: response };
   }
   App.post = post;
 
@@ -116,19 +124,22 @@
     const sidebar = $("#sidebar");
     if (!sidebar) return;
     const backdrop = $("[data-sidebar-close]");
+    const toggles = $$("[data-sidebar-toggle]");
     const open = () => {
       sidebar.classList.add("is-open");
+      toggles.forEach((btn) => btn.setAttribute("aria-expanded", "true"));
       if (backdrop) backdrop.hidden = false;
       if (backdrop) backdrop.classList.add("is-open");
     };
     const close = () => {
       sidebar.classList.remove("is-open");
+      toggles.forEach((btn) => btn.setAttribute("aria-expanded", "false"));
       if (backdrop) backdrop.classList.remove("is-open");
       window.setTimeout(() => {
         if (backdrop && !backdrop.classList.contains("is-open")) backdrop.hidden = true;
       }, 200);
     };
-    $$("[data-sidebar-toggle]").forEach((btn) => btn.addEventListener("click", () => {
+    toggles.forEach((btn) => btn.addEventListener("click", () => {
       sidebar.classList.contains("is-open") ? close() : open();
     }));
     if (backdrop) backdrop.addEventListener("click", close);
@@ -161,17 +172,49 @@
     const bodyEl = $("[data-modal-body]", backdrop);
     const confirmBtn = $("[data-modal-confirm]", backdrop);
     let pending = null;
+    let previouslyFocused = null;
+
+    function getFocusableElements() {
+      return $$('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', backdrop)
+        .filter((el) => !el.disabled && el.offsetParent !== null);
+    }
 
     function close() {
       backdrop.classList.remove("is-open");
+      backdrop.setAttribute("aria-hidden", "true");
       pending = null;
+      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+        previouslyFocused.focus();
+        previouslyFocused = null;
+      }
     }
     $$("[data-modal-close]", backdrop).forEach((btn) => btn.addEventListener("click", close));
     backdrop.addEventListener("click", (event) => {
       if (event.target === backdrop) close();
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && backdrop.classList.contains("is-open")) close();
+      if (!backdrop.classList.contains("is-open")) return;
+      if (event.key === "Escape") {
+        close();
+        return;
+      }
+      if (event.key === "Tab") {
+        const focusables = getFocusableElements();
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey) {
+          if (document.activeElement === first || !backdrop.contains(document.activeElement)) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last || !backdrop.contains(document.activeElement)) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      }
     });
     confirmBtn.addEventListener("click", () => {
       if (!pending) return;
@@ -193,6 +236,7 @@
       const form = trigger.closest("form");
       event.preventDefault();
       event.stopPropagation();
+      previouslyFocused = trigger;
       pending = {
         form: form,
         button: trigger.tagName === "BUTTON" && form && trigger.type === "submit" ? trigger : null,
@@ -203,6 +247,11 @@
       confirmBtn.textContent = trigger.dataset.confirmButton || "Bestätigen";
       confirmBtn.className = "btn " + (trigger.dataset.confirmStyle || "danger");
       backdrop.classList.add("is-open");
+      backdrop.removeAttribute("aria-hidden");
+      window.setTimeout(() => {
+        const focusables = getFocusableElements();
+        if (focusables.length > 0) focusables[0].focus();
+      }, 50);
     }, true);
   }
 
@@ -469,12 +518,32 @@
   /* ----------------------------------------------- Ladezustand bei Navigation */
   function initNavigationFeedback() {
     window.addEventListener("beforeunload", () => showLoading());
+    window.addEventListener("pageshow", () => {
+      hideLoading();
+      $$("button.is-loading").forEach((btn) => {
+        btn.classList.remove("is-loading");
+        if (!btn.dataset.wasDisabled) btn.disabled = false;
+      });
+      $$("form[data-submitting]").forEach((f) => {
+        delete f.dataset.submitting;
+      });
+    });
     document.addEventListener("submit", (event) => {
       const form = event.target;
       if (form.matches("[data-ajax]")) return;
+      if (form.dataset.submitting === "true") {
+        event.preventDefault();
+        return;
+      }
+      form.dataset.submitting = "true";
       const button = event.submitter || $("button[type=submit]", form);
       withButtonLoading(button, true);
       showLoading();
+      window.setTimeout(() => {
+        delete form.dataset.submitting;
+        if (button && !button.dataset.wasDisabled) withButtonLoading(button, false);
+        hideLoading();
+      }, 6000);
     });
     document.addEventListener("click", (event) => {
       const link = event.target.closest("a[href]");
@@ -520,6 +589,29 @@
     });
   }
 
+  /* ------------------------------------------------ Formular-Barrierefreiheit */
+  function initFormA11y() {
+    $$(".field, .form-field").forEach((field) => {
+      const input = $("input, select, textarea", field);
+      if (!input) return;
+      const error = $("[role=alert]", field);
+      const help = $(".help", field);
+      const describedBy = [];
+      if (error && error.id) {
+        input.setAttribute("aria-invalid", "true");
+        describedBy.push(error.id);
+      }
+      if (help && help.id) {
+        describedBy.push(help.id);
+      }
+      if (describedBy.length > 0) {
+        const existing = input.getAttribute("aria-describedby") || "";
+        const combined = [existing, ...describedBy].filter(Boolean).join(" ");
+        input.setAttribute("aria-describedby", combined);
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     adoptFlashMessages();
     initSidebar();
@@ -531,6 +623,7 @@
     initNavigationFeedback();
     initProgressBars();
     initDialogs();
+    initFormA11y();
   });
 })();
 

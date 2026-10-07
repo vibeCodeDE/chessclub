@@ -78,12 +78,12 @@
 
   <div class="main main-shell">
     <header class="topbar">
-      <button class="icon-btn mobile-menu" type="button" data-sidebar-toggle aria-label="Navigation öffnen">
+      <button class="icon-btn mobile-menu" type="button" data-sidebar-toggle aria-label="Navigation öffnen" aria-expanded="false" aria-controls="sidebar">
         <svg class="icon"><use href="#i-menu"></use></svg>
       </button>
       <div class="topbar-title breadcrumb">
         <span>{% if user_role == 'admin' %}Vereinsverwaltung{% else %}Vereinsleben{% endif %}</span>
-        <svg class="icon icon-sm" style="width:13px;height:13px;color:#b0b7a8" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        <svg class="icon icon-sm" style="width:13px;height:13px;color:var(--muted)" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
         <strong>{% block page_title %}Dashboard{% endblock %}</strong>
         {% block crumbs %}{% endblock %}
       </div>
@@ -94,7 +94,7 @@
         <kbd>⌘ K</kbd>
       </form>
       <div class="dropdown">
-        <button class="user-chip topbar-avatar-btn" type="button" data-dropdown-toggle aria-haspopup="true">
+        <button class="user-chip topbar-avatar-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-controls="topbar-profile-dropdown">
           <span class="avatar avatar-sand" aria-hidden="true">{{ user.get_short_name|default:user.get_username|slice:":2"|upper }}</span>
           <span class="who">
             <strong>{{ user.get_full_name|default:user.get_username }}</strong>
@@ -102,7 +102,7 @@
           </span>
           <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </button>
-        <div class="dropdown-panel" data-dropdown-panel>
+        <div class="dropdown-panel" id="topbar-profile-dropdown" data-dropdown-panel>
           <a href="{% url 'core:dashboard' %}"><svg class="icon icon-sm"><use href="#i-dashboard"></use></svg> Dashboard</a>
           <a href="{% url 'members:profil' %}"><svg class="icon icon-sm"><use href="#i-user"></use></svg> Mein Profil</a>
           <a href="{% url 'core:home' %}"><svg class="icon icon-sm"><use href="#i-globe"></use></svg> Vereinsseite</a>
@@ -134,7 +134,7 @@
 
 <div class="toast-stack" data-toast-stack aria-live="polite" aria-atomic="true"></div>
 
-<div class="modal-backdrop" data-modal-backdrop>
+<div class="modal-backdrop" data-modal-backdrop aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-head">
       <h3 id="modal-title" data-modal-title>Bestätigen</h3>

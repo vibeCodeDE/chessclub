@@ -85,13 +85,37 @@
   /* ----------------------------------------------- Ladezustand bei Navigation */
   function initNavigationFeedback() {
     window.addEventListener("beforeunload", () => showLoading());
+    window.addEventListener("pageshow", () => {
+      hideLoading();
+      $$("button.is-loading").forEach((btn) => {
+        btn.classList.remove("is-loading");
+        btn.disabled = false;
+      });
+      $$("form[data-submitting]").forEach((f) => {
+        delete f.dataset.submitting;
+      });
+    });
     document.addEventListener("submit", (event) => {
-      const button = event.submitter || $("button[type=submit]", event.target);
+      const form = event.target;
+      if (form.dataset.submitting === "true") {
+        event.preventDefault();
+        return;
+      }
+      form.dataset.submitting = "true";
+      const button = event.submitter || $("button[type=submit]", form);
       if (button) {
         button.classList.add("is-loading");
         button.disabled = true;
       }
       showLoading();
+      window.setTimeout(() => {
+        delete form.dataset.submitting;
+        if (button) {
+          button.classList.remove("is-loading");
+          button.disabled = false;
+        }
+        hideLoading();
+      }, 6000);
     });
     document.addEventListener("click", (event) => {
       const link = event.target.closest("a[href]");
@@ -105,9 +129,33 @@
     });
   }
 
+  /* ------------------------------------------------ Formular-Barrierefreiheit */
+  function initFormA11y() {
+    $$(".form-field").forEach((field) => {
+      const input = $("input, select, textarea", field);
+      if (!input) return;
+      const error = $("[role=alert]", field);
+      const help = $(".help", field);
+      const describedBy = [];
+      if (error && error.id) {
+        input.setAttribute("aria-invalid", "true");
+        describedBy.push(error.id);
+      }
+      if (help && help.id) {
+        describedBy.push(help.id);
+      }
+      if (describedBy.length > 0) {
+        const existing = input.getAttribute("aria-describedby") || "";
+        const combined = [existing, ...describedBy].filter(Boolean).join(" ");
+        input.setAttribute("aria-describedby", combined);
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initPublicNav();
     initNavigationFeedback();
+    initFormA11y();
   });
 })();
 

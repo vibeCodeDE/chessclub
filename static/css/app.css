@@ -105,6 +105,7 @@ body {
   overflow-x: hidden;
   max-width: 100%;
   width: 100%;
+  overflow-wrap: break-word;
 }
 
 h1, h2, h3, h4, p { margin: 0; }
@@ -805,6 +806,14 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
   padding: 10px 14px; color: var(--text); font-size: 14px; min-height: 42px; box-shadow: var(--shadow-xs);
   transition: border-color .15s, box-shadow .15s;
 }
+.field.has-error input, .field.has-error select, .field.has-error textarea {
+  border-color: var(--danger);
+  background: var(--danger-soft, #fdf4f2);
+}
+.field.has-error input:focus, .field.has-error select:focus, .field.has-error textarea:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px rgba(168, 64, 48, 0.15);
+}
 .field textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
 .field input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--forest); }
 .field .check { display: flex; align-items: center; gap: 9px; font-weight: 500; font-size: 14px; }
@@ -1044,7 +1053,7 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
   .sidebar-backdrop.is-open { opacity: 1; pointer-events: auto; }
   .main, .main-shell { margin-left: 0; width: 100%; max-width: 100%; }
   .topbar { padding: 0 18px; gap: 12px; }
-  .mobile-menu { display: inline-flex; }
+  .mobile-menu { display: inline-flex; width: 44px; height: 44px; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
   .sidebar-tip { display: none; }
 }
 
@@ -1072,6 +1081,7 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
   .form-grid.cols-2, .form-grid.cols-3 { grid-template-columns: minmax(0, 1fr); }
   .filters { padding: 12px 14px; gap: 10px; }
   .filters input, .filters select { width: 100%; min-width: 0; }
+  .field input, .field select, .field textarea, .input { font-size: 16px; }
   .page-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
 
@@ -1083,5 +1093,12 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transform: none !important;
+    transition-duration: 0.15s !important;
+    transition-property: background-color, color, border-color, opacity, outline-color, box-shadow !important;
+    scroll-behavior: auto !important;
+  }
 }

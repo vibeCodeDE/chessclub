@@ -1,0 +1,32 @@
+{% load static %}<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zugriff verweigert (403) – {{ club_short|default:"Schachverein" }}</title>
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+  {% include "includes/sprite.html" %}
+  <div class="container">
+    <div class="not-found-page">
+      <div class="not-found-inner">
+        <span class="not-found-symbol" aria-hidden="true">♟</span>
+        <h1>Zugriff <em>nicht gestattet.</em></h1>
+        <p>
+          Für diesen Bereich oder diese Aktion fehlen die erforderlichen Berechtigungen.
+          Bitte melde dich mit dem entsprechenden Vereinskonto an oder wende dich an den Vorstand.
+        </p>
+        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+          <a class="button button-dark" href="/">
+            <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Zur Startseite
+          </a>
+          <a class="button button-lime" href="/anmelden/">
+            Zum Mitglieder-Login
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

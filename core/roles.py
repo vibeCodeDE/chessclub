@@ -11,7 +11,7 @@ ROLES = ("gast", "mitglied", "kapitaen", "admin")
 
 
 def role_of(user):
-    if not user.is_authenticated:
+    if not user or not getattr(user, "is_authenticated", False):
         return "gast"
     group_names = set(user.groups.values_list("name", flat=True))
     if ADMIN_GROUP in group_names:

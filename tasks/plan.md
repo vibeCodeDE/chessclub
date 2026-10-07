@@ -6,7 +6,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 ## Architecture Decisions
 
-> Begründungen einzelner Entscheidungen stehen als ADRs in `docs/decisions/` ([ADR-001](../docs/decisions/ADR-001-django-stack.md) bis ADR-012).
+> Begründungen einzelner Entscheidungen stehen als ADRs in `docs/decisions/` ([ADR-001](../docs/decisions/ADR-001-django-stack.md) bis [ADR-016](../docs/decisions/ADR-016-dsb-schnittstellen-architektur.md)).
 
 - **Django 5 + PostgreSQL + serverseitige Templates:** Nutzer kennt Django noch nicht — Djangos Admin-Oberfläche übernimmt einen großen Teil der Verwaltungs-UI; Views bleiben einfache Function-Based Views. Keine SPA.
 - **Design-System handgeschrieben in `static/css/app.css`:** kein Tailwind, kein CSS-Buildschritt, kein Node im Betrieb. Das eingebaute Stylesheet ist selbst die Quelle; ein Build würde nur einen zusätzlichen Fehlerpfad in den Betrieb bringen. (Der frühere Tailwind-CLI-Build ist mit dem Zusammenführen der Zweige entfallen.)
@@ -19,6 +19,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 - **Schweizer Paarung:** kleine Eigenimplementierung in `tournaments/pairing.py` (Buchholz-Wertung, Bye-Behandlung, Vermeidung von Wiederholungen) statt exotischer Library — Risiko bewusst minimiert, Formate ≤ 64 Spieler reichen für den Verein.
 - **Betrieb mit Caddy + restic (+ Uptime Kuma):** [ADR-009](../docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md). Umsetzung als T24, T24b.
 - **Mobile-First + PWA:** alle Templates responsive ab 360 px (Burger-Menü, scrollbare Tabellen); Web-App-Manifest + Service Worker, damit die App auf dem Homescreen installierbar ist (keine nativen Apps, kein Store).
+- **DSB-Schnittstellen-Architektur:** [ADR-016](../docs/decisions/ADR-016-dsb-schnittstellen-architektur.md) regelt die Verbandsanbindung: Keine Schreib-API beim DSB, stattdessen Drei-Säulen-Modell aus DWZ-Read-Sync (JSON-API), strukturiertem nuLiga-/LSB-Mutationsexport und TRF16-/DeWIS-Turnierformat (K3.6).
 
 ## Konventionen
 
@@ -265,7 +266,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
 - **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
-- **Out of scope (K):** DSB-Meldeformate (K3.6), SMS/Erinnerungen (K5.4), DATEV (K6.3)
+- **Out of scope (K):** DSB-Meldeformate (K3.6 — konzipiert in [ADR-016](../docs/decisions/ADR-016-dsb-schnittstellen-architektur.md)), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
 **Traceability-Check (bei jedem Checkpoint):** Jede M- und N-ID aus `docs/prd.md` ist genau einer Task zugeordnet — v1-Task, außer N1.6 (2FA) und N2.8 (Monitoring), die im PRD als S geführt werden und daher T26 bzw. T24b (v1.1) zugeordnet sind. T10b ist reine Technik ohne PRD-ID.
 

@@ -403,7 +403,7 @@
     </section>
 
     <a class="club-evening-card" href="{% url 'core:verein' %}">
-      <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img">
+      <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img" loading="lazy" width="400" height="235">
       <span class="photo-shade"></span>
       <div class="evening-content">
         <span class="evening-eyebrow"><span></span>UNSER VEREINSABEND</span>
@@ -462,7 +462,7 @@
     </section>
     {% else %}
     <a class="club-evening-card" href="{% url 'core:verein' %}">
-      <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img">
+      <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img" loading="lazy" width="400" height="235">
       <span class="photo-shade"></span>
       <div class="evening-content">
         <span class="evening-eyebrow"><span></span>UNSER VEREINSABEND</span>

@@ -69,7 +69,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M3.3 Ergebniserfassung: Rundeneingabe, automatische Zwischenwertung (Schweizer System)
 - S3.4 Paarungen: automatische Paarung nach Schweizer System (z. B. Bibliothek/Matcher)
 - S3.5 Export: Ergebnisliste drucken + Export für ChessResults-Import
-- K3.6 DSB-Meldeformate
+- K3.6 DSB-Schnittstelle & Meldeformate (DWZ-Sync, nuLiga-Export, TRF16, siehe [ADR-016](decisions/ADR-016-dsb-schnittstellen-architektur.md))
 
 ### 3.4 Spielbetrieb / Mannschaften (M/S)
 
@@ -168,7 +168,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 - Native Mobile-Apps im App Store (PWA-Installation genügt — kein Store-Review, kein zweiter Codestand)
 - Vollständige Finanzbuchhaltung / DATEV-Buchführung
 - Livestream/Streaming, Spielpaarungs-Server für Online-Schach
-- Integration in DSB-Mitgliedschaftsportale (nur Export)
+- Direkte Schreib-Integration in DSB-Mitgliedschaftsportale mangels offener Verbands-API (stattdessen Export & DWZ-Read-Sync, siehe [ADR-016](decisions/ADR-016-dsb-schnittstellen-architektur.md))
 
 ---
 
@@ -231,3 +231,4 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v1.5 | 2026-09-30 | Neu §3.9 (S9.1–S9.4): öffentliche Vereinsseite in der Designsprache der Referenz-ZIP; Abgrenzung zum internen Design in [ADR-013](decisions/ADR-013-oeffentliche-designsprache.md). Alle vier Anforderungen gehen an T28 |
 | v1.6 | 2026-10-04 | Schärfung für universelle Zugänglichkeit, Inklusion für alle Altersklassen (6–80+ Jahre) und Barrierefreiheit (WCAG 2.1 AA/AAA, Touch-Targets ≥ 44px, Textskalierung bis 200 %, Tastaturfokus) in §1, §4.2 (N2.3, N2.6) und §7 |
 | v1.7 | 2026-10-05 | Integration von django-axes (Brute-Force-Schutz, N1.6) und django-debug-toolbar (Dev-Profiling & N+1-Prüfung, N2.2) gemäß ADR-015 |
+| v1.8 | 2026-10-07 | Spezifikation der DSB-Schnittstellen-Architektur (K3.6) als Drei-Säulen-Modell (DWZ-Read-Sync, nuLiga-Mutations-Export, TRF/DeWIS) in [ADR-016](decisions/ADR-016-dsb-schnittstellen-architektur.md) |

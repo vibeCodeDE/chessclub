@@ -7,7 +7,7 @@ colors:
   neutral-bg: "#f7f6f1"
   neutral-surface: "#ffffff"
   neutral-ink: "#202c25"
-  neutral-muted: "#68766c"
+  neutral-muted: "#57685c"
   border: "#d9dfd6"
   accent-rust: "#a86e50"
   accent-gold: "#b88d3b"
