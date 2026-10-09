@@ -32,7 +32,7 @@ Bevor echte Vereinsdaten verarbeitet oder Angebote unterbreitet werden, müssen 
    * **AGB & Vertragsunterlagen:** Festlegung der 12-monatigen Mindestlaufzeit, Kündigungsfrist (1 Monat zum Laufzeitende), Klausel zur Kleinunternehmerregelung gem. § 19 UStG sowie Preisanpassungsklausel bei späterem Wechsel zur Regelbesteuerung ([ADR-014](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-014-preisgestaltung.md)).
    * **Rechtstexte der Website:** Platzhalter in `/impressum/` und `/datenschutz/` durch finale Pflichtangaben ersetzen.
 2. **Technisches Deployment-Template finalisieren:**
-   * Vorbereitung eines standardisierten Docker-Compose-Stacks für neue Vereinsinstanzen (`kunde1.schachclub-cloud.de`).
+   * Vorbereitung eines standardisierten Docker-Compose-Stacks für neue Vereinsinstanzen (`kunde1.schachverwaltung.de`).
    * Testen der Backup- und Restore-Routinen ([tools/backup.sh](file:///C:/Users/xyxyx/Desktop/development/tools/backup.sh), [docs/deployment.md](file:///C:/Users/xyxyx/Desktop/development/docs/deployment.md)) und Monitoring via Uptime Kuma ([tasks/plan.md](file:///C:/Users/xyxyx/Desktop/development/tasks/plan.md) Task T24b).
    * Einrichtung der E-Mail-Infrastruktur (SMTP-Zustellbarkeit mit SPF/DKIM zur Vermeidung von Spam-Einstufungen bei Rundbriefen).
 3. **Vertriebsmaterialien & Onboarding-Paket:**
@@ -158,7 +158,7 @@ gantt
 * **Übergabe der Altdaten:** Export der aktuellen Mitgliederdaten aus Excel, Vereinssoftware oder DSB-Meldeliste.
 
 ### Woche 2: Technische Bereitstellung & Datenmigration
-* **Deployment:** Eigene Instanz unter Subdomain (z. B. `sc-pilot.ihredomain.de`) per Docker Compose aufsetzen, SSL-Zertifikat automatisch via Caddy ausstellen.
+* **Deployment:** Eigene Instanz unter Subdomain (z. B. `sc-pilot.schachverwaltung.de`) per Docker Compose aufsetzen, SSL-Zertifikat automatisch via Caddy ausstellen.
 * **Datenbereinigung & Import:**
   * Entwickler bereinigen Dubletten, fehlerhafte E-Mail-Adressen und formatieren Geburtsdaten.
   * Einspielen der Mitgliederstammdaten, Beitragssätze und bestehenden SEPA-Mandate.

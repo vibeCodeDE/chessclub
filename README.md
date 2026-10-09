@@ -44,9 +44,11 @@ docker compose exec app pytest
 
 Die Verkaufsseite für andere Vereine liegt unter `/produkt/` (in der bisherigen Gestaltung;
 `/` bleibt die Vereinsseite im neuen Design).
-Name und Kontakt kommen aus `PRODUCT_NAME` und `PRODUCT_CONTACT`; Preise, Funktionen und FAQ
+Das Managed-Angebot firmiert unter **Schachverwaltung.de** (`PRODUCT_NAME=Schachverwaltung.de`,
+Kontakt über `PRODUCT_CONTACT=kontakt@schachverwaltung.de`). Preise, Funktionen und FAQ
 stehen in `core/produkt.py`. Die Preise sind festgelegt (19/35/69 € Endpreise, Jahreszahlung,
 zwölf Monate Laufzeit) und in [ADR-014](docs/decisions/ADR-014-preisgestaltung.md) begründet.
+Entscheidung zum Markenauftritt: [ADR-018](docs/decisions/ADR-018-branding-schachverwaltung-de.md).
 `/impressum/` und `/datenschutz/` enthalten nur Platzhaltertexte und müssen vor dem Livegang
 ersetzt werden.
 

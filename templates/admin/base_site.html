@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 {% load static %}
 
-{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"Schachklub Manager" }}{% endblock %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"Schachverwaltung.de" }}{% endblock %}
 
 {% block extrahead %}
   {{ block.super }}
@@ -19,6 +19,6 @@
 {% endblock %}
 
 {% block userlinks %}
-  <a href="{% url 'core:dashboard' %}" style="margin-right: 1.25rem; color: #f2e3be; font-weight: 500; text-decoration: none;">← Zum Vereins-Dashboard</a>
+  <a href="{% url 'core:dashboard' %}" class="admin-back-link">← Zum Vereins-Dashboard</a>
   {{ block.super }}
 {% endblock %}

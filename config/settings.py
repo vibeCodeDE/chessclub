@@ -241,8 +241,8 @@ DSB_API_BASE_URL = os.environ.get(
 DSB_CACHE_TIMEOUT = int(os.environ.get("DSB_CACHE_TIMEOUT", "86400"))  # 24 h serverseitiges Caching
 
 # Produkt-Landingpage (/produkt/): Name und Kontakt für den Verkauf als Dienstleistung.
-PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Schachclub-Manager")
-PRODUCT_CONTACT = os.environ.get("PRODUCT_CONTACT", "hallo@schachclub-manager.example")
+PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Schachverwaltung.de")
+PRODUCT_CONTACT = os.environ.get("PRODUCT_CONTACT", "kontakt@schachverwaltung.de")
 
 # Absender für System- und Gruppen-Mails (PRD M5.2) sowie Fehlerbenachrichtigung.
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", CLUB_CONTACT)

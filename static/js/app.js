@@ -505,12 +505,16 @@
     $$("[data-quick-filter]").forEach((input) => {
       const table = $(input.dataset.quickFilter);
       if (!table) return;
+      let timer = null;
       input.addEventListener("input", () => {
-        const needle = input.value.trim().toLowerCase();
-        $$("tbody tr", table).forEach((row) => {
-          const haystack = row.textContent.toLowerCase();
-          row.hidden = needle.length > 0 && !haystack.includes(needle);
-        });
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const needle = input.value.trim().toLowerCase();
+          $$("tbody tr", table).forEach((row) => {
+            const haystack = row.textContent.toLowerCase();
+            row.hidden = needle.length > 0 && !haystack.includes(needle);
+          });
+        }, 80);
       });
     });
   }

@@ -202,10 +202,10 @@ svg { flex-shrink: 0; }
 .button-danger-subtle:hover, .btn.danger:hover { background: #fbdada; border-color: #f1b7b2; color: #841e15; }
 
 .button-gold, .btn.gold, .btn-gold {
-  background: var(--gold); color: #ffffff; border-color: var(--gold-dark);
+  background: var(--gold); color: var(--forest-dark); border-color: var(--gold-dark); font-weight: 700;
 }
 .button-gold:hover, .btn.gold:hover, .btn-gold:hover {
-  background: var(--gold-dark); border-color: var(--gold-dark); color: #ffffff;
+  background: #c89d56; border-color: var(--gold-dark); color: var(--forest-dark);
 }
 
 .button-lime, .btn.lime, .btn-lime {
@@ -216,10 +216,10 @@ svg { flex-shrink: 0; }
 }
 
 .button-rust, .btn.rust, .btn-rust {
-  background: var(--rust); color: #ffffff; border-color: var(--rust-deep);
+  background: var(--rust-deep); color: #ffffff; border-color: var(--rust-deep);
 }
 .button-rust:hover, .btn.rust:hover, .btn-rust:hover {
-  background: var(--rust-deep); border-color: var(--rust-deep); color: #ffffff;
+  background: #73422a; border-color: #73422a; color: #ffffff;
 }
 
 .button-ghost, .btn.ghost {
@@ -238,9 +238,15 @@ svg { flex-shrink: 0; }
 .link-btn.danger { color: var(--danger); }
 
 .icon-button, .icon-btn {
+  position: relative;
   width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
   color: var(--muted); border-radius: var(--radius-sm); transition: background .15s, color .15s;
   background: none; border: 0; cursor: pointer;
+}
+.icon-button::before, .icon-btn::before {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px; min-height: 44px; width: 100%; height: 100%;
 }
 .icon-button:hover, .icon-btn:hover, .icon-button.selected { background: var(--sidebar-border); color: var(--forest-dark); }
 .icon-button.small, .icon-btn.small { width: 28px; height: 28px; }
@@ -511,7 +517,7 @@ svg { flex-shrink: 0; }
   height: 6px; background: #e8eee6; border-radius: 4px; width: 100%; margin-top: 10px; overflow: hidden;
 }
 .progress-track > span, .progress > span {
-  display: block; height: 100%; border-radius: 4px; background: var(--forest); transition: width .3s;
+  display: block; height: 100%; border-radius: 4px; background: var(--forest); transform-origin: left; transition: transform .3s ease, opacity .2s ease;
 }
 .progress.success > span, .progress-track.success > span { background: var(--success); }
 .progress.warn > span, .progress-track.warn > span { background: var(--warn); }
@@ -527,7 +533,7 @@ svg { flex-shrink: 0; }
 
 .mini-chart, .sparkbar { display: flex; align-items: flex-end; gap: 6px; height: 42px; margin-top: 6px; opacity: 0.95; }
 .mini-chart > div, .sparkbar .bar {
-  width: 10px; background: #d3dfd1; border-radius: 3px 3px 0 0; min-height: 5px; transition: height .3s;
+  width: 10px; background: #d3dfd1; border-radius: 3px 3px 0 0; min-height: 5px; transform-origin: bottom; transition: transform .3s ease, opacity .2s ease;
 }
 .mini-chart > div:nth-child(2n), .sparkbar .bar:nth-child(2n) { background: #c2d4c0; }
 .mini-chart > div.current, .sparkbar .bar.current { background: var(--forest); }
@@ -1094,7 +1100,7 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 0s !important;
     animation-iteration-count: 1 !important;
     transform: none !important;
     transition-duration: 0.15s !important;

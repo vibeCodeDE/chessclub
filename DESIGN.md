@@ -76,6 +76,14 @@ components:
     height: "54px"
   button-lime-hover:
     backgroundColor: "#e9f2c2"
+  button-gold:
+    backgroundColor: "{colors.accent-gold}"
+    textColor: "{colors.primary-dark}"
+    rounded: "{rounded.xs}"
+    padding: "0 22px"
+    height: "54px"
+  button-gold-hover:
+    backgroundColor: "#c89d56"
   button-admin:
     backgroundColor: "{colors.primary}"
     textColor: "#ffffff"

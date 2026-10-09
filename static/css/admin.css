@@ -69,6 +69,20 @@ body {
   text-decoration: none !important;
 }
 
+.admin-back-link {
+  margin-right: 1.25rem;
+  color: var(--admin-gold-light) !important;
+  font-weight: 500;
+  text-decoration: none !important;
+  background: transparent !important;
+}
+
+.admin-back-link:hover {
+  color: #ffffff !important;
+  text-decoration: underline !important;
+  background: transparent !important;
+}
+
 /* Breadcrumbs */
 div.breadcrumbs {
   background: var(--admin-surface) !important;

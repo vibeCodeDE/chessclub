@@ -97,3 +97,18 @@ class ProduktSeiteTests(TestCase):
         for frage, _ in produkt.FAQ:
             with self.subTest(frage=frage):
                 self.assertIn(frage, inhalt)
+
+
+class ProduktStandardBrandingTests(TestCase):
+    def test_standard_branding_ist_schachverwaltung(self):
+        """Das Default-Branding lautet Schachverwaltung.de mit kontakt@schachverwaltung.de (ADR-018)."""
+        self.assertEqual(settings.PRODUCT_NAME, "Schachverwaltung.de")
+        self.assertEqual(settings.PRODUCT_CONTACT, "kontakt@schachverwaltung.de")
+
+    def test_standard_branding_wird_auf_produktseite_gerendert(self):
+        inhalt = self.client.get("/produkt/").content.decode()
+        self.assertIn("Schachverwaltung.de", inhalt)
+        self.assertIn("mailto:kontakt@schachverwaltung.de", inhalt)
+        # Negativtest: alte Platzhaltermarken erscheinen nicht
+        self.assertNotIn("Schachclub-Manager", inhalt)
+        self.assertNotIn("schachclub-manager.example", inhalt)

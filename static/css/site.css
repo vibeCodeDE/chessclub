@@ -164,8 +164,8 @@ h1, h2, h3, h4, h5, h6 { margin: 0; overflow-wrap: break-word; word-break: break
 .button-dark:hover { background: var(--forest-hover); }
 .button-lime { color: var(--forest-deep); background: var(--lime); }
 .button-lime:hover { background: var(--lime-hover); }
-.button-gold { color: #fff; background: var(--gold-dark); }
-.button-gold:hover { background: var(--gold); }
+.button-gold { color: var(--forest-deep); background: var(--gold); }
+.button-gold:hover { background: #c89d56; color: var(--forest-deep); }
 .button svg, .underlined-link svg, .section-more svg, .back-link svg, .news-bottom-link svg, .fixtures-link svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .underlined-link {
   display: inline-flex; align-items: center; gap: 11px; width: fit-content;
@@ -585,7 +585,7 @@ h1, h2, h3, h4, h5, h6 { margin: 0; overflow-wrap: break-word; word-break: break
 .auth-card form { margin-top: 26px; }
 .auth-hint { margin-top: 20px; padding: 16px 18px; background: var(--sage); color: var(--forest); font-size: 12px; line-height: 1.6; border: 1px solid var(--line); }
 .auth-hint-line { margin-top: 8px; word-break: break-all; }
-.auth-hint code, .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12px; }
+.auth-hint code, .mono { font-family: var(--sans); font-variant-numeric: tabular-nums; font-size: 12px; }
 #id_code, #code { letter-spacing: .35em; text-align: center; }
 .auth-card .form-submit { width: 100%; justify-content: space-between; }
 .auth-card .button { margin-top: 26px; width: 100%; }
@@ -887,7 +887,7 @@ h1, h2, h3, h4, h5, h6 { margin: 0; overflow-wrap: break-word; word-break: break
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 0s !important;
     animation-iteration-count: 1 !important;
     transform: none !important;
     transition-duration: 0.15s !important;

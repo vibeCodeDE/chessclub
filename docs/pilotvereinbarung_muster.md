@@ -27,7 +27,7 @@ Vor diesem Hintergrund schließen die Parteien die folgende Vereinbarung:
 ---
 
 ### § 1 Gegenstand der Vereinbarung & Pilotbetrieb
-1. Der Anbieter stellt dem Verein für die Dauer des Pilotbetriebs eine eigenständige, cloudbasierte Instanz der Schachvereins-Software zur Verfügung (Subdomain: `[verein-pilot].schachclub-cloud.de`).
+1. Der Anbieter stellt dem Verein für die Dauer des Pilotbetriebs eine eigenständige, cloudbasierte Instanz der Schachvereins-Software zur Verfügung (Subdomain: `[verein-pilot].schachverwaltung.de`).
 2. Die Software umfasst die Module Mitgliederverwaltung, Beitragsverwaltung & Mahnwesen, Spielbetrieb (Mannschaften & Ligaspiele), Turniere (Schweizer System), Kassenbuch sowie die öffentliche Vereinsseite.
 3. Der Pilotbetrieb beginnt am **[Datum]** und endet am **[Datum]** (Dauer: ca. 8 bis 12 Wochen).
 4. Nach erfolgreichem Abschluss des Pilotbetriebs geht die Nutzung für weitere **12 Monate in eine kostenfreie Vollnutzung** über. Danach erhält der Verein eine dauerhafte Preisgarantie auf den Gründer-Tarif in Höhe von [25,00 / 29,00] € brutto pro Monat (Endpreis gem. § 19 UStG).
