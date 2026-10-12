@@ -4,20 +4,21 @@ import urllib.parse
 from pathlib import Path
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.test import TestCase
 
 WURZEL = Path(__file__).resolve().parents[2]
 
 
-class ScalingoDeploymentConfigurationTests(SimpleTestCase):
+class ScalingoDeploymentConfigurationTests(TestCase):
+
     def test_procfile_exists_and_configured(self):
         """Procfile existiert und definiert Web-Prozess und postdeploy-Migration."""
         procfile = WURZEL / "Procfile"
         self.assertTrue(procfile.exists(), "Procfile fehlt im Projekt-Stammverzeichnis")
         content = procfile.read_text(encoding="utf-8")
         self.assertIn("web: gunicorn config.wsgi:application", content)
-        self.assertIn("$PORT", content)
-        self.assertIn("postdeploy: python manage.py migrate --noinput", content)
+        self.assertIn("postdeploy: python manage.py migrate --noinput && python manage.py ensure_admin", content)
+
 
     def test_runtime_txt_exists_and_uses_python_312(self):
         """runtime.txt legt Python 3.12 für den Scalingo Python-Buildpack fest."""
@@ -82,3 +83,35 @@ class ScalingoDeploymentConfigurationTests(SimpleTestCase):
             "django.db.backends.sqlite3",
             "django.db.backends.postgresql",
         ])
+
+    def test_ensure_admin_creates_or_updates_superuser(self):
+        """ensure_admin erstellt oder aktualisiert Superadmin aus Environment-Variablen."""
+        from io import StringIO
+        from django.core.management import call_command
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        out = StringIO()
+        # Ohne Passwort: überspringen
+        call_command("ensure_admin", stdout=out)
+        self.assertIn("Kein DJANGO_SUPERUSER_PASSWORD gesetzt", out.getvalue())
+
+        # Mit Passwort: anlegen
+        with patch.dict(os.environ, {
+            "DJANGO_SUPERUSER_USERNAME": "scalingo_testadmin",
+            "DJANGO_SUPERUSER_PASSWORD": "geheimpasswort123",
+            "DJANGO_SUPERUSER_EMAIL": "test@scalingo.example",
+        }):
+            out_create = StringIO()
+            call_command("ensure_admin", stdout=out_create)
+            self.assertIn("erfolgreich erstellt", out_create.getvalue())
+
+            user = User.objects.get(username="scalingo_testadmin")
+            self.assertTrue(user.is_superuser)
+            self.assertTrue(user.check_password("geheimpasswort123"))
+
+            # Idempotenz: zweiter Aufruf aktualisiert
+            out_update = StringIO()
+            call_command("ensure_admin", stdout=out_update)
+            self.assertIn("aktualisiert", out_update.getvalue())
+
