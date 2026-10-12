@@ -5,11 +5,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if h.strip()
-]
+_allowed = os.environ.get("DJANGO_ALLOWED_HOSTS") or os.environ.get("ALLOWED_HOSTS")
+if _allowed:
+    ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
+else:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".scalingo.io", "testserver"]
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -247,10 +248,13 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
-# Vertrauenswürdige Origins für Formular-POSTs (z. B. Reverse-Proxy-Domain).
-CSRF_TRUSTED_ORIGINS = [
-    o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
-]
+# Vertrauenswürdige Origins für Formular-POSTs (z. B. Reverse-Proxy-Domain oder Scalingo).
+_csrf_env = os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+if _csrf_env:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_env.split(",") if o.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = ["https://*.scalingo.io"]
+
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
