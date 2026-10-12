@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditLog, ModuleSettings, TwoFactorDevice
+from .models import AuditLog, ClubProfile, ModuleSettings, TwoFactorDevice
 
 
 @admin.register(AuditLog)
@@ -93,3 +93,24 @@ class ModuleSettingsAdmin(admin.ModelAdmin):
                 aktion="Modul-Einstellungen geändert",
                 text=f"Geänderte Module: {geaendert}",
             )
+
+
+@admin.register(ClubProfile)
+class ClubProfileAdmin(admin.ModelAdmin):
+    list_display = ("name", "kurzname", "kontakt_email", "ort", "sepa_glaeubiger_id")
+
+    def has_add_permission(self, request):
+        return not ClubProfile.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if form.changed_data:
+            AuditLog.objects.create(
+                benutzer=request.user,
+                aktion="Vereinsprofil im Admin geändert",
+                text=f"Geänderte Felder: {', '.join(form.changed_data)}",
+            )
+

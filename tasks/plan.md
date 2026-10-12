@@ -277,9 +277,13 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   De-/Aktivierung optionaler Satellitenmodule (`teams`, `tournaments`, `cashbook`, `comms`) im Django Admin Panel über das Singleton-Modell `ModuleSettings` (ADR-019).
   *Design:* [ADR-019](../docs/decisions/ADR-019-modul-toggles-im-admin-panel.md). Reines Singleton-Modell in `core/models.py`, Fachlogik in `core/services.py:is_module_active`, URL-Schutz mit 404 über `ModulAktivMiddleware`, dynamische Filterung in `core/context_processors.py`, Kacheln im Dashboard dynamisch, Finanzbuchungs-Integrität in `dues` bleibt im Hintergrund unangetastet, AuditLog-Erfassung bei Einstellungsänderung.
   *Acceptance:* Superadmin/Vorstand kann Checkboxen im Admin (`/admin/core/modulesettings/`) ändern; inaktive Module verschwinden aus Navigation, Dashboard und Suche; direkte URL-Aufrufe inaktiver Module liefern 404; Reaktivierung stellt alle Daten sofort wieder her; Nicht-Admins werden im Admin abgewiesen (403); Änderung erzeugt AuditLog.
-  *Verify:* `pytest core/tests/test_module_toggles.py` — **Negativtest:** Rollen „mitglied" und „kapitaen" erhalten 403 im Admin; Aufruf von Routen deaktivierter Module liefert 404; AuditLog erfasst geänderte Felder. · *Files:* `core/models.py`, `core/services.py`, `core/middleware.py`, `core/admin.py`, `core/context_processors.py`, `core/views.py`, `config/settings.py`, Templates, Migration · *Größe:* M · *PRD:* S7.4 · *Release:* v1.1 · *Deps:* T2, T5, T6
+- [x] **T31: Vereins-Setup & Onboarding-Tool (Web & CSV-Import)** *(v1.1)*
+  Zentrales Onboarding- und Verwaltungstool für den Vorstand im Browser (`/verein/setup/`) und per CLI (`import_members`), um echte Vereinsdaten nach dem Deployment (z. B. auf Scalingo) in die Datenbank einzupflegen (ADR-020).
+  *Design:* [ADR-020](../docs/decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md). Singleton-Modell `ClubProfile` in `core/models.py` mit Fallback auf Django-Settings; reiner Fachservice `members.services.import_service` für Parsing, Encoding-Erkennung (UTF-8, Latin-1), Validierung und verschlüsselte SEPA-Mandatsanlage (Fernet); dünne Function-Based Views mit `@role_required(ADMIN_GROUP)` für Profil, Beitragskategorien, Mannschaften und CSV-Import inklusive Muster-Download und Dry-Run-Vorschau; AuditLog-Erfassung.
+  *Acceptance:* Vorstand kann über `/verein/setup/` Stammdaten (Name, Spielabendzeiten, SEPA-Gläubiger) in der DB speichern; Templates und Kontextprozessoren spiegeln DB-Werte sofort wider; Mitglieder-CSV lässt sich prüfen (Vorschau mit Fehleranzeige) und fehlerfrei importieren; SEPA-Mandate werden mit verschlüsselter IBAN erzeugt; Nicht-Admins erhalten 403.
+  *Verify:* `pytest core/tests/test_club_profile.py` + `pytest members/tests/test_member_import.py` — **Negativtest:** Rollen „mitglied“ und „kapitaen“ erhalten 403 auf allen Setup-Routen; defekte CSV bricht mit verständlicher Fehlermeldung ab; Dry-Run legt keine Daten an. · *Files:* `core/models.py`, `core/views_setup.py`, `core/forms_setup.py`, `core/urls.py`, `members/services/import_service.py`, `members/management/commands/import_members.py`, Templates, Tests · *Größe:* M · *PRD:* S7.5, S1.7 · *Release:* v1.1 · *Deps:* T2, T5, T7, T9
 
-**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30.
+**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30, T31.
 
 ## Release-Schnitt
 
@@ -301,6 +305,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | M5.1 / M5.2 | T13 / T14 |
 | M7.1 / M7.2 / M7.3 | T6 + T11 / T1 + T2 / T5 |
 | S7.4 | T30 *(v1.1 / ADR-019)* |
+| S7.5 / S1.7 | T31 *(v1.1 / ADR-020)* |
 | N1.1 | T24 (Hoststandort + kein CDN/Tracker) |
 | N1.2 / N1.3 / N1.4 | T23 |
 | N1.5 | T5 (Logins/Änderungen) + T12 (Detail-Zugriffe) |

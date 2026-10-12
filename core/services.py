@@ -19,6 +19,23 @@ MODUL_SCHLUESSEL = {
 }
 
 
+def get_club_profile(request: Optional[HttpRequest] = None):
+    """Liefert die Singleton-Vereinsstammdaten (mit Request-Caching)."""
+    if request is not None and hasattr(request, "_club_profile"):
+        return request._club_profile
+
+    from .models import ClubProfile
+
+    try:
+        profil = ClubProfile.objects.filter(pk=1).first()
+    except Exception:
+        profil = None
+
+    if request is not None:
+        request._club_profile = profil
+    return profil
+
+
 def get_module_settings(request: Optional[HttpRequest] = None) -> ModuleSettings:
     """Liefert die Singleton-Einstellungen der Module (mit Request-Caching)."""
     if request is not None and hasattr(request, "_module_settings"):

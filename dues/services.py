@@ -254,13 +254,28 @@ def erstelle_sepa_xml(
     flüchtige Entschlüsselung der IBANs im Arbeitsspeicher (ADR-010).
     """
     # 1. Gläubigerdaten prüfen
-    glaeubiger_id = (glaeubiger_id or getattr(settings, "SEPA_CREDITOR_ID", "")).strip()
+    profil = None
+    if not (glaeubiger_id and glaeubiger_iban and glaeubiger_name):
+        from core.services import get_club_profile
+        profil = get_club_profile()
+
+    glaeubiger_id = (
+        glaeubiger_id
+        or (profil.sepa_glaeubiger_id if profil and profil.sepa_glaeubiger_id else "")
+        or getattr(settings, "SEPA_CREDITOR_ID", "")
+    ).strip()
     if not glaeubiger_id:
         raise ValidationError(
             "Keine Gläubiger-Identifikationsnummer (SEPA_CREDITOR_ID) konfiguriert."
         )
 
-    glaeubiger_iban = normalize_iban((glaeubiger_iban or getattr(settings, "SEPA_CREDITOR_IBAN", "")).strip())
+    glaeubiger_iban = normalize_iban(
+        (
+            glaeubiger_iban
+            or (profil.sepa_iban if profil and profil.sepa_iban else "")
+            or getattr(settings, "SEPA_CREDITOR_IBAN", "")
+        ).strip()
+    )
     if not glaeubiger_iban:
         raise ValidationError(
             "Keine Vereins-IBAN (SEPA_CREDITOR_IBAN) für Lastschriften konfiguriert."
@@ -268,12 +283,18 @@ def erstelle_sepa_xml(
 
     glaeubiger_name = (
         glaeubiger_name
+        or (profil.sepa_glaeubiger_name if profil and profil.sepa_glaeubiger_name else "")
+        or (profil.name if profil and profil.name else "")
         or getattr(settings, "SEPA_CREDITOR_NAME", "")
         or getattr(settings, "CLUB_NAME", "Schachverein")
     ).strip()
     glaeubiger_name_bereinigt = sepa_sanitize(glaeubiger_name, max_len=70)
 
-    glaeubiger_bic = (glaeubiger_bic or getattr(settings, "SEPA_CREDITOR_BIC", "")).strip()
+    glaeubiger_bic = (
+        glaeubiger_bic
+        or (profil.sepa_bic if profil and profil.sepa_bic else "")
+        or getattr(settings, "SEPA_CREDITOR_BIC", "")
+    ).strip()
 
     # 2. Einzuziehende Beitragsposten laden (O(1)-Query-Budget)
     posten = (

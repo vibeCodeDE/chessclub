@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Vereins-Setup · Mannschaften{% endblock %}
+{% block page_title %}Vereins-Setup & Mannschaften{% endblock %}
+
+{% block crumbs %}
+<span class="crumbs-detail">· Schritt 3: Mannschaften</span>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-heading">
+  <div>
+    <h1>Mannschaften einrichten</h1>
+    <p>Lege die aktiven Mannschaften deines Vereins für den Ligaspielbetrieb an (z. B. 1. Mannschaft, 2. Mannschaft, Jugendmannschaft).</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "core/includes/setup_nav.html" %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:24px;align-items:start">
+  <div class="card">
+    <h2 style="font-size:18px;margin-bottom:12px">Vorhandene Mannschaften</h2>
+    {% if teams %}
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mannschaft</th>
+              <th>Liga</th>
+              <th>Bretter</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in teams %}
+              <tr>
+                <td><strong>{{ t.name }}</strong></td>
+                <td>{{ t.liga|default:"–" }}</td>
+                <td>{{ t.brettanzahl }}</td>
+                <td>
+                  {% if t.aktiv %}
+                    <span class="badge badge-aktiv">Aktiv</span>
+                  {% else %}
+                    <span class="badge badge-neutral">Inaktiv</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color:var(--text-muted)">Bisher sind keine Mannschaften angelegt.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:18px;margin-bottom:12px">Neue Mannschaft anlegen</h2>
+    <form method="post" class="form-grid">
+      {% csrf_token %}
+      <div style="margin-bottom:16px">
+        <label for="id_name"><strong>Name der Mannschaft*</strong></label>
+        {{ form.name }}
+        {% if form.name.errors %}<div class="form-error">{{ form.name.errors }}</div>{% endif %}
+      </div>
+      <div style="margin-bottom:16px">
+        <label for="id_liga"><strong>Liga / Staffel</strong></label>
+        {{ form.liga }}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div>
+          <label for="id_altersklasse"><strong>Altersklasse</strong></label>
+          {{ form.altersklasse }}
+        </div>
+        <div>
+          <label for="id_brettanzahl"><strong>Bretter</strong></label>
+          {{ form.brettanzahl }}
+        </div>
+      </div>
+      <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        {{ form.aktiv }}
+        <label for="id_aktiv" style="margin-bottom:0">Mannschaft ist aktiv</label>
+      </div>
+      <button type="submit" class="btn button button-primary" style="width:100%">
+        <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mannschaft anlegen
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

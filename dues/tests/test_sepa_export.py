@@ -212,9 +212,10 @@ class SepaExportServiceTests(TestCase):
 
     def test_o_1_abfrage_budget(self):
         """Service darf keine N+1-Abfragen für Mandate oder Zahlungen machen."""
-        with self.assertNumQueries(2):
-            # Query 1: MembershipFee mit select_related member + sepa_mandat
-            # Query 2: prefetch_related zahlungen
+        with self.assertNumQueries(3):
+            # Query 1: ClubProfile für Gläubigerdaten
+            # Query 2: MembershipFee mit select_related member + sepa_mandat
+            # Query 3: prefetch_related zahlungen
             erstelle_sepa_xml(2026)
 
 

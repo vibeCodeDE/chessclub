@@ -1,23 +1,273 @@
 /* ==========================================================================
    Schachvereins-Software – Django Admin Custom Styling
    Farben, Typografie und Ästhetik abgestimmt auf die Schachklub-Designsprache.
+   Vollständige Unterstützung von Light Mode, Dark Mode (WCAG 2.1 AA Kontraste)
+   und nahtlose Harmonisierung mit Django 5 Admin CSS-Variablen.
    ========================================================================== */
 
-:root {
+/* --------------------------------------------------------------------------
+   1. FARBSYSTEM & THEME-VARIABLEN (LIGHT & DARK)
+   -------------------------------------------------------------------------- */
+
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+
+  /* Schachklub Markenpalette (Light) */
   --admin-forest: #1b382b;
   --admin-forest-dark: #12281e;
   --admin-forest-light: #2c5442;
   --admin-gold: #c89d56;
   --admin-gold-light: #fdf7ee;
+
   --admin-bg: #f5f8f5;
   --admin-surface: #ffffff;
+  --admin-surface-subtle: #f0f5ef;
+  --admin-input-bg: #ffffff;
   --admin-text: #1d2b22;
-  --admin-muted: #5d6f62;
+  --admin-heading: #1b382b;
+  --admin-muted: #56695b;
   --admin-border: #dde5dc;
+  --admin-row-hover: #f6f9f5;
+  --admin-row-selected: #e8f3eb;
+
   --admin-radius: 8px;
   --admin-radius-lg: 12px;
   --admin-shadow: 0 1px 3px rgba(27, 56, 43, 0.05), 0 4px 12px rgba(27, 56, 43, 0.03);
+  --admin-focus-ring: rgba(27, 56, 43, 0.18);
+
+  /* Aktionen & Meldungen */
+  --admin-delete-bg: #faeae8;
+  --admin-delete-fg: #9e2a22;
+  --admin-delete-border: #f3cac7;
+  --admin-delete-hover-bg: #f7deda;
+  --admin-delete-hover-fg: #841e17;
+
+  --admin-msg-success-bg: #eaf5ee;
+  --admin-msg-success-fg: #124b24;
+  --admin-msg-success-border: #b8e2c4;
+
+  --admin-msg-warning-bg: #fdf6e7;
+  --admin-msg-warning-fg: #7a4d05;
+  --admin-msg-warning-border: #f4dfad;
+
+  --admin-msg-error-bg: #fdeeed;
+  --admin-msg-error-fg: #8a1f18;
+  --admin-msg-error-border: #f7c6c2;
+
+  /* Django Admin Native CSS Variablen Überschreibung */
+  --primary: #1b382b;
+  --secondary: #12281e;
+  --accent: #c89d56;
+  --primary-fg: #ffffff;
+
+  --header-bg: #1b382b;
+  --header-color: #ffffff;
+  --header-link-color: #ffffff;
+
+  --breadcrumbs-bg: #ffffff;
+  --breadcrumbs-fg: #56695b;
+  --breadcrumbs-link-fg: #1b382b;
+
+  --link-fg: #1b382b;
+  --link-hover-color: #0e1e16;
+  --link-selected-fg: #1b382b;
+
+  --body-bg: #f5f8f5;
+  --body-fg: #1d2b22;
+  --body-quiet-color: #56695b;
+  --body-medium-color: #3b4d40;
+  --body-loud-color: #12281e;
+
+  --border-color: #dde5dc;
+  --hairline-color: #e6ede6;
+  --darkened-bg: #f0f5ef;
+  --selected-bg: #e8f3eb;
+  --selected-row: #e8f3eb;
+
+  --button-bg: #1b382b;
+  --button-fg: #ffffff;
+  --button-hover-bg: #12281e;
+  --default-button-bg: #1b382b;
+  --default-button-hover-bg: #12281e;
+  --delete-button-bg: #9e2a22;
+  --delete-button-hover-bg: #841e17;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]),
+  html[data-theme="auto"] {
+    color-scheme: dark;
+
+    /* Schachklub Markenpalette (Dark) */
+    --admin-forest: #2b5641;
+    --admin-forest-dark: #1e3f30;
+    --admin-forest-light: #6edaa0;
+    --admin-gold: #e2ba73;
+    --admin-gold-light: #fef8ee;
+
+    --admin-bg: #111a14;
+    --admin-surface: #19251e;
+    --admin-surface-subtle: #223329;
+    --admin-input-bg: #141f18;
+    --admin-text: #e8f0ea;
+    --admin-heading: #ffffff;
+    --admin-muted: #a3baa8;
+    --admin-border: #2d4033;
+    --admin-row-hover: #22352a;
+    --admin-row-selected: #244635;
+
+    --admin-radius: 8px;
+    --admin-radius-lg: 12px;
+    --admin-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+    --admin-focus-ring: rgba(110, 218, 160, 0.25);
+
+    /* Aktionen & Meldungen */
+    --admin-delete-bg: #3b1a18;
+    --admin-delete-fg: #fca59f;
+    --admin-delete-border: #632824;
+    --admin-delete-hover-bg: #4d2220;
+    --admin-delete-hover-fg: #ffffff;
+
+    --admin-msg-success-bg: #133821;
+    --admin-msg-success-fg: #8be3a6;
+    --admin-msg-success-border: #235c36;
+
+    --admin-msg-warning-bg: #382a0d;
+    --admin-msg-warning-fg: #fcd87e;
+    --admin-msg-warning-border: #5c4618;
+
+    --admin-msg-error-bg: #3d1a18;
+    --admin-msg-error-fg: #f89a94;
+    --admin-msg-error-border: #632a26;
+
+    /* Django Admin Native CSS Variablen Überschreibung */
+    --primary: #2b5641;
+    --secondary: #1e3f30;
+    --accent: #e2ba73;
+    --primary-fg: #ffffff;
+
+    --header-bg: #142219;
+    --header-color: #ffffff;
+    --header-link-color: #ffffff;
+
+    --breadcrumbs-bg: #19251e;
+    --breadcrumbs-fg: #a3baa8;
+    --breadcrumbs-link-fg: #72d699;
+
+    --link-fg: #72d699;
+    --link-hover-color: #a5f0c0;
+    --link-selected-fg: #e2ba73;
+
+    --body-bg: #111a14;
+    --body-fg: #e8f0ea;
+    --body-quiet-color: #a3baa8;
+    --body-medium-color: #c8d8cc;
+    --body-loud-color: #ffffff;
+
+    --border-color: #2d4033;
+    --hairline-color: #26362c;
+    --darkened-bg: #223329;
+    --selected-bg: #244635;
+    --selected-row: #244635;
+
+    --button-bg: #2b5641;
+    --button-fg: #ffffff;
+    --button-hover-bg: #376d52;
+    --default-button-bg: #2b5641;
+    --default-button-hover-bg: #376d52;
+    --delete-button-bg: #8c2e28;
+    --delete-button-hover-bg: #a83832;
+  }
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Schachklub Markenpalette (Dark) */
+  --admin-forest: #2b5641;
+  --admin-forest-dark: #1e3f30;
+  --admin-forest-light: #6edaa0;
+  --admin-gold: #e2ba73;
+  --admin-gold-light: #fef8ee;
+
+  --admin-bg: #111a14;
+  --admin-surface: #19251e;
+  --admin-surface-subtle: #223329;
+  --admin-input-bg: #141f18;
+  --admin-text: #e8f0ea;
+  --admin-heading: #ffffff;
+  --admin-muted: #a3baa8;
+  --admin-border: #2d4033;
+  --admin-row-hover: #22352a;
+  --admin-row-selected: #244635;
+
+  --admin-radius: 8px;
+  --admin-radius-lg: 12px;
+  --admin-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --admin-focus-ring: rgba(110, 218, 160, 0.25);
+
+  /* Aktionen & Meldungen */
+  --admin-delete-bg: #3b1a18;
+  --admin-delete-fg: #fca59f;
+  --admin-delete-border: #632824;
+  --admin-delete-hover-bg: #4d2220;
+  --admin-delete-hover-fg: #ffffff;
+
+  --admin-msg-success-bg: #133821;
+  --admin-msg-success-fg: #8be3a6;
+  --admin-msg-success-border: #235c36;
+
+  --admin-msg-warning-bg: #382a0d;
+  --admin-msg-warning-fg: #fcd87e;
+  --admin-msg-warning-border: #5c4618;
+
+  --admin-msg-error-bg: #3d1a18;
+  --admin-msg-error-fg: #f89a94;
+  --admin-msg-error-border: #632a26;
+
+  /* Django Admin Native CSS Variablen Überschreibung */
+  --primary: #2b5641;
+  --secondary: #1e3f30;
+  --accent: #e2ba73;
+  --primary-fg: #ffffff;
+
+  --header-bg: #142219;
+  --header-color: #ffffff;
+  --header-link-color: #ffffff;
+
+  --breadcrumbs-bg: #19251e;
+  --breadcrumbs-fg: #a3baa8;
+  --breadcrumbs-link-fg: #72d699;
+
+  --link-fg: #72d699;
+  --link-hover-color: #a5f0c0;
+  --link-selected-fg: #e2ba73;
+
+  --body-bg: #111a14;
+  --body-fg: #e8f0ea;
+  --body-quiet-color: #a3baa8;
+  --body-medium-color: #c8d8cc;
+  --body-loud-color: #ffffff;
+
+  --border-color: #2d4033;
+  --hairline-color: #26362c;
+  --darkened-bg: #223329;
+  --selected-bg: #244635;
+  --selected-row: #244635;
+
+  --button-bg: #2b5641;
+  --button-fg: #ffffff;
+  --button-hover-bg: #376d52;
+  --default-button-bg: #2b5641;
+  --default-button-hover-bg: #376d52;
+  --delete-button-bg: #8c2e28;
+  --delete-button-hover-bg: #a83832;
+}
+
+/* --------------------------------------------------------------------------
+   2. BASIS & TYPOGRAFIE
+   -------------------------------------------------------------------------- */
 
 body {
   background: var(--admin-bg) !important;
@@ -27,13 +277,24 @@ body {
   line-height: 1.5 !important;
 }
 
-/* Header & Branding */
+a:link, a:visited {
+  color: var(--link-fg) !important;
+}
+
+a:hover, a:focus {
+  color: var(--link-hover-color) !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. HEADER, BRANDING & USER TOOLS
+   -------------------------------------------------------------------------- */
+
 #header {
-  background: var(--admin-forest) !important;
+  background: var(--header-bg) !important;
   color: #ffffff !important;
   padding: 14px 32px !important;
   border-bottom: 2px solid var(--admin-gold) !important;
-  box-shadow: 0 2px 8px rgba(18, 40, 30, 0.15) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
 #header a {
@@ -47,34 +308,69 @@ body {
   display: inline-flex !important;
   align-items: center !important;
   gap: 8px !important;
+  text-decoration: none !important;
 }
 
 #user-tools {
   font-size: 13px !important;
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: 10px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
-#user-tools a {
-  padding: 4px 10px !important;
+#user-tools strong {
+  color: #ffffff !important;
+}
+
+#user-tools a,
+#user-tools form button,
+#user-tools .theme-toggle {
+  padding: 5px 12px !important;
   border-radius: var(--admin-radius) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  cursor: pointer !important;
   text-decoration: none !important;
-  transition: background .15s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  line-height: 1.4 !important;
+  transition: background .15s, border-color .15s !important;
 }
 
-#user-tools a:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
+#user-tools a:hover,
+#user-tools form button:hover,
+#user-tools .theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.24) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
   text-decoration: none !important;
+}
+
+#user-tools form {
+  display: inline-flex !important;
+  margin: 0 !important;
+}
+
+#user-tools .theme-toggle svg {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+  width: 16px !important;
+  height: 16px !important;
 }
 
 .admin-back-link {
   margin-right: 1.25rem;
-  color: var(--admin-gold-light) !important;
-  font-weight: 500;
+  color: var(--admin-gold) !important;
+  font-weight: 600 !important;
   text-decoration: none !important;
   background: transparent !important;
+  border: none !important;
 }
 
 .admin-back-link:hover {
@@ -83,7 +379,10 @@ body {
   background: transparent !important;
 }
 
-/* Breadcrumbs */
+/* --------------------------------------------------------------------------
+   4. BREADCRUMBS
+   -------------------------------------------------------------------------- */
+
 div.breadcrumbs {
   background: var(--admin-surface) !important;
   border-bottom: 1px solid var(--admin-border) !important;
@@ -93,11 +392,18 @@ div.breadcrumbs {
 }
 
 div.breadcrumbs a {
-  color: var(--admin-forest-light) !important;
+  color: var(--link-fg) !important;
   font-weight: 500 !important;
 }
 
-/* Main Content Area */
+div.breadcrumbs a:hover {
+  color: var(--link-hover-color) !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. INHALTSBEREICH & TYPO
+   -------------------------------------------------------------------------- */
+
 #content {
   padding: 28px 32px !important;
   max-width: 1560px !important;
@@ -107,12 +413,23 @@ div.breadcrumbs a {
 #content h1 {
   font-size: 24px !important;
   font-weight: 700 !important;
-  color: var(--admin-forest) !important;
+  color: var(--admin-heading) !important;
   margin-bottom: 20px !important;
   letter-spacing: -0.02em !important;
 }
 
-/* Modules & Cards */
+#content h2, #content-main h2 {
+  color: var(--admin-heading) !important;
+}
+
+#content-related h2, #content-related h3 {
+  color: var(--admin-heading) !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. MODULE & KARTEN
+   -------------------------------------------------------------------------- */
+
 .module {
   background: var(--admin-surface) !important;
   border: 1px solid var(--admin-border) !important;
@@ -123,8 +440,8 @@ div.breadcrumbs a {
 }
 
 .module h2, .module caption {
-  background: #f0f5ef !important;
-  color: var(--admin-forest) !important;
+  background: var(--admin-surface-subtle) !important;
+  color: var(--admin-heading) !important;
   font-size: 14px !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
@@ -132,18 +449,29 @@ div.breadcrumbs a {
   border-bottom: 1px solid var(--admin-border) !important;
 }
 
-/* Tables */
-#changelist table {
+.module h2 a, .module caption a {
+  color: var(--admin-heading) !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. TABELLEN (CHANGELIST, INLINES, DASHBOARD)
+   -------------------------------------------------------------------------- */
+
+#changelist table,
+.change-list table,
+table {
   border: 1px solid var(--admin-border) !important;
   border-radius: var(--admin-radius-lg) !important;
   overflow: hidden !important;
   background: var(--admin-surface) !important;
   box-shadow: var(--admin-shadow) !important;
+  color: var(--admin-text) !important;
 }
 
-#changelist table thead th {
-  background: #f2f6f1 !important;
-  color: var(--admin-forest) !important;
+#changelist table thead th,
+table thead th {
+  background: var(--admin-surface-subtle) !important;
+  color: var(--admin-heading) !important;
   font-size: 12px !important;
   font-weight: 700 !important;
   letter-spacing: 0.04em !important;
@@ -152,37 +480,95 @@ div.breadcrumbs a {
   border-bottom: 1px solid var(--admin-border) !important;
 }
 
-#changelist table tbody td, #changelist table tbody th {
+#changelist table thead th a,
+table thead th a {
+  color: var(--admin-heading) !important;
+}
+
+#changelist table tbody td,
+#changelist table tbody th,
+table tbody td,
+table tbody th {
   padding: 12px 16px !important;
   font-size: 13.5px !important;
-  border-bottom: 1px solid #edf2ec !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  background: transparent !important;
+}
+
+#changelist table tbody tr:hover,
+table tbody tr:hover {
+  background: var(--admin-row-hover) !important;
+}
+
+#changelist tbody tr.selected,
+#changelist tbody tr:has(.action-select:checked) {
+  background-color: var(--admin-row-selected) !important;
+}
+
+#changelist tbody tr.selected td,
+#changelist tbody tr:has(.action-select:checked) td {
   color: var(--admin-text) !important;
 }
 
-#changelist table tbody tr:hover {
-  background: #f8faf6 !important;
+/* --------------------------------------------------------------------------
+   8. FORMULARE, INPUTS & LABELS
+   -------------------------------------------------------------------------- */
+
+label {
+  color: var(--admin-text) !important;
+  font-weight: 500 !important;
 }
 
-/* Forms & Inputs */
+.required label, label.required {
+  color: var(--admin-heading) !important;
+  font-weight: 700 !important;
+}
+
+.help, p.help, span.help {
+  color: var(--admin-muted) !important;
+  font-size: 12px !important;
+}
+
+fieldset {
+  border-color: var(--admin-border) !important;
+}
+
+.form-row {
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
 input[type="text"], input[type="password"], input[type="email"], input[type="url"],
-input[type="number"], input[type="tel"], textarea, select, .vTextField {
+input[type="number"], input[type="tel"], textarea, select, .vTextField, .vLargeTextField {
   border: 1px solid var(--admin-border) !important;
   border-radius: var(--admin-radius) !important;
   padding: 8px 12px !important;
   font-size: 14px !important;
   color: var(--admin-text) !important;
-  background: var(--admin-surface) !important;
+  background: var(--admin-input-bg) !important;
   min-height: 38px !important;
   box-sizing: border-box !important;
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: var(--admin-forest) !important;
-  box-shadow: 0 0 0 3px rgba(27, 56, 43, 0.15) !important;
+  border-color: var(--link-fg) !important;
+  box-shadow: 0 0 0 3px var(--admin-focus-ring) !important;
   outline: none !important;
 }
 
-/* Buttons */
+.submit-row {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius-lg) !important;
+  box-shadow: var(--admin-shadow) !important;
+  padding: 12px 18px !important;
+  margin: 20px 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. BUTTONS & AKTIONEN
+   -------------------------------------------------------------------------- */
+
 .button, input[type="submit"], input[type="button"], .submit-row input, a.button {
   background: var(--admin-forest) !important;
   color: #ffffff !important;
@@ -192,11 +578,13 @@ input:focus, textarea:focus, select:focus {
   font-size: 13.5px !important;
   padding: 9px 18px !important;
   cursor: pointer !important;
-  transition: background .15s, transform .15s !important;
-  box-shadow: 0 1px 3px rgba(27, 56, 43, 0.1) !important;
+  transition: background .15s, transform .15s, border-color .15s !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  text-decoration: none !important;
+  display: inline-block !important;
 }
 
-.button:hover, input[type="submit"]:hover, input[type="button"]:hover, .submit-row input:hover {
+.button:hover, input[type="submit"]:hover, input[type="button"]:hover, .submit-row input:hover, a.button:hover {
   background: var(--admin-forest-dark) !important;
   border-color: var(--admin-forest-dark) !important;
   color: #ffffff !important;
@@ -207,21 +595,82 @@ input:focus, textarea:focus, select:focus {
   border-color: var(--admin-forest) !important;
 }
 
-.deletelink {
-  background: #faeae8 !important;
-  color: #9e2a22 !important;
-  border: 1px solid #f3cac7 !important;
+.deletelink, a.deletelink {
+  background: var(--admin-delete-bg) !important;
+  color: var(--admin-delete-fg) !important;
+  border: 1px solid var(--admin-delete-border) !important;
   border-radius: var(--admin-radius) !important;
   padding: 9px 18px !important;
   font-weight: 600 !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  transition: background .15s, color .15s !important;
 }
 
-.deletelink:hover {
-  background: #f7deda !important;
-  color: #841e17 !important;
+.deletelink:hover, a.deletelink:hover {
+  background: var(--admin-delete-hover-bg) !important;
+  color: var(--admin-delete-hover-fg) !important;
 }
 
-/* Filter & Search Bar */
+.object-tools a {
+  background: var(--admin-surface-subtle) !important;
+  color: var(--admin-heading) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius) !important;
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.object-tools a:hover {
+  background: var(--admin-forest) !important;
+  color: #ffffff !important;
+  border-color: var(--admin-forest) !important;
+}
+
+/* --------------------------------------------------------------------------
+   10. CHANGELIST FILTER, SEARCHBAR & PAGINATOR
+   -------------------------------------------------------------------------- */
+
+#toolbar {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius-lg) !important;
+  color: var(--admin-text) !important;
+  padding: 12px 16px !important;
+  margin-bottom: 20px !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+#toolbar form input[type="submit"] {
+  padding: 6px 14px !important;
+  min-height: auto !important;
+}
+
+#changelist-search {
+  margin-bottom: 0 !important;
+}
+
+#changelist .paginator {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius) !important;
+  color: var(--admin-muted) !important;
+  padding: 10px 16px !important;
+  margin-top: 16px !important;
+}
+
+#changelist .paginator a {
+  color: var(--link-fg) !important;
+  font-weight: 600 !important;
+}
+
+#changelist .paginator .this-page {
+  color: var(--admin-heading) !important;
+  font-weight: 700 !important;
+}
+
 #changelist-filter {
   background: var(--admin-surface) !important;
   border: 1px solid var(--admin-border) !important;
@@ -230,13 +679,240 @@ input:focus, textarea:focus, select:focus {
 }
 
 #changelist-filter h2 {
-  background: #f0f5ef !important;
-  color: var(--admin-forest) !important;
+  background: var(--admin-surface-subtle) !important;
+  color: var(--admin-heading) !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   padding: 10px 16px !important;
+  border-bottom: 1px solid var(--admin-border) !important;
 }
 
-#changelist-search {
-  margin-bottom: 20px !important;
+#changelist-filter h3 {
+  color: var(--admin-heading) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
 }
+
+#changelist-filter ul {
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
+#changelist-filter a {
+  color: var(--admin-muted) !important;
+  text-decoration: none !important;
+}
+
+#changelist-filter a:hover {
+  color: var(--link-hover-color) !important;
+}
+
+#changelist-filter li.selected {
+  border-left: 4px solid var(--admin-gold) !important;
+}
+
+#changelist-filter li.selected a {
+  color: var(--admin-heading) !important;
+  font-weight: 700 !important;
+}
+
+#changelist .actions {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius) !important;
+  color: var(--admin-muted) !important;
+  padding: 10px 16px !important;
+  margin-bottom: 16px !important;
+}
+
+#changelist .actions label {
+  color: var(--admin-muted) !important;
+}
+
+#changelist .actions select {
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+}
+
+#changelist .actions .button {
+  min-height: 32px !important;
+  padding: 6px 14px !important;
+}
+
+/* --------------------------------------------------------------------------
+   11. NAVIGATIONSSIDEBAR & FORMULARE-INLINES
+   -------------------------------------------------------------------------- */
+
+#nav-sidebar {
+  background: var(--admin-surface) !important;
+  border-right: 1px solid var(--admin-border) !important;
+}
+
+#nav-sidebar .module caption,
+#nav-sidebar .module h2 {
+  background: var(--admin-surface-subtle) !important;
+  color: var(--admin-heading) !important;
+}
+
+#nav-sidebar .module th a {
+  color: var(--admin-text) !important;
+}
+
+#nav-sidebar .module th a:hover {
+  color: var(--link-hover-color) !important;
+}
+
+#nav-sidebar .current-app .section:link,
+#nav-sidebar .current-app .section:visited {
+  color: var(--admin-heading) !important;
+  font-weight: 700 !important;
+}
+
+#nav-sidebar .current-model {
+  background: var(--admin-surface-subtle) !important;
+}
+
+#nav-sidebar .current-model a {
+  color: var(--admin-gold) !important;
+  font-weight: 700 !important;
+}
+
+#toggle-nav-sidebar {
+  background: var(--admin-forest) !important;
+  color: #ffffff !important;
+  border-right: 1px solid var(--admin-border) !important;
+}
+
+.inline-group {
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius-lg) !important;
+  overflow: hidden !important;
+  margin-bottom: 24px !important;
+  background: var(--admin-surface) !important;
+}
+
+.inline-group h2 {
+  background: var(--admin-surface-subtle) !important;
+  color: var(--admin-heading) !important;
+}
+
+.inline-related h3 {
+  background: var(--admin-surface-subtle) !important;
+  color: var(--admin-heading) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
+.inline-related h3 span.delete label {
+  color: var(--admin-muted) !important;
+}
+
+/* --------------------------------------------------------------------------
+   12. MELDUNGEN & HINWEISE
+   -------------------------------------------------------------------------- */
+
+.messagelist li {
+  border-radius: var(--admin-radius) !important;
+  margin-bottom: 10px !important;
+  padding: 12px 16px !important;
+  font-weight: 500 !important;
+}
+
+.messagelist li.success {
+  background: var(--admin-msg-success-bg) !important;
+  color: var(--admin-msg-success-fg) !important;
+  border: 1px solid var(--admin-msg-success-border) !important;
+}
+
+.messagelist li.warning {
+  background: var(--admin-msg-warning-bg) !important;
+  color: var(--admin-msg-warning-fg) !important;
+  border: 1px solid var(--admin-msg-warning-border) !important;
+}
+
+.messagelist li.error {
+  background: var(--admin-msg-error-bg) !important;
+  color: var(--admin-msg-error-fg) !important;
+  border: 1px solid var(--admin-msg-error-border) !important;
+}
+
+.errornote {
+  background: var(--admin-msg-error-bg) !important;
+  color: var(--admin-msg-error-fg) !important;
+  border: 1px solid var(--admin-msg-error-border) !important;
+  border-radius: var(--admin-radius) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 10px 14px !important;
+  margin-bottom: 15px !important;
+}
+
+ul.errorlist {
+  background: var(--admin-msg-error-bg) !important;
+  color: var(--admin-msg-error-fg) !important;
+  border: 1px solid var(--admin-msg-error-border) !important;
+  border-radius: var(--admin-radius) !important;
+  padding: 8px 12px 8px 28px !important;
+}
+
+ul.errorlist li {
+  color: var(--admin-msg-error-fg) !important;
+}
+
+/* --------------------------------------------------------------------------
+   13. LOGIN CONTAINER
+   -------------------------------------------------------------------------- */
+
+.login #container {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: var(--admin-radius-lg) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.login .password-reset-link a {
+  color: var(--link-fg) !important;
+}
+
+/* --------------------------------------------------------------------------
+   14. RESPONSIVITÄT & MOBIL-OPTIMIERUNG (360px - 767px)
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  #header {
+    padding: 10px 16px !important;
+  }
+
+  #user-tools {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+    margin-top: 8px !important;
+  }
+
+  .admin-back-link {
+    margin-right: 0.5rem !important;
+  }
+
+  div.breadcrumbs {
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+  }
+
+  #content {
+    padding: 16px !important;
+  }
+
+  .submit-row {
+    padding: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .submit-row input,
+  .submit-row a {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+  }
+}
+

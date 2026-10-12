@@ -125,6 +125,7 @@
       if (!href || href.startsWith("#")) return;
       if (link.hasAttribute("data-no-loading")) return;  /* z. B. mailto-Links */
       if (link.host !== window.location.host) return;
+      if (link.pathname === window.location.pathname && link.search === window.location.search) return;
       showLoading();
     });
   }

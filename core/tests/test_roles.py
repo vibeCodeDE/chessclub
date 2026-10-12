@@ -31,3 +31,7 @@ class RoleTests(TestCase):
         user = User.objects.create_user("u4", password="x")
         user.groups.add(a, k)
         self.assertEqual(role_of(user), "admin")
+
+    def test_superuser_is_admin(self):
+        su = User.objects.create_superuser("su", password="x")
+        self.assertEqual(role_of(su), "admin")

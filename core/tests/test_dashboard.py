@@ -287,16 +287,16 @@ class DashboardErweiterungenTests(TestCase):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        # Die View führt exakt 34 Queries aus (konstant, da kein N+1 pro Mitglied/Posten; inkl. 1 Query ModuleSettings)
-        with self.assertNumQueries(34):
+        # Die View führt exakt 35 Queries aus (konstant, da kein N+1 pro Mitglied/Posten; inkl. 1 Query ModuleSettings, 1 Query ClubProfile)
+        with self.assertNumQueries(35):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)
 
-        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 34 (kein N+1)
+        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 35 (kein N+1)
         for i in range(15, 25):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        with self.assertNumQueries(34):
+        with self.assertNumQueries(35):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)

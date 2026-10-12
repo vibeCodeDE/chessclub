@@ -33,6 +33,9 @@
           </select>
         </form>
       {% endif %}
+      <a class="btn secondary button button-secondary" href="{% url 'core:club_setup_profile' %}">
+        <svg class="icon icon-sm"><use href="#i-settings"></use></svg> Vereins-Setup
+      </a>
       <a class="btn secondary button button-secondary" href="{% url 'dues:export' %}?jahr={{ jahr }}">
         <svg class="icon icon-sm"><use href="#i-download"></use></svg> Exportieren
       </a>
@@ -55,6 +58,16 @@
 
 {% block content %}
 {% if rolle == "admin" %}
+{% if mitglieder_gesamt == 0 %}
+  <div class="alert alert-info" role="alert" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <span>
+      <strong>Erst-Einrichtung:</strong> In der Datenbank sind noch keine Mitglieder hinterlegt. Nutze das Vereins-Setup, um echte Stammdaten einzutragen und deine Mitglieder per CSV zu importieren.
+    </span>
+    <a href="{% url 'core:club_setup_profile' %}" class="btn small button button-primary" style="margin:0">
+      Jetzt einrichten <svg class="icon icon-sm" style="width:12px;height:12px"><use href="#i-arrow-right"></use></svg>
+    </a>
+  </div>
+{% endif %}
 {% if ohne_kategorie > 0 %}
   <div class="alert alert-warning" role="alert" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
     <span>

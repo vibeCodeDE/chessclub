@@ -146,7 +146,7 @@ input, select, textarea { caret-color: var(--rust-deep); }
 img { display: block; max-width: 100%; }
 svg { flex-shrink: 0; }
 
-.icon { width: 19px; height: 19px; flex: 0 0 auto; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon { width: 19px; height: 19px; flex: 0 0 auto; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .icon-sm { width: 15px; height: 15px; }
 .icon-lg { width: 26px; height: 26px; }
 
@@ -985,7 +985,7 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
 .pagination .info { border: 0; background: transparent; color: var(--muted); margin-left: auto; }
 
 /* ------------------------------------------------------------- Loading & Progress */
-.loading-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 200; background: transparent; }
+.loading-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 200; background: transparent; pointer-events: none; }
 .loading-bar.is-active { background: linear-gradient(90deg, transparent, var(--forest), var(--gold), transparent); background-size: 40% 100%; animation: loadslide 1.1s linear infinite; }
 @keyframes loadslide { from { background-position: -40% 0; } to { background-position: 140% 0; } }
 

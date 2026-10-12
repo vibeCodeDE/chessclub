@@ -143,6 +143,9 @@
       sidebar.classList.contains("is-open") ? close() : open();
     }));
     if (backdrop) backdrop.addEventListener("click", close);
+    sidebar.addEventListener("click", (event) => {
+      if (event.target.closest("a[href]")) close();
+    });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") close();
     });
@@ -159,7 +162,8 @@
         toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
       });
     });
-    document.addEventListener("click", () => {
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("[data-dropdown-panel]")) return;
       $$("[data-dropdown-panel].is-open").forEach((panel) => panel.classList.remove("is-open"));
     });
   }
@@ -556,6 +560,7 @@
       const href = link.getAttribute("href");
       if (!href || href.startsWith("#") || link.dataset.noLoading !== undefined) return;
       if (link.host !== window.location.host) return;
+      if (link.pathname === window.location.pathname && link.search === window.location.search) return;
       const skeletonTarget = link.dataset.skeleton;
       if (skeletonTarget) {
         $$(skeletonTarget).forEach((el) => el.classList.add("skeleton"));

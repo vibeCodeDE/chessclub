@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Vereins-Setup · Mitglieder-Import{% endblock %}
+{% block page_title %}Mitglieder-Import (CSV){% endblock %}
+
+{% block crumbs %}
+<span class="crumbs-detail">· Schritt 4: Mitglieder-Import</span>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-heading">
+  <div>
+    <h1>Echte Mitgliederdaten importieren</h1>
+    <p>Lade eine CSV-Datei mit den echten Mitgliedern deines Vereins hoch. Du erhältst vor der Übernahme eine detaillierte Prüfung und Vorschau.</p>
+  </div>
+  <div class="page-heading-actions">
+    <a href="{% url 'core:club_setup_import_muster' %}" class="btn button button-secondary secondary">
+      <svg class="icon icon-sm"><use href="#i-download"></use></svg> CSV-Mustervorlage herunterladen
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "core/includes/setup_nav.html" %}
+
+<div class="card" style="margin-bottom:24px">
+  <h2 style="font-size:18px;margin-bottom:8px">1. CSV-Datei auswählen & prüfen</h2>
+  <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">
+    Unterstützt werden Spalten wie <code>Vorname</code>, <code>Nachname</code>, <code>E-Mail</code>, <code>Geburtsdatum</code>, <code>Eintrittsdatum</code>, <code>Beitragskategorie</code>, <code>IBAN</code>, <code>DWZ</code>.
+    Trennzeichen (Semikolon <code>;</code> oder Komma <code>,</code>) und Zeichensätze (UTF-8, Latin-1) werden automatisch erkannt.
+  </p>
+
+  <form method="post" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+    {% csrf_token %}
+    <input type="hidden" name="aktion" value="pruefen">
+    <div style="flex:1;min-width:280px">
+      {{ form.csv_file }}
+      {% if form.csv_file.errors %}<div class="form-error">{{ form.csv_file.errors }}</div>{% endif %}
+    </div>
+    <button type="submit" class="btn button button-primary">
+      <svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Datei prüfen & Vorschau anzeigen
+    </button>
+  </form>
+</div>
+
+{% if validation %}
+  <div class="card" style="margin-bottom:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:16px">
+      <div>
+        <h2 style="font-size:18px;margin-bottom:4px">2. Prüfergebnis & Vorschau</h2>
+        <div style="font-size:13.5px;color:var(--text-muted)">
+          <strong>{{ validation.valid_count }}</strong> gültige Datensätze | 
+          <strong>{{ validation.error_count }}</strong> fehlerhafte Zeilen | 
+          <strong>{{ validation.warning_count }}</strong> Hinweise
+        </div>
+      </div>
+
+      {% if validation.valid_count > 0 %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="aktion" value="bestaetigen">
+          <button type="submit" class="btn button button-primary" style="background:var(--success, #16a34a);border-color:var(--success, #16a34a)">
+            <svg class="icon icon-sm"><use href="#i-check"></use></svg> {{ validation.valid_count }} Mitglieder jetzt verbindlich importieren
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    {% if validation.warnings %}
+      <div class="alert alert-warning" style="margin-bottom:16px">
+        <strong>Hinweise:</strong>
+        <ul style="margin:4px 0 0 16px;padding:0">
+          {% for w in validation.warnings %}
+            <li>{{ w }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if validation.invalid_rows %}
+      <div class="alert alert-error" style="margin-bottom:16px">
+        <strong>Fehlerhafte Zeilen (werden nicht importiert):</strong>
+        <ul style="margin:4px 0 0 16px;padding:0">
+          {% for err in validation.invalid_rows %}
+            <li>Zeile {{ err.zeile }}: {{ err.fehler|join:", " }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Zeile</th>
+            <th>Name</th>
+            <th>E-Mail</th>
+            <th>Geburtsdatum</th>
+            <th>Eintritt</th>
+            <th>Kategorie</th>
+            <th>SEPA-IBAN</th>
+            <th>DWZ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in validation.valid_rows %}
+            <tr>
+              <td><span class="badge badge-neutral">#{{ row.zeile }}</span></td>
+              <td><strong>{{ row.nachname }}, {{ row.vorname }}</strong></td>
+              <td>{{ row.email|default:"–" }}</td>
+              <td>{{ row.geburtsdatum|date:"d.m.Y"|default:"–" }}</td>
+              <td>{{ row.eintrittsdatum|date:"d.m.Y" }}</td>
+              <td>
+                {% if row.beitragskategorie %}
+                  <span class="badge badge-aktiv">{{ row.beitragskategorie.name }}</span>
+                {% else %}
+                  <span class="badge badge-neutral">Ohne</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.iban %}
+                  <span class="badge badge-aktiv" title="Verschlüsselt">SEPA hinterlegt</span>
+                {% else %}
+                  –
+                {% endif %}
+              </td>
+              <td>{{ row.dwz|default:"–" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

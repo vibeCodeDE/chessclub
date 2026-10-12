@@ -153,6 +153,17 @@
   5. **Automatisierte Absicherung (`config/tests/test_deployment.py`):** Tests für Compose-Services, Volumes, Port-Restriktion auf `127.0.0.1`, `KUMA_PUSH_URL`-Präsenz und Push-Logik in `tools/backup.sh`.
 - **Beleg:** `pytest config/tests/test_deployment.py` → 12 passed in 0.78s; Gesamttestlauf `docker compose exec app pytest` → **481 passed, 213 subtests passed** in 43.67s (100% grün). `docker compose -f docker-compose.prod.yml config` syntaktisch valide.
 
+### T31: Vereins-Setup & Onboarding-Tool (Web & CSV-Import) (2026-10-12)
+
+- **Problem & Kontext:** Nach dem initialen Deployment (z. B. auf Scalingo) und Anlegen des Superusers fehlte eine barrierefreie Möglichkeit, das Vereinsprofil (Name, Anschrift, Spielabendzeiten, SEPA-Gläubiger-ID) in der Datenbank zu hinterlegen und echte Mitgliederdaten (aus Altsystemen oder Excel) zu importieren, statt Dummy-Daten zu nutzen (ADR-020).
+- **Umsetzung (gemäß ADR-020, S7.5, S1.7):**
+  1. **Singleton-Modell (`core/models.py`):** `ClubProfile` mit `pk=1`, Löschschutz und transparentem Fallback auf Django-Settings (`settings.CLUB_*`, `settings.SEPA_*`), falls Felder noch leer sind. Migration `core/migrations/0008_clubprofile.py`.
+  2. **Fachservice (`members/services/import_service.py`):** Reine Funktionen `parse_members_csv` (Encoding-Erkennung UTF-8/Latin-1, Delimiter `;`/`,`), `validate_members_import` (Validierung von Pflichtfeldern, Datumsformaten, IBAN-Muster) und `execute_members_import` (atomare Anlage von `Member`, Fernet-verschlüsseltem `SepaMandate` und AuditLog).
+  3. **Web-Interface (`/verein/setup/`):** Strukturierte Reiterführung mit `@role_required(ADMIN_GROUP)` für Profil & Stammdaten, Beitragskategorien, Mannschaften und geführten CSV-Import mit Vorschau, Fehlerhinweisen und Download einer CSV-Mustervorlage.
+  4. **CLI-Command (`members/management/commands/import_members.py`):** Unterstützung für Skript- und One-Off-Container-Import (`--dry-run`).
+  5. **Integration & Querschnitt:** Templates, Kontextprozessor (`core/context_processors.py`), Dashboard-Banner und SEPA-Export lesen vorrangig die Datenbank-Stammdaten.
+- **Beleg:** `docker compose exec app pytest core/tests/test_club_profile.py members/tests/test_member_import.py` → **13 passed** in 3.69s; Gesamttestlauf `docker compose exec app pytest` → **510 passed, 239 subtests passed** in 38.62s (100% grün). Negative Rollentests (403 für Nicht-Admins) und Dry-Run-Integrität nachgewiesen.
+
 ---
 
 ## Nächste Schritte

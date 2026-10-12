@@ -1,7 +1,7 @@
 from django.contrib.auth import views as django_auth_views
 from django.urls import path
 
-from . import auth_views, views
+from . import auth_views, views, views_setup
 
 app_name = "core"
 
@@ -12,6 +12,12 @@ urlpatterns = [
     path("datenschutz/", views.rechtliches, {"seite": "datenschutz"}, name="datenschutz"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("verein/", views.verein, name="verein"),
+    path("verein/setup/", views_setup.club_setup_profile, name="club_setup"),
+    path("verein/setup/profil/", views_setup.club_setup_profile, name="club_setup_profile"),
+    path("verein/setup/beitraege/", views_setup.club_setup_dues, name="club_setup_dues"),
+    path("verein/setup/mannschaften/", views_setup.club_setup_teams, name="club_setup_teams"),
+    path("verein/setup/mitglieder-import/", views_setup.club_setup_members_import, name="club_setup_members_import"),
+    path("verein/setup/mitglieder-import/muster.csv", views_setup.club_setup_import_muster, name="club_setup_import_muster"),
     path("aktuelles/", views.news_archiv, name="news_archiv"),
     path("aktuelles/<int:pk>/", views.news_detail, name="news_detail"),
     path("suche/", views.suche, name="suche"),

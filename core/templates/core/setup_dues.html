@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Vereins-Setup · Beitragskategorien{% endblock %}
+{% block page_title %}Vereins-Setup & Beitragskategorien{% endblock %}
+
+{% block crumbs %}
+<span class="crumbs-detail">· Schritt 2: Beitragskategorien</span>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-heading">
+  <div>
+    <h1>Beitragskategorien einrichten</h1>
+    <p>Definiere die Beitragskategorien deines Vereins (z. B. Erwachsene, Jugendliche, Familie, Passiv). Mitglieder werden diesen Kategorien zugeordnet.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "core/includes/setup_nav.html" %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:24px;align-items:start">
+  <div class="card">
+    <h2 style="font-size:18px;margin-bottom:12px">Vorhandene Beitragskategorien</h2>
+    {% if kategorien %}
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Kategorie</th>
+              <th>Regelsatz</th>
+              <th>Status</th>
+              <th>Mitglieder</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for k in kategorien %}
+              <tr>
+                <td>
+                  <strong>{{ k.name }}</strong>
+                  {% if k.beschreibung %}<div style="font-size:12px;color:var(--text-muted)">{{ k.beschreibung }}</div>{% endif %}
+                </td>
+                <td>{{ k.betrag }} €</td>
+                <td>
+                  {% if k.aktiv %}
+                    <span class="badge badge-aktiv">Aktiv</span>
+                  {% else %}
+                    <span class="badge badge-neutral">Inaktiv</span>
+                  {% endif %}
+                </td>
+                <td>{{ k.mitglieder.count }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color:var(--text-muted)">Bisher sind keine Beitragskategorien angelegt.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:18px;margin-bottom:12px">Neue Beitragskategorie anlegen</h2>
+    <form method="post" class="form-grid">
+      {% csrf_token %}
+      <div style="margin-bottom:16px">
+        <label for="id_name"><strong>Name der Kategorie*</strong></label>
+        {{ form.name }}
+        {% if form.name.errors %}<div class="form-error">{{ form.name.errors }}</div>{% endif %}
+      </div>
+      <div style="margin-bottom:16px">
+        <label for="id_beschreibung"><strong>Beschreibung</strong></label>
+        {{ form.beschreibung }}
+      </div>
+      <div style="margin-bottom:16px">
+        <label for="id_betrag"><strong>Jahresbeitrag (€)*</strong></label>
+        {{ form.betrag }}
+        {% if form.betrag.errors %}<div class="form-error">{{ form.betrag.errors }}</div>{% endif %}
+      </div>
+      <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        {{ form.aktiv }}
+        <label for="id_aktiv" style="margin-bottom:0">Kategorie ist aktiv und wählbar</label>
+      </div>
+      <button type="submit" class="btn button button-primary" style="width:100%">
+        <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Kategorie speichern
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

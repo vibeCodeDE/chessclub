@@ -102,6 +102,8 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M7.2 Rollenbasierte Navigation (Menüs je Rolle)
 - M7.3 Audit-Log: wer hat Personendaten wann geändert (DSGVO-Nachweis)
 - S7.4 Modul-Toggles im Admin-Panel: Superadmin / Vorstand kann optionale Satellitenmodule (Spielbetrieb, Turniere, Kassenbuch, Kommunikation) im Django Admin an- und ausschalten (ADR-019)
+- S7.5 Vereins-Setup & Stammdatenverwaltung im Browser: Superadmin / Vorstand kann Stammdaten (Name, Anschrift, Spielabendzeiten, SEPA-Gläubiger-ID) in der Datenbank verwalten (ADR-020)
+- S1.7 Mitglieder-CSV-Import: Importfunktion für echte Mitgliederstammdaten inklusive Validierung, optionaler SEPA-Mandatsanlage und Audit-Protokollierung (ADR-020)
 
 ### 3.8 Berechtigungsmatrix (M)
 
@@ -126,6 +128,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 | Auskunfts-Export (DSGVO) | ja | nein | nur eigene Person | nein |
 | Audit-/Zugriffslog einsehen | ja | nein | nein | nein |
 | Modul-Toggles verwalten (ADR-019) | ja | nein | nein | nein |
+| Vereins-Setup & Mitglieder-Import (ADR-020) | ja | nein | nein | nein |
 
 ---
 
@@ -238,3 +241,4 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v1.9 | 2026-10-07 | Umsetzung der DSB-/DWZ-Synchronisation und Drift Detection (ADR-016, K3.6) in Task T29 |
 | v2.0 | 2026-10-07 | SEPA-XML-Export (pain.008.001.02, S2.7) für Beitragsläufe gemäß ADR-017 / T9c |
 | v2.1 | 2026-10-11 | Modul-Toggles (S7.4) im Django Admin Panel gemäß ADR-019 für Satellitenmodule spezifiziert (T30) |
+| v2.2 | 2026-10-12 | Vereins-Setup & Stammdaten im Browser (S7.5) und Mitglieder-CSV-Import (S1.7) gemäß ADR-020 spezifiziert (T31) |

@@ -161,3 +161,49 @@ class ModuleSettings(models.Model):
     def get_solo(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class ClubProfile(models.Model):
+    """Stammdaten und Vereinsprofil des Schachvereins (ADR-020, T31).
+
+    Singleton-Muster: immer genau ein Datensatz (pk=1).
+    Erlaubt es dem Vorstand, Vereinsdaten, Spielabendzeiten und SEPA-Gläubiger-Daten
+    direkt im Browser zu pflegen, ohne Umgebungsvariablen ändern zu müssen.
+    Fallback auf Django-Settings greift, wenn DB-Felder leer sind.
+    """
+
+    name = models.CharField("Vereinsname", max_length=150, blank=True)
+    kurzname = models.CharField("Kurzname / Kürzel", max_length=50, blank=True)
+    kontakt_email = models.EmailField("Kontakt-E-Mail", blank=True)
+    gruendungsjahr = models.CharField("Gründungsjahr", max_length=10, blank=True)
+    ort = models.CharField("Ort", max_length=100, blank=True)
+    spiellokal = models.CharField("Spiellokal / Anschrift", max_length=255, blank=True)
+    spielabend_zeiten = models.CharField("Spielabend / Erwachsene", max_length=255, blank=True)
+    jugend_zeiten = models.CharField("Jugendtraining", max_length=255, blank=True)
+    beschreibung = models.TextField("Kurzbeschreibung", blank=True)
+
+    # SEPA & Finanzen (für Lastschriften, Mahnbriefe und Mitgliedsanträge)
+    sepa_glaeubiger_id = models.CharField("SEPA-Gläubiger-Identifikationsnummer", max_length=50, blank=True)
+    sepa_glaeubiger_name = models.CharField("SEPA-Gläubiger-Name", max_length=150, blank=True)
+    sepa_iban = models.CharField("Vereins-IBAN", max_length=50, blank=True)
+    sepa_bic = models.CharField("Vereins-BIC", max_length=20, blank=True)
+
+    class Meta:
+        verbose_name = "Vereinsprofil"
+        verbose_name_plural = "Vereinsprofil"
+
+    def __str__(self):
+        return self.name or getattr(settings, "CLUB_NAME", "Vereinsprofil")
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass  # Löschen des Singleton-Datensatzes unterbinden
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+

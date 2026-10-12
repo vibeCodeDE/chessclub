@@ -25,6 +25,10 @@ class Command(BaseCommand):
         user.is_superuser = True
         user.save()
 
+        from django.contrib.auth.models import Group
+        admin_group, _ = Group.objects.get_or_create(name="admin")
+        user.groups.add(admin_group)
+
         if created:
             self.stdout.write(self.style.SUCCESS(f"Superadmin '{username}' erfolgreich erstellt."))
         else:
