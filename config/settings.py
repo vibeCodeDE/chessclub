@@ -30,6 +30,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+]
+try:
+    import whitenoise  # noqa: F401
+
+    MIDDLEWARE.append("whitenoise.middleware.WhiteNoiseMiddleware")
+except ImportError:
+    pass
+MIDDLEWARE.extend([
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -37,8 +45,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.SicherheitsHeaderMiddleware",
+    "core.middleware.ModulAktivMiddleware",
     "axes.middleware.AxesMiddleware",
-]
+])
+
 
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",
@@ -50,6 +60,9 @@ AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 1  # 1 Stunde Sperre nach 5 Fehlversuchen
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = "core/lockout.html"
+# Proxy-Konfiguration für Reverse Proxy (Caddy / Docker, PRD N1.6)
+AXES_PROXY_COUNT = int(os.environ.get("AXES_PROXY_COUNT", "1"))
+AXES_META_PRE_NAME = os.environ.get("AXES_META_PRE_NAME", "HTTP_X_FORWARDED_FOR")
 
 # Entwicklungs-Profiling (django-debug-toolbar, PRD N2.2, ADR-015):
 # Nur aktiv, wenn DEBUG=True gesetzt ist und das Paket installiert ist.
@@ -106,10 +119,28 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Produktion nutzt PostgreSQL (siehe docker-compose.yml). Ohne POSTGRES_HOST
-# fällt die App auf SQLite zurück – so lässt sie sich ohne Datenbankserver
-# starten (Entwicklung, Tests, Vorführung).
-if os.environ.get("POSTGRES_HOST"):
+# Produktion nutzt PostgreSQL (siehe docker-compose.yml bzw. Scalingo DATABASE_URL).
+# Unterstützt SCALINGO_POSTGRESQL_URL / DATABASE_URL (PaaS) sowie POSTGRES_HOST (Docker).
+# Ohne Datenbankserver fällt die App auf SQLite zurück (Entwicklung, Tests, Vorführung).
+_db_url = os.environ.get("DATABASE_URL") or os.environ.get("SCALINGO_POSTGRESQL_URL")
+if _db_url:
+    import urllib.parse
+
+    _parsed_url = urllib.parse.urlparse(_db_url)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _parsed_url.path.lstrip("/"),
+            "USER": _parsed_url.username or "",
+            "PASSWORD": _parsed_url.password or "",
+            "HOST": _parsed_url.hostname or "localhost",
+            "PORT": str(_parsed_url.port or 5432),
+        }
+    }
+    _query = urllib.parse.parse_qs(_parsed_url.query)
+    if "sslmode" in _query:
+        DATABASES["default"]["OPTIONS"] = {"sslmode": _query["sslmode"][0]}
+elif os.environ.get("POSTGRES_HOST"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -128,6 +159,7 @@ else:
             "OPTIONS": {"timeout": 20},
         }
     }
+
 
 # PRD N1.6: Passwörter mit Argon2 (Fallback auf Djangos Standard, falls das
 # Paket in einer Umgebung fehlt – dann bleibt der Betrieb lauffähig).
@@ -157,7 +189,22 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+try:
+    import whitenoise  # noqa: F401
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        },
+    }
+except ImportError:
+    pass
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
 LOGIN_URL = "/anmelden/"
 LOGIN_REDIRECT_URL = "/dashboard/"

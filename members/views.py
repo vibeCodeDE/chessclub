@@ -188,7 +188,7 @@ def member_delete(request, pk):
     return redirect("members:member_detail", pk=member.pk)
 
 
-@role_required(ADMIN_GROUP, KAPITAEN_GROUP)
+@role_required(ADMIN_GROUP)
 @require_POST
 def member_status(request, pk):
     """Optimistischer Statuswechsel aus der Mitgliederliste."""

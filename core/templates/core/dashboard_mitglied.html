@@ -88,6 +88,7 @@
       </div>
     </section>
 
+    {% if module_settings.spielbetrieb_aktiv %}
     <section class="panel">
       <div class="panel-heading">
         <div>
@@ -114,6 +115,7 @@
         {% endfor %}
       </div>
     </section>
+    {% endif %}
   </div>
 
   <aside class="dashboard-side-column">

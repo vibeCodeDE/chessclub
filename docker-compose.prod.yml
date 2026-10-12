@@ -61,6 +61,7 @@ services:
     env_file: [.env.prod]
     environment:
       POSTGRES_HOST: db
+      KUMA_PUSH_URL: ${KUMA_PUSH_URL:-}
     depends_on:
       db:
         condition: service_healthy
@@ -69,14 +70,26 @@ services:
       - ./tools:/tools:ro
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "apk add --no-cache openssl >/dev/null 2>&1 || true;
+      "apk add --no-cache openssl curl >/dev/null 2>&1 || true;
        while true; do
          /tools/backup.sh;
          sleep 86400;
        done"
+
+  # Monitoring mit Uptime Kuma (PRD N2.8 / ADR-009 / T24b)
+  uptime-kuma:
+    image: louislam/uptime-kuma:1-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - kuma_data:/app/data
+    depends_on:
+      - app
 
 volumes:
   db_data:
   static_files:
   caddy_data:
   caddy_config:
+  kuma_data:

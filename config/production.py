@@ -15,13 +15,14 @@ from django.core.exceptions import ImproperlyConfigured
 
 from .settings import *  # noqa: F401,F403
 
-_secret_key = os.environ.get("DJANGO_SECRET_KEY", "")
+_secret_key = os.environ.get("DJANGO_SECRET_KEY") or os.environ.get("SECRET_KEY", "")
 if not _secret_key or _secret_key == "dev-insecure-key":
     raise ImproperlyConfigured(
         "DJANGO_SECRET_KEY muss in der Produktion gesetzt sein "
         "(der Dev-Fallback-Schlüssel ist nicht erlaubt)."
     )
 SECRET_KEY = _secret_key
+
 
 # Gleiche Variable wie in settings.py und .env.prod.example; der ältere Name
 # DJANGO_EMAIL_BACKEND wird weiterhin gelesen, damit bestehende .env-Dateien

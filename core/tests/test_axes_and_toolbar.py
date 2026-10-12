@@ -6,7 +6,7 @@ Gemäß PRD N1.6 (Härtung), N2.2 (Performance) und ADR-015.
 from axes.models import AccessAttempt
 from axes.utils import reset
 from django.contrib.auth.models import User
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 
 
 @override_settings(AXES_ENABLED=True, AXES_FAILURE_LIMIT=5, AXES_RESET_ON_SUCCESS=True)
@@ -149,3 +149,62 @@ class DjangoExtensionsTests(TestCase):
         finally:
             os.environ.clear()
             os.environ.update(env_backup)
+
+
+class ReverseProxyAndIpTests(TestCase):
+    """Prüft die korrekte IP-Ermittlung hinter Reverse-Proxies und Axes-Proxy-Konfiguration (SEC-06)."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_axes_proxy_einstellungen(self):
+        """Prüft, dass Axes für den Betrieb hinter einem Reverse-Proxy vorkonfiguriert ist."""
+        from django.conf import settings
+
+        self.assertEqual(settings.AXES_PROXY_COUNT, 1)
+        self.assertEqual(settings.AXES_META_PRE_NAME, "HTTP_X_FORWARDED_FOR")
+
+    def test_ip_extraktion_mit_x_forwarded_for(self):
+        """_ip extrahiert die echte Client-IP aus X-Forwarded-For auch bei Proxy-Ketten."""
+        from core.signals import _ip
+
+        request = self.factory.get("/dashboard/", HTTP_X_FORWARDED_FOR="203.0.113.195, 10.0.0.1")
+        self.assertEqual(_ip(request), "203.0.113.195")
+
+    def test_ip_extraktion_fallback_remote_addr(self):
+        """_ip fällt auf REMOTE_ADDR zurück, falls kein X-Forwarded-For Header vorliegt."""
+        from core.signals import _ip
+
+        request = self.factory.get("/dashboard/", REMOTE_ADDR="198.51.100.4")
+        self.assertEqual(_ip(request), "198.51.100.4")
+
+    def test_ip_extraktion_ohne_request_negativtest(self):
+        """Negativtest: Bei None als Request wird ein sicherer Ersatzwert geliefert."""
+        from core.signals import _ip
+
+        self.assertEqual(_ip(None), "—")
+
+    def test_anmeldeversuch_protokolliert_client_ip_aus_reverse_proxy(self):
+        """Fehlgeschlagener und erfolgreicher Login protokollieren die Client-IP aus X-Forwarded-For."""
+        from core.models import AuditLog
+
+        User.objects.create_user(username="proxy_spieler", password="sicheres-passwort-1")
+
+        # Fehlversuch mit X-Forwarded-For
+        self.client.post(
+            "/anmelden/",
+            {"username": "proxy_spieler", "password": "falsches-passwort"},
+            HTTP_X_FORWARDED_FOR="203.0.113.50, 10.0.0.1",
+        )
+        fehl_log = AuditLog.objects.filter(aktion="Anmeldung abgelehnt").latest("zeitpunkt")
+        self.assertIn("IP: 203.0.113.50", fehl_log.text)
+
+        # Erfolgreicher Login mit X-Forwarded-For
+        self.client.post(
+            "/anmelden/",
+            {"username": "proxy_spieler", "password": "sicheres-passwort-1"},
+            HTTP_X_FORWARDED_FOR="203.0.113.50, 10.0.0.1",
+        )
+        erfolg_log = AuditLog.objects.filter(aktion="Anmeldung").latest("zeitpunkt")
+        self.assertIn("IP: 203.0.113.50", erfolg_log.text)
+

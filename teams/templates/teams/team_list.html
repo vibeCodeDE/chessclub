@@ -9,8 +9,10 @@
   <p class="lede">Mannschaften, Aufstellungen und Ergebnisse für den Ligabetrieb pflegen.</p>
   <div class="page-actions">
     <a class="btn secondary" href="{% url 'teams:tabelle_list' %}"><svg class="icon icon-sm"><use href="#i-table"></use></svg> Tabellen</a>
-    <a class="btn secondary" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Ligaspiel</a>
-    <a class="btn" href="{% url 'teams:team_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mannschaft anlegen</a>
+    {% if user_role == "admin" %}
+      <a class="btn secondary" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Ligaspiel</a>
+      <a class="btn" href="{% url 'teams:team_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mannschaft anlegen</a>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

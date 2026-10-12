@@ -102,6 +102,7 @@ class TwoFactorDevice(models.Model):
     bestaetigt = models.BooleanField("Bestätigt", default=False)
     erstellt_am = models.DateTimeField("Erstellt am", auto_now_add=True)
     letzte_nutzung = models.DateTimeField("Zuletzt genutzt", null=True, blank=True)
+    letzter_zeitschritt = models.BigIntegerField("Letzter Zeitschritt", null=True, blank=True)
 
     class Meta:
         verbose_name = "Zwei-Faktor-Gerät"
@@ -109,3 +110,54 @@ class TwoFactorDevice(models.Model):
 
     def __str__(self):
         return f"2FA für {self.user.get_username()}"
+
+
+class ModuleSettings(models.Model):
+    """Konfiguration aktiver Satellitenmodule des Vereins (T30, S7.4, ADR-019).
+
+    Singleton-Muster: immer genau ein Datensatz (pk=1).
+    Erlaubt es dem Superadmin / Vorstand, nicht genutzte Module
+    (Spielbetrieb, Turniere, Kassenbuch, Kommunikation) im laufenden Betrieb
+    in der UI und an den Routen zu deaktivieren.
+    Kernmodule (core, members, dues) sind als Fundament nicht deaktivierbar.
+    """
+
+    spielbetrieb_aktiv = models.BooleanField(
+        "Spielbetrieb & Mannschaften",
+        default=True,
+        help_text="Aktiviert Mannschaften, Ligaspiele, Aufstellungen und Ligatabellen.",
+    )
+    turniere_aktiv = models.BooleanField(
+        "Turniere",
+        default=True,
+        help_text="Aktiviert Turnierverwaltung, öffentliche Anmeldung und Schweizer System.",
+    )
+    kassenbuch_aktiv = models.BooleanField(
+        "Kassenbuch",
+        default=True,
+        help_text="Aktiviert das allgemeine Einnahmen-/Ausgaben-Kassenbuch.",
+    )
+    nachrichten_aktiv = models.BooleanField(
+        "Kommunikation & News",
+        default=True,
+        help_text="Aktiviert Ankündigungen, News-Archiv und E-Mail-Rundschreiben.",
+    )
+
+    class Meta:
+        verbose_name = "Modul-Einstellung"
+        verbose_name_plural = "Modul-Einstellungen"
+
+    def __str__(self):
+        return "Modul-Einstellungen"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass  # Löschen des Singleton-Datensatzes unterbinden
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

@@ -3,6 +3,7 @@
 from django.conf import settings
 
 from .roles import ADMIN_GROUP, role_of
+from .services import get_module_settings, is_module_active
 
 # Menü: (Sektion, [(URL-Name, Label, Icon, Rollen, Badge-Schlüssel)])
 NAV_STRUKTUR = [
@@ -68,38 +69,60 @@ NAV_STRUKTUR = [
 ]
 
 
-def _badges(role):
-    """Zähler für die Navigation – nur laden, was die Rolle auch sieht."""
+def _is_nav_item_allowed(url_name, request):
+    prefix = url_name.split(":")[0]
+    if prefix == "teams" and not is_module_active("teams", request):
+        return False
+    if prefix == "tournaments" and not is_module_active("tournaments", request):
+        return False
+    if prefix == "cashbook" and not is_module_active("cashbook", request):
+        return False
+    if prefix == "comms" and not is_module_active("comms", request):
+        return False
+    return True
+
+
+def _badges(role, request=None):
+    """Zähler für die Navigation – nur laden, was die Rolle auch sieht und was aktiv ist."""
     if role != ADMIN_GROUP:
         return {}
-    from comms.models import NewsPost
     from dues.models import MembershipFee
     from members.models import ChangeRequest
-    from tournaments.models import Tournament
 
     offene_posten = sum(
         1
         for fee in MembershipFee.objects.prefetch_related("zahlungen").all()[:500]
         if fee.ist_offen
     )
-    return {
+    res = {
         "wuensche": ChangeRequest.objects.filter(status=ChangeRequest.Status.EINGEREICHT).count(),
-        "entwuerfe": NewsPost.objects.filter(veroeffentlicht=False).count(),
+        "entwuerfe": 0,
         "offene_posten": offene_posten,
         "mahnungen": MembershipFee.objects.filter(mahnstufe__gt=0).count(),
-        "turniere": Tournament.objects.exclude(status=Tournament.Status.BEENDET).count(),
+        "turniere": 0,
     }
+    if is_module_active("comms", request):
+        from comms.models import NewsPost
+
+        res["entwuerfe"] = NewsPost.objects.filter(veroeffentlicht=False).count()
+    if is_module_active("tournaments", request):
+        from tournaments.models import Tournament
+
+        res["turniere"] = Tournament.objects.exclude(status=Tournament.Status.BEENDET).count()
+    return res
 
 
 def nav(request):
     user = getattr(request, "user", None)
     role = role_of(user)
-    badges = _badges(role)
+    badges = _badges(role, request)
     sektionen = []
     for titel, eintraege in NAV_STRUKTUR:
         links = []
         for url_name, label, icon, rollen, badge_key in eintraege:
             if role not in rollen:
+                continue
+            if not _is_nav_item_allowed(url_name, request):
                 continue
             links.append(
                 {
@@ -113,6 +136,7 @@ def nav(request):
             sektionen.append({"titel": titel, "links": links})
 
     return {
+        "module_settings": get_module_settings(request),
         "user_role": role,
         "nav_sektionen": sektionen,
         "nav_links": [
@@ -132,3 +156,4 @@ def nav(request):
         "club_youth_hours": settings.CLUB_YOUTH_HOURS,
         "club_description": settings.CLUB_DESCRIPTION,
     }
+

@@ -16,7 +16,9 @@
       </form>
     {% endif %}
     <a class="btn secondary" href="{% url 'teams:tabelle_list' %}"><svg class="icon icon-sm"><use href="#i-table"></use></svg> Tabellen</a>
-    <a class="btn" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ligaspiel planen</a>
+    {% if user_role == "admin" %}
+      <a class="btn" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ligaspiel planen</a>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

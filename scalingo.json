@@ -1,0 +1,46 @@
+{
+  "name": "Schachverwaltung",
+  "description": "Vereinsverwaltung für Schachvereine in Deutschland (Django 5, PostgreSQL, DSGVO)",
+  "addons": [
+    "postgresql:postgresql-sandbox"
+  ],
+  "env": {
+    "DJANGO_SETTINGS_MODULE": {
+      "value": "config.production",
+      "description": "Django Settings für den Produktivbetrieb"
+    },
+    "DJANGO_SECRET_KEY": {
+      "generator": "secret",
+      "description": "Kryptografischer Schlüssel für Django-Sessions und CSRF"
+    },
+    "IBAN_FERNET_KEY": {
+      "description": "Fernet-Schlüssel für verschlüsselte IBANs (ADR-010). Erzeugen mit: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+    },
+    "DJANGO_ALLOWED_HOSTS": {
+      "value": "*",
+      "description": "Kommagetrennte Liste der erlaubten Domains"
+    },
+    "TWOFA_PFLICHT": {
+      "value": "1",
+      "description": "Zwei-Faktor-Authentifizierung für den Vorstand erzwingen"
+    },
+    "EMAIL_BACKEND": {
+      "value": "django.core.mail.backends.smtp.EmailBackend",
+      "description": "E-Mail-Backend für den E-Mail-Versand (z. B. SMTP)"
+    },
+    "SECURE_SSL_REDIRECT": {
+      "value": "1",
+      "description": "HTTPS-Weiterleitung erzwingen"
+    },
+    "SECURE_HSTS_SECONDS": {
+      "value": "31536000",
+      "description": "HSTS-Header-Laufzeit (1 Jahr)"
+    }
+  },
+  "formation": {
+    "web": {
+      "amount": 1,
+      "size": "S"
+    }
+  }
+}

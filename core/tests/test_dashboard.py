@@ -219,6 +219,41 @@ class AuditSeitenTests(TestCase):
         response = self.client.get("/suche/", {"q": "gibtesnicht"})
         self.assertContains(response, "0 Treffer")
 
+    def test_negativ_mitglied_sieht_in_suche_keine_mitglieder_und_keine_entwuerfe(self):
+        from comms.models import NewsPost
+        from tournaments.models import Tournament
+        mitglied_user = make_user("mitglied1", "mitglied")
+        Member.objects.create(vorname="Anna", nachname="Suchmeier", email="geheim@example.com", eintrittsdatum=date(2020, 1, 1))
+        NewsPost.objects.create(titel="Geheimer Vorstands-Entwurf", text="Intern", veroeffentlicht=False)
+        NewsPost.objects.create(titel="Öffentliche Ankündigung", text="Offen", veroeffentlicht=True)
+        Tournament.objects.create(name="Vereinsmeisterschaft", datum=date(2026, 11, 1), oeffentlich=True)
+
+        self.client.force_login(mitglied_user)
+        # Suche nach Mitglied
+        resp1 = self.client.get("/suche/", {"q": "Suchmeier"})
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(resp1.context["ergebnisse"]["mitglieder"], [])
+        self.assertNotContains(resp1, "geheim@example.com")
+        self.assertNotContains(resp1, "<h2>Mitglieder</h2>")
+
+        # Suche nach News-Entwurf
+        resp2 = self.client.get("/suche/", {"q": "Geheimer Vorstands-Entwurf"})
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(list(resp2.context["ergebnisse"]["news"]), [])
+        self.assertContains(resp2, "Keine Ankündigungen gefunden")
+
+        # Suche nach veröffentlichter News & Turnier funktioniert
+        resp3 = self.client.get("/suche/", {"q": "Öffentliche"})
+        self.assertEqual(resp3.status_code, 200)
+        self.assertContains(resp3, "Öffentliche Ankündigung")
+
+        resp4 = self.client.get("/suche/", {"q": "Vereinsmeisterschaft"})
+        self.assertEqual(resp4.status_code, 200)
+        self.assertContains(resp4, "Vereinsmeisterschaft")
+        # Turniere verlinken für Nicht-Admins auf öffentliche Detailseite, nicht Admin-Manage
+        self.assertNotContains(resp4, "/turniere/verwaltung/")
+        self.assertContains(resp4, "/turniere/")
+
 
 class DashboardErweiterungenTests(TestCase):
     def setUp(self):
@@ -252,16 +287,16 @@ class DashboardErweiterungenTests(TestCase):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        # Die View führt exakt 33 Queries aus (konstant, da kein N+1 pro Mitglied/Posten)
-        with self.assertNumQueries(33):
+        # Die View führt exakt 34 Queries aus (konstant, da kein N+1 pro Mitglied/Posten; inkl. 1 Query ModuleSettings)
+        with self.assertNumQueries(34):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)
 
-        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 33 (kein N+1)
+        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 34 (kein N+1)
         for i in range(15, 25):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        with self.assertNumQueries(33):
+        with self.assertNumQueries(34):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)

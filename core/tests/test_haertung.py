@@ -92,6 +92,44 @@ class ZweiFaktorTests(TestCase):
         self.assertRedirects(response, "/anmelden/zwei-faktor/")
         self.assertFalse(TwoFactorDevice.objects.filter(user=self.admin).exists())
 
+    def test_negativ_fuenf_fehlversuche_sperren_den_zwei_faktor_zugang(self):
+        secret = neues_secret()
+        TwoFactorDevice.objects.create(user=self.admin, secret=secret, bestaetigt=True)
+        self.client.post("/anmelden/", {"username": "vorstand", "password": "sicheres-passwort-1"})
+
+        # 4 Fehlversuche: bleibt auf zwei_faktor und zeigt Restversuche
+        for i in range(1, 5):
+            res = self.client.post("/anmelden/zwei-faktor/", {"code": f"00000{i}"})
+            self.assertEqual(res.status_code, 200)
+            self.assertContains(res, f"noch {5 - i} Versuch")
+
+        # 5. Fehlversuch: Sperrung und Redirect zu /anmelden/
+        res5 = self.client.post("/anmelden/zwei-faktor/", {"code": "000005"})
+        self.assertRedirects(res5, "/anmelden/")
+        self.assertNotIn("_2fa_user_id", self.client.session)
+
+        # Neuer Aufruf von /anmelden/zwei-faktor/ leitet nun direkt zu /anmelden/ um (Session bereinigt)
+        res_neu = self.client.get("/anmelden/zwei-faktor/")
+        self.assertRedirects(res_neu, "/anmelden/")
+
+    def test_negativ_replay_schutz_verhindert_wiederverwendung_desselben_codes(self):
+        secret = neues_secret()
+        TwoFactorDevice.objects.create(user=self.admin, secret=secret, bestaetigt=True)
+        code = code_erzeugen(secret)
+
+        # Erste Anmeldung mit Code erfolgreich
+        self.client.post("/anmelden/", {"username": "vorstand", "password": "sicheres-passwort-1"})
+        res1 = self.client.post("/anmelden/zwei-faktor/", {"code": code})
+        self.assertRedirects(res1, "/dashboard/")
+        self.client.logout()
+
+        # Zweite Anmeldung mit demselben Code im selben Zeitfenster schlägt fehl
+        self.client.post("/anmelden/", {"username": "vorstand", "password": "sicheres-passwort-1"})
+        res2 = self.client.post("/anmelden/zwei-faktor/", {"code": code})
+        self.assertEqual(res2.status_code, 200)
+        self.assertContains(res2, "Der Code stimmt nicht")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
 
 class TotpPruefungTests(TestCase):
     def test_codes_sind_zeitabhaengig_und_sechsstellig(self):

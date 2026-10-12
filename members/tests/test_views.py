@@ -39,6 +39,20 @@ class MemberListAccessTests(TestCase):
         response = self.client.get("/mitglieder/")
         self.assertEqual(response.status_code, 403)
 
+    def test_member_status_kapitaen_is_forbidden(self):
+        m = make_member("Test", "Person")
+        make_user("k1", "kapitaen")
+        self.client.login(username="k1", password="x")
+        response = self.client.post(f"/mitglieder/{m.pk}/status/", {"status": "passiv"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_member_status_plain_member_is_forbidden(self):
+        m = make_member("Test", "Person")
+        make_user("p1", "mitglied")
+        self.client.login(username="p1", password="x")
+        response = self.client.post(f"/mitglieder/{m.pk}/status/", {"status": "passiv"})
+        self.assertEqual(response.status_code, 403)
+
 
 class MemberListTests(TestCase):
     def setUp(self):

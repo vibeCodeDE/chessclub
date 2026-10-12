@@ -19,7 +19,7 @@ def _wert(value):
 
 @receiver(pre_save, sender=Member)
 def stammdaten_altwerte_ablesen(sender, instance, **kwargs):
-    if instance.pk is None:
+    if instance.pk is None or getattr(instance, "_is_anonymizing", False):
         return
     zeile = (
         sender.objects.filter(pk=instance.pk)
@@ -31,7 +31,7 @@ def stammdaten_altwerte_ablesen(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Member)
 def stammdaten_anderungen_protokollieren(sender, instance, created, **kwargs):
-    if created or not hasattr(instance, "_audit_alt_werte"):
+    if created or getattr(instance, "_is_anonymizing", False) or not hasattr(instance, "_audit_alt_werte"):
         return
     alt_werte = instance._audit_alt_werte
     benutzer = getattr(instance, "_changed_by", None)
@@ -53,6 +53,9 @@ def stammdaten_anderungen_protokollieren(sender, instance, created, **kwargs):
 def _ip(request):
     if request is None:
         return "—"
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR", "—")
 
 

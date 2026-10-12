@@ -8,8 +8,10 @@
 <div class="page-head">
   <p class="lede">{% if team.kapitaen %}Mannschaftsführung: {{ team.kapitaen }}{% else %}Noch keine Mannschaftsführung benannt{% endif %}</p>
   <div class="page-actions">
-    <a class="btn secondary" href="{% url 'teams:team_update' team.pk %}"><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Bearbeiten</a>
-    <a class="btn" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ligaspiel planen</a>
+    {% if user_role == "admin" %}
+      <a class="btn secondary" href="{% url 'teams:team_update' team.pk %}"><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Bearbeiten</a>
+      <a class="btn" href="{% url 'teams:match_create' %}"><svg class="icon icon-sm"><use href="#i-plus"></use></svg> Ligaspiel planen</a>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

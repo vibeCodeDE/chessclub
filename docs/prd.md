@@ -101,10 +101,11 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M7.1 Dashboard: offene Beiträge, anstehende Termine, letzte Anmeldungen
 - M7.2 Rollenbasierte Navigation (Menüs je Rolle)
 - M7.3 Audit-Log: wer hat Personendaten wann geändert (DSGVO-Nachweis)
+- S7.4 Modul-Toggles im Admin-Panel: Superadmin / Vorstand kann optionale Satellitenmodule (Spielbetrieb, Turniere, Kassenbuch, Kommunikation) im Django Admin an- und ausschalten (ADR-019)
 
 ### 3.8 Berechtigungsmatrix (M)
 
-Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Aufstellung), T19 (Turnieranmeldung/Gastdaten) und **alle** Export-/Übersichtstasks (T9c, T10, T11b, T15, T22, T23); jede Zeile erhält einen Negativtest.
+Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Aufstellung), T19 (Turnieranmeldung/Gastdaten) und **alle** Export-/Übersichtstasks (T9c, T10, T11b, T15, T22, T23, T30); jede Zeile erhält einen Negativtest.
 
 | Funktion | Admin (Vorstand) | Kapitän | Mitglied | Gast |
 |---|---|---|---|---|
@@ -124,6 +125,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 | E-Mail an Gruppe | ja | nein | nein | nein |
 | Auskunfts-Export (DSGVO) | ja | nein | nur eigene Person | nein |
 | Audit-/Zugriffslog einsehen | ja | nein | nein | nein |
+| Modul-Toggles verwalten (ADR-019) | ja | nein | nein | nein |
 
 ---
 
@@ -235,3 +237,4 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v1.8 | 2026-10-07 | Spezifikation der DSB-Schnittstellen-Architektur (K3.6) als Drei-Säulen-Modell (DWZ-Read-Sync, nuLiga-Mutations-Export, TRF/DeWIS) in [ADR-016](decisions/ADR-016-dsb-schnittstellen-architektur.md) |
 | v1.9 | 2026-10-07 | Umsetzung der DSB-/DWZ-Synchronisation und Drift Detection (ADR-016, K3.6) in Task T29 |
 | v2.0 | 2026-10-07 | SEPA-XML-Export (pain.008.001.02, S2.7) für Beitragsläufe gemäß ADR-017 / T9c |
+| v2.1 | 2026-10-11 | Modul-Toggles (S7.4) im Django Admin Panel gemäß ADR-019 für Satellitenmodule spezifiziert (T30) |

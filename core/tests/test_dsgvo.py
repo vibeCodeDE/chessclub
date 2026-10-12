@@ -254,6 +254,28 @@ class AnonymisierungTests(TestCase):
         self.assertEqual(self.alt.email, "alt@example.org")
 
     def test_anonymisierung_entfernt_kontaktdaten_behaelt_finanzen(self):
+        # User, SEPA-Mandat und alter Audit-Eintrag verknüpfen
+        user = User.objects.create_user("alt_user", email="alt@example.org", first_name="Alt", last_name="Ehemalig")
+        self.alt.user = user
+        self.alt.save()
+        from dues.models import SepaMandate
+        mandat = SepaMandate.objects.create(
+            member=self.alt,
+            iban="DE89370400440532013000",
+            kontoinhaber="Alt Ehemalig",
+            referenz="MANDAT-ALT-01",
+            erteilt_am=date(2020, 1, 1),
+            status=SepaMandate.Status.AKTIV,
+        )
+        AuditLog.objects.create(
+            benutzer=self.admin,
+            aktion="Stammdaten geändert",
+            feld="email",
+            alt_wert="alt@example.org",
+            neu_wert="alt@example.org",
+            member=self.alt,
+        )
+
         call_command("anonymize_former_members", verbosity=0)
         self.alt.refresh_from_db()
         self.assertEqual(self.alt.vorname, "Ehemaliges")
@@ -262,9 +284,32 @@ class AnonymisierungTests(TestCase):
         self.assertEqual(self.alt.email, "")
         self.assertEqual(self.alt.telefon, "")
         self.assertEqual(self.alt.strasse, "")
+        self.assertIsNone(self.alt.user)
         self.assertIsNotNone(self.alt.anonymisiert_am)
         self.assertEqual(self.alt.fees.count(), 1, "Finanzhistorie bleibt erhalten")
-        self.assertTrue(AuditLog.objects.filter(aktion="Mitglied anonymisiert").exists())
+
+        # User wurde deaktiviert und bereinigt
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+        self.assertEqual(user.email, "")
+        self.assertEqual(user.first_name, "")
+        self.assertEqual(user.last_name, "")
+
+        # SEPA-Mandat wurde anonymisiert und widerrufen
+        mandat.refresh_from_db()
+        self.assertEqual(mandat.kontoinhaber, "Anonymisiert")
+        self.assertEqual(mandat.status, SepaMandate.Status.WIDERRUFEN)
+
+        # AuditLog enthält keinen Klarnamen im Text und keine alten PII-Werte
+        anonym_log = AuditLog.objects.get(aktion="Mitglied anonymisiert")
+        self.assertNotIn("Ehemalig", anonym_log.text)
+        self.assertNotIn("Alt", anonym_log.text)
+        self.assertIn(f"ID {self.alt.pk}", anonym_log.text)
+
+        # Alter Audit-Eintrag wurde maskiert
+        alter_log = AuditLog.objects.get(feld="email", member=self.alt)
+        self.assertEqual(alter_log.alt_wert, "[anonymisiert]")
+        self.assertEqual(alter_log.neu_wert, "[anonymisiert]")
 
         self.frisch.refresh_from_db()
         self.assertEqual(self.frisch.email, "neu@example.org", "Frist läuft noch")

@@ -128,15 +128,37 @@
   5. **UI & Konfiguration:** Dialog `#sepa-dialog` und Export-Button `SEPA-XML {jahr}` in `dues/templates/dues/overview.html`, Route `/beitraege/sepa-export.xml`, Gläubigereinstellungen `SEPA_CREDITOR_ID`, `SEPA_CREDITOR_IBAN`, `SEPA_CREDITOR_BIC` in `config/settings.py` und `.env.prod.example`.
 - **Beleg:** `docker compose exec app pytest dues/tests/test_sepa_export.py dues/tests/test_rollen.py` → **25 passed, 39 subtests passed** in 4.14s; Gesamttestlauf `docker compose exec app pytest` → **454 passed, 213 subtests passed** in 37.94s (100% grün).
 
+### T30: Modul-Toggles im Admin-Panel (2026-10-11)
+
+- **Problem & Kontext:** Kleine Vereine und unterschiedliche Betriebsmodelle (ADR-014 Managed-Abo) benötigen Flexibilität, ungenutzte Satellitenmodule (`teams`, `tournaments`, `cashbook`, `comms`) auszublenden, ohne Daten oder Datenbank-Integrität zu gefährden. Dynamisches Entladen von Django-Apps aus `INSTALLED_APPS` scheidet aus.
+- **Umsetzung (gemäß ADR-019 / S7.4):**
+  1. **Singleton-Modell (`core/models.py`):** `ModuleSettings` (garantiert `pk=1`, `delete` unterbunden) mit Schaltern für `spielbetrieb_aktiv`, `turniere_aktiv`, `kassenbuch_aktiv`, `nachrichten_aktiv`. Kernmodule (`core`, `members`, `dues`) bleiben fest. Migration `core/migrations/0007_modulesettings.py`.
+  2. **Fachservice (`core/services.py`):** Reine Funktionen `is_module_active` und `get_module_settings` mit Request-Caching für O(1)-Query-Budget.
+  3. **URL-Schutz (`core/middleware.py`):** `ModulAktivMiddleware` prüft `resolver_match` und blockt inaktive Module mit HTTP 404.
+  4. **Dynamische Navigation (`core/context_processors.py`):** Inaktive Menüpunkte und Sektionen werden ausgeblendet; Badges inaktiver Module werden gar nicht erst abgefragt. `module_settings` global im Template-Kontext verfügbar.
+  5. **Admin & AuditLog (`core/admin.py`):** `ModuleSettingsAdmin` für den Vorstand/Superadmin im Django-Admin; jede Einstellungsänderung wird im `AuditLog` protokolliert.
+  6. **UI- & Suchintegration:** Dashboard (`core/templates/core/dashboard*.html`), Vereinsseite und globale Suche (`core/views.py:suche`) berücksichtigen inaktive Module dynamisch.
+  7. **Finanzintegrität:** Beitragszahlungen schreiben bei `kassenbuch_aktiv=False` im Hintergrund weiterhin unverändert den revisionssicheren `CashEntry` (ADR-005, ADR-006).
+- **Beleg:** `pytest core/tests/test_module_toggles.py` sichert Singleton-Garantie, Admin-Berechtigungen (Negativtest für Nicht-Admin), Navigation, 404-URL-Sperren, Suchausblendung und Finanzintegrität ab.
+
+
+### T24b: Monitoring mit Uptime Kuma (2026-10-11)
+
+- **Problem & Kontext:** Für den Ausfallsicherheits- und Beobachtbarkeitsnachweis (PRD N2.8 / ADR-009) muss die Erreichbarkeit der Anwendung und das verlässliche Durchlaufen des täglichen verschlüsselten Datenbank-Backups lückenlos überwacht werden, ohne dass personenbezogene Daten nach außen dringen.
+- **Umsetzung (gemäß ADR-009 / PRD N2.8):**
+  1. **Container (`docker-compose.prod.yml`):** Service `uptime-kuma` (`louislam/uptime-kuma:1-alpine`) mit persistentem Volume `kuma_data:/app/data` hinzugefügt. Portbindung auf `127.0.0.1:3001:3001` beschränkt (Negativkriterium: kein offener Port nach außen ohne SSH-Tunnel/Login).
+  2. **Backup-Push-Monitor (`tools/backup.sh`):** Push-Ping-Logik integriert (`$KUMA_PUSH_URL`). Nach jedem fehlerfreien, verschlüsselten Dump wird Uptime Kuma angepingt. Fehler beim Ping fangen graceful ab (`|| true`), damit das Backup niemals wegen eines Monitoring-Fehlers scheitert.
+  3. **Konfiguration (`.env.prod.example`):** Variable `KUMA_PUSH_URL` für den Push-Endpunkt dokumentiert und in Compose an den Backup-Dienst durchgereicht.
+  4. **Dokumentation (`docs/deployment.md`):** Abschnitt 7 vollständig überarbeitet mit Anleitungen für den sicheren Zugriff (SSH-Tunnel), HTTP-Healthcheck-Monitor (`http://app:8000/health/`), Backup-Push-Monitor, SMTP-Alarmierung und manueller Ausfallsimulation.
+  5. **Automatisierte Absicherung (`config/tests/test_deployment.py`):** Tests für Compose-Services, Volumes, Port-Restriktion auf `127.0.0.1`, `KUMA_PUSH_URL`-Präsenz und Push-Logik in `tools/backup.sh`.
+- **Beleg:** `pytest config/tests/test_deployment.py` → 12 passed in 0.78s; Gesamttestlauf `docker compose exec app pytest` → **481 passed, 213 subtests passed** in 43.67s (100% grün). `docker compose -f docker-compose.prod.yml config` syntaktisch valide.
 
 ---
 
 ## Nächste Schritte
 
-1. [T24b](plan.md) Monitoring mit Uptime Kuma (v1.1)
-2. **Pilotbetrieb & Abnahme** durch den Testverein mit den erstellten Mustern (`docs/einfuehrung_testverein.md`, `docs/abnahme.md`)
-
-**Danach (v1.1):** T18 · T22 · T24b
+1. **Pilotbetrieb & Abnahme** durch den Testverein mit den erstellten Mustern (`docs/einfuehrung_testverein.md`, `docs/abnahme.md`)
+2. Ersteinrichtung der echten Beitragssätze und Schlüssel vor Go-Live (`docs/ersteinrichtung.md`)
 
 ---
 

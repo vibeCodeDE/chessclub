@@ -47,8 +47,12 @@ nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
 
     <nav class="main-nav" id="hauptnavigation" data-public-nav aria-label="Hauptnavigation">
       <a class="nav-link{% if url_name == 'home' %} active{% endif %}" href="{% url 'core:home' %}"{% if url_name == 'home' %} aria-current="page"{% endif %}>Startseite</a>
+      {% if module_settings.nachrichten_aktiv %}
       <a class="nav-link{% if url_name == 'news_archiv' or url_name == 'news_detail' %} active{% endif %}" href="{% url 'core:news_archiv' %}"{% if url_name == 'news_archiv' or url_name == 'news_detail' %} aria-current="page"{% endif %}>Aktuelles</a>
+      {% endif %}
+      {% if module_settings.turniere_aktiv %}
       <a class="nav-link{% if url_name == 'public_list' or url_name == 'public_detail' %} active{% endif %}" href="{% url 'tournaments:public_list' %}"{% if url_name == 'public_list' or url_name == 'public_detail' %} aria-current="page"{% endif %}>Turniere</a>
+      {% endif %}
       <a class="nav-link{% if url_name == 'verein' %} active{% endif %}" href="{% url 'core:verein' %}"{% if url_name == 'verein' %} aria-current="page"{% endif %}>Der Verein</a>
       {% if user.is_authenticated %}
         <a class="nav-link" href="{% url 'core:dashboard' %}">Dashboard</a>

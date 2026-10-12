@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditLog, TwoFactorDevice
+from .models import AuditLog, ModuleSettings, TwoFactorDevice
 
 
 @admin.register(AuditLog)
@@ -64,3 +64,32 @@ class TwoFactorDeviceAdmin(admin.ModelAdmin):
     list_display = ("user", "bestaetigt", "erstellt_am", "letzte_nutzung")
     search_fields = ("user__username",)
     readonly_fields = ("secret", "erstellt_am", "letzte_nutzung")
+
+
+@admin.register(ModuleSettings)
+class ModuleSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "__str__",
+        "spielbetrieb_aktiv",
+        "turniere_aktiv",
+        "kassenbuch_aktiv",
+        "nachrichten_aktiv",
+    )
+
+    def has_add_permission(self, request):
+        return not ModuleSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if change and form.changed_data:
+            geaendert = ", ".join(
+                f"{f}: {form.cleaned_data.get(f)}" for f in form.changed_data
+            )
+            AuditLog.objects.create(
+                benutzer=request.user,
+                aktion="Modul-Einstellungen geändert",
+                text=f"Geänderte Module: {geaendert}",
+            )

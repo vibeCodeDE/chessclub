@@ -74,20 +74,29 @@ class DeploymentConfigurationTests(SimpleTestCase):
         self.assertIn("app:", compose_text)
         self.assertIn("caddy:", compose_text)
         self.assertIn("backup:", compose_text)
+        self.assertIn("uptime-kuma:", compose_text)
 
         # Caddy TLS & Ports
         self.assertIn('"80:80"', compose_text)
         self.assertIn('"443:443"', compose_text)
         self.assertIn("caddy:2-alpine", compose_text)
 
+        # Uptime Kuma Port & Image (PRD N2.8: von aussen nicht ohne Weiteres erreichbar)
+        self.assertIn('"127.0.0.1:3001:3001"', compose_text)
+        self.assertNotIn('"3001:3001"', compose_text)
+        self.assertNotIn('"0.0.0.0:3001"', compose_text)
+        self.assertIn("louislam/uptime-kuma", compose_text)
+
         # Volumes
         self.assertIn("caddy_data:", compose_text)
         self.assertIn("caddy_config:", compose_text)
         self.assertIn("static_files:", compose_text)
         self.assertIn("db_data:", compose_text)
+        self.assertIn("kuma_data:", compose_text)
 
-        # Backup Skriptbindung
+        # Backup Skriptbindung & Monitoring
         self.assertIn("/tools/backup.sh", compose_text)
+        self.assertIn("KUMA_PUSH_URL", compose_text)
 
     def test_caddyfile_configuration(self):
         """Caddyfile leitet auf app:8000 weiter, liefert statische Dateien aus und setzt Security-Header."""
@@ -114,9 +123,10 @@ class DeploymentConfigurationTests(SimpleTestCase):
         self.assertIn("POSTGRES_USER=", env_example)
         self.assertIn("POSTGRES_PASSWORD=", env_example)
         self.assertIn("EMAIL_BACKEND=", env_example)
+        self.assertIn("KUMA_PUSH_URL=", env_example)
 
     def test_deployment_doc_requirements(self):
-        """docs/deployment.md nennt EU/DE Hoststandort, Caddy, Restore-Protokoll und Updatepfad."""
+        """docs/deployment.md nennt EU/DE Hoststandort, Caddy, Restore-Protokoll, Updatepfad und Uptime Kuma Monitoring."""
         doc = (WURZEL / "docs/deployment.md").read_text(encoding="utf-8")
 
         self.assertIn("DE/EU", doc)
@@ -127,6 +137,18 @@ class DeploymentConfigurationTests(SimpleTestCase):
         self.assertIn("Restore-Test-Protokoll", doc)
         self.assertIn("schachverein_2026-10-01", doc)
         self.assertIn("git pull", doc)
+        self.assertIn("Uptime Kuma", doc)
+        self.assertIn("Push-Monitor", doc)
+        self.assertIn("KUMA_PUSH_URL", doc)
+        self.assertIn("127.0.0.1:3001", doc)
+
+    def test_backup_script_contains_push_monitor_logic(self):
+        """tools/backup.sh enthält die Push-Ping-Logik für Uptime Kuma (PRD N2.8 / T24b)."""
+        backup_sh = (WURZEL / "tools/backup.sh").read_text(encoding="utf-8")
+        self.assertIn("KUMA_PUSH_URL", backup_sh)
+        self.assertIn("Melde erfolgreiches Backup an Uptime Kuma", backup_sh)
+        # Negativfall: Fehler beim Ping darf Backup nicht abbrechen
+        self.assertIn("|| echo", backup_sh)
 
 
 class EncryptedBackupRestoreTests(SimpleTestCase):

@@ -26,9 +26,8 @@ def _darf_aufstellen(request, match):
     if rolle == ADMIN_GROUP:
         return True
     if rolle == KAPITAEN_GROUP:
-        return match.team.kapitaen_id == getattr(
-            Member.objects.filter(user=request.user).first(), "pk", None
-        ) or match.team.kapitaen_id is None
+        member = Member.objects.filter(user=request.user).first()
+        return bool(member and match.team.kapitaen_id == member.pk)
     return False
 
 
@@ -50,7 +49,7 @@ def team_list(request):
     return render(request, "teams/team_list.html", kontext)
 
 
-@role_required(*TEAM_ROLES)
+@role_required(ADMIN_GROUP)
 def team_create(request):
     if request.method == "POST":
         form = TeamForm(request.POST)
@@ -67,7 +66,7 @@ def team_create(request):
     return render(request, "teams/team_form.html", {"form": form, "team": None})
 
 
-@role_required(*TEAM_ROLES)
+@role_required(ADMIN_GROUP)
 def team_update(request, pk):
     team = get_object_or_404(Team, pk=pk)
     if request.method == "POST":
@@ -144,7 +143,7 @@ def match_list(request):
     return render(request, "teams/match_list.html", kontext)
 
 
-@role_required(*TEAM_ROLES)
+@role_required(ADMIN_GROUP)
 def match_create(request):
     if request.method == "POST":
         form = MatchForm(request.POST)
@@ -159,7 +158,7 @@ def match_create(request):
     return render(request, "teams/match_form.html", {"form": form, "match": None})
 
 
-@role_required(*TEAM_ROLES)
+@role_required(ADMIN_GROUP)
 def match_update(request, pk):
     match = get_object_or_404(LeagueMatch, pk=pk)
     if request.method == "POST":

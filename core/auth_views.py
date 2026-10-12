@@ -10,10 +10,12 @@ from django.views.decorators.http import require_POST
 
 from core.models import TwoFactorDevice
 from core.roles import ADMIN_GROUP
-from core.twofa import code_pruefen, neues_secret, otpauth_uri
+from core.twofa import code_pruefen, code_pruefen_schritt, neues_secret, otpauth_uri
 
 SESSION_SCHLUESSEL = "_2fa_user_id"
 SESSION_SECRET = "_2fa_secret"
+SESSION_FEHLSCHLAEGE = "_2fa_fehlschlaege"
+MAX_FEHLSCHLAEGE = 5
 
 
 def zwei_faktor_pflicht():
@@ -47,6 +49,7 @@ def anmelden(request):
                 user, "backend", "django.contrib.auth.backends.ModelBackend"
             )
             request.session["_2fa_next"] = ziel
+            request.session[SESSION_FEHLSCHLAEGE] = 0
             return redirect("core:zwei_faktor")
         login(request, user)
         return redirect(ziel or "core:dashboard")
@@ -66,26 +69,72 @@ def zwei_faktor(request):
         return redirect("core:login")
 
     device = TwoFactorDevice.objects.filter(user=user).first()
-    fehler = None
+    fehler = False
+    form_fehler = None
 
     if request.method == "POST":
+        fehlschlaege = request.session.get(SESSION_FEHLSCHLAEGE, 0)
+        if fehlschlaege >= MAX_FEHLSCHLAEGE:
+            request.session.pop(SESSION_SCHLUESSEL, None)
+            request.session.pop(SESSION_SECRET, None)
+            request.session.pop(SESSION_FEHLSCHLAEGE, None)
+            messages.error(request, "Zu viele fehlgeschlagene 2FA-Versuche. Bitte erneut anmelden.")
+            return redirect("core:login")
+
+        from django.utils import timezone
+        code_input = request.POST.get("code", "")
+
         if device is None:
             secret = request.session.get(SESSION_SECRET) or neues_secret()
             request.session[SESSION_SECRET] = secret
-            if code_pruefen(secret, request.POST.get("code", "")):
-                device = TwoFactorDevice.objects.create(user=user, secret=secret, bestaetigt=True)
+            schritt = code_pruefen_schritt(secret, code_input)
+            if schritt is not None:
+                device = TwoFactorDevice.objects.create(
+                    user=user,
+                    secret=secret,
+                    bestaetigt=True,
+                    letzte_nutzung=timezone.now(),
+                    letzter_zeitschritt=schritt,
+                )
                 request.session.pop(SESSION_SECRET, None)
             else:
-                fehler = "Der Code stimmt nicht. Bitte den aktuellen Code aus der App eingeben."
-        elif code_pruefen(device.secret, request.POST.get("code", "")):
-            from django.utils import timezone
-
-            device.letzte_nutzung = timezone.now()
-            device.save(update_fields=["letzte_nutzung"])
+                fehler = True
         else:
-            fehler = "Der Code stimmt nicht. Bitte den aktuellen Code aus der App eingeben."
+            schritt = code_pruefen_schritt(
+                device.secret, code_input, letzter_zeitschritt=device.letzter_zeitschritt
+            )
+            if schritt is not None:
+                device.letzte_nutzung = timezone.now()
+                device.letzter_zeitschritt = schritt
+                device.save(update_fields=["letzte_nutzung", "letzter_zeitschritt"])
+            else:
+                fehler = True
 
-        if fehler is None:
+        if fehler:
+            fehlschlaege += 1
+            request.session[SESSION_FEHLSCHLAEGE] = fehlschlaege
+            from django.contrib.auth.signals import user_login_failed
+            user_login_failed.send(
+                sender=user.__class__,
+                credentials={"username": user.get_username()},
+                request=request,
+            )
+            verbleibend = MAX_FEHLSCHLAEGE - fehlschlaege
+            if verbleibend <= 0:
+                request.session.pop(SESSION_SCHLUESSEL, None)
+                request.session.pop(SESSION_SECRET, None)
+                request.session.pop(SESSION_FEHLSCHLAEGE, None)
+                messages.error(
+                    request,
+                    "Zu viele fehlgeschlagene 2FA-Versuche. Der Zugang wurde gesperrt. Bitte erneut anmelden.",
+                )
+                return redirect("core:login")
+            form_fehler = (
+                f"Der Code stimmt nicht (noch {verbleibend} Versuch{'e' if verbleibend != 1 else ''}). "
+                "Bitte den aktuellen Code aus der App eingeben."
+            )
+        else:
+            request.session.pop(SESSION_FEHLSCHLAEGE, None)
             backend = request.session.pop(
                 "_2fa_backend", "django.contrib.auth.backends.ModelBackend"
             ) or "django.contrib.auth.backends.ModelBackend"
@@ -105,7 +154,7 @@ def zwei_faktor(request):
         request,
         "registration/zwei_faktor.html",
         {
-            "form_fehler": fehler,
+            "form_fehler": form_fehler,
             "braucht_einrichtung": device is None,
             "secret": secret,
             "uri": otpauth_uri(secret, user.get_username()),

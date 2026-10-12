@@ -19,6 +19,7 @@ from core import produkt
 from core.dsgvo import datenauskunft, verarbeitungstaetigkeiten
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_of, role_required
+from core.services import is_module_active
 from dues.models import MembershipFee, Payment, jahres_uebersicht
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, Team
@@ -135,23 +136,39 @@ def health(request):
 def home(request):
     """Öffentliche Startseite: News, Termine, Beitrittsinfo (PRD §2)."""
     heute = timezone.localdate()
-    news = NewsPost.objects.filter(veroeffentlicht=True)[:6]
+    has_comms = is_module_active("comms", request)
+    has_tournaments = is_module_active("tournaments", request)
+    has_teams = is_module_active("teams", request)
+
+    news = NewsPost.objects.filter(veroeffentlicht=True)[:6] if has_comms else []
     turniere = (
-        Tournament.objects.filter(oeffentlich=True, datum__gte=heute)
-        .order_by("datum")[:5]
+        list(Tournament.objects.filter(oeffentlich=True, datum__gte=heute).order_by("datum")[:5])
+        if has_tournaments
+        else []
     )
     spiele = (
-        LeagueMatch.objects.filter(datum__gte=heute, status__in=["geplant", "aufgestellt"])
-        .select_related("team")
-        .order_by("datum")[:5]
+        list(
+            LeagueMatch.objects.filter(datum__gte=heute, status__in=["geplant", "aufgestellt"])
+            .select_related("team")
+            .order_by("datum")[:5]
+        )
+        if has_teams
+        else []
     )
     letzte_spiele = (
-        LeagueMatch.objects.filter(datum__lt=heute, status="gespielt")
-        .select_related("team")
-        .order_by("-datum", "-uhrzeit")[:3]
+        list(
+            LeagueMatch.objects.filter(datum__lt=heute, status="gespielt")
+            .select_related("team")
+            .order_by("-datum", "-uhrzeit")[:3]
+        )
+        if has_teams
+        else []
     )
-    from teams.models import LeagueCalendarFeed
-    feed_token = LeagueCalendarFeed.get_token()
+    feed_token = None
+    if has_teams:
+        from teams.models import LeagueCalendarFeed
+
+        feed_token = LeagueCalendarFeed.get_token()
 
     kontext = {
         "news": news,
@@ -160,14 +177,22 @@ def home(request):
         "letzte_spiele": letzte_spiele,
         "ical_token": feed_token,
         "mitglieder_aktiv": Member.objects.filter(status=Member.Status.AKTIV).count(),
-        "mannschaften": Team.objects.filter(aktiv=True).count(),
+        "mannschaften": Team.objects.filter(aktiv=True).count() if has_teams else 0,
         "naechstes_turnier": turniere[0] if turniere else None,
         # Zähler für die Übersichtsleiste: alle anstehenden Termine, nicht nur
         # die auf der Seite gezeigten fünf.
-        "turniere_anzahl": Tournament.objects.filter(oeffentlich=True, datum__gte=heute).count(),
-        "spiele_anzahl": LeagueMatch.objects.filter(
-            datum__gte=heute, status__in=["geplant", "aufgestellt"]
-        ).count(),
+        "turniere_anzahl": (
+            Tournament.objects.filter(oeffentlich=True, datum__gte=heute).count()
+            if has_tournaments
+            else 0
+        ),
+        "spiele_anzahl": (
+            LeagueMatch.objects.filter(
+                datum__gte=heute, status__in=["geplant", "aufgestellt"]
+            ).count()
+            if has_teams
+            else 0
+        ),
         "jahre_tradition": _jahre_seit_gruendung(heute),
     }
     return render(request, "core/home.html", kontext)
@@ -185,32 +210,41 @@ def _jahre_seit_gruendung(heute):
 def verein(request):
     """Öffentliche Vereinsseite: Selbstverständnis, Zeiten, Spielplan (PRD S2.2)."""
     heute = timezone.localdate()
-    spiele = (
-        LeagueMatch.objects.filter(datum__gte=heute)
-        .select_related("team")
-        .order_by("datum", "uhrzeit")[:8]
-    )
-    letzte_spiele = (
-        LeagueMatch.objects.filter(datum__lt=heute, status="gespielt")
-        .select_related("team")
-        .order_by("-datum", "-uhrzeit")[:4]
-    )
-    mannschaften = (
-        Team.objects.filter(aktiv=True)
-        .select_related("kapitaen")
-        .prefetch_related("matches")
-    )
-
-    from teams.services import tabelle
+    has_teams = is_module_active("teams", request)
+    spiele = []
+    letzte_spiele = []
+    mannschaften = []
     ligen_tabellen = {}
-    for team in mannschaften:
-        if team.liga and team.liga not in ligen_tabellen:
-            tab = tabelle(team.liga)
-            if tab:
-                ligen_tabellen[team.liga] = tab
+    feed_token = None
 
-    from teams.models import LeagueCalendarFeed
-    feed_token = LeagueCalendarFeed.get_token()
+    if has_teams:
+        spiele = (
+            LeagueMatch.objects.filter(datum__gte=heute)
+            .select_related("team")
+            .order_by("datum", "uhrzeit")[:8]
+        )
+        letzte_spiele = (
+            LeagueMatch.objects.filter(datum__lt=heute, status="gespielt")
+            .select_related("team")
+            .order_by("-datum", "-uhrzeit")[:4]
+        )
+        mannschaften = (
+            Team.objects.filter(aktiv=True)
+            .select_related("kapitaen")
+            .prefetch_related("matches")
+        )
+
+        from teams.services import tabelle
+
+        for team in mannschaften:
+            if team.liga and team.liga not in ligen_tabellen:
+                tab = tabelle(team.liga)
+                if tab:
+                    ligen_tabellen[team.liga] = tab
+
+        from teams.models import LeagueCalendarFeed
+
+        feed_token = LeagueCalendarFeed.get_token()
 
     kontext = {
         "spiele": spiele,
@@ -304,12 +338,24 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
     # PRD §3.8: Beiträge, Zahlungen, Mahnungen, Kassenbuch, Mitgliederliste und
     # Audit-Log sind Vorstandssache. Für den Kapitän werden diese Daten gar
     # erst nicht geladen – ein ausgeblendetes Kachel-Label ist kein Schutz.
+    has_teams = is_module_active("teams", request)
+    has_tournaments = is_module_active("tournaments", request)
+    has_cashbook = is_module_active("cashbook", request)
+
     kommende_spiele = (
-        LeagueMatch.objects.filter(datum__gte=heute)
-        .select_related("team")
-        .order_by("datum", "uhrzeit")[:5]
+        list(
+            LeagueMatch.objects.filter(datum__gte=heute)
+            .select_related("team")
+            .order_by("datum", "uhrzeit")[:5]
+        )
+        if has_teams
+        else []
     )
-    kommende_turniere = Tournament.objects.filter(datum__gte=heute).order_by("datum")[:4]
+    kommende_turniere = (
+        list(Tournament.objects.filter(datum__gte=heute).order_by("datum")[:4])
+        if has_tournaments
+        else []
+    )
 
     verfuegbare_jahre = sorted(
         set(MembershipFee.objects.values_list("jahr", flat=True)) | {heute.year},
@@ -326,10 +372,14 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
     }
 
     if rolle != ADMIN_GROUP:
-        kontext["eigene_mannschaften"] = Team.objects.filter(
-            kapitaen__user=request.user, aktiv=True
-        ).select_related("kapitaen")
-        kontext["offene_aufgaben"] = _kapitaen_aufgaben(request.user, heute)
+        kontext["eigene_mannschaften"] = (
+            Team.objects.filter(kapitaen__user=request.user, aktiv=True).select_related("kapitaen")
+            if has_teams
+            else []
+        )
+        kontext["offene_aufgaben"] = (
+            _kapitaen_aufgaben(request.user, heute) if has_teams else []
+        )
         return render(request, "core/dashboard.html", kontext)
 
     uebersicht = jahres_uebersicht(jahr)
@@ -345,7 +395,7 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
     offene_wuensche = ChangeRequest.objects.filter(
         status=ChangeRequest.Status.EINGEREICHT
     ).select_related("member")[:5]
-    kasse = jahresabschluss(jahr)
+    kasse = jahresabschluss(jahr) if has_cashbook else None
     neue_mitglieder = Member.objects.filter(
         eintrittsdatum__gte=heute - timedelta(days=180)
     ).order_by("-eintrittsdatum")[:5]
@@ -412,6 +462,10 @@ def _kapitaen_aufgaben(benutzer, heute):
 
 
 def _dashboard_mitglied(request, heute):
+    has_teams = is_module_active("teams", request)
+    has_tournaments = is_module_active("tournaments", request)
+    has_comms = is_module_active("comms", request)
+
     member = Member.objects.filter(user=request.user).first()
     posten = []
     if member:
@@ -425,14 +479,26 @@ def _dashboard_mitglied(request, heute):
         "posten": posten,
         "offen": [fee for fee in posten if fee.ist_offen],
         "wuensche": member.change_requests.all()[:5] if member else [],
-        "news": NewsPost.objects.filter(veroeffentlicht=True)[:4],
-        "kommende_spiele": LeagueMatch.objects.filter(datum__gte=heute)
-        .select_related("team")
-        .order_by("datum")[:4],
-        "kommende_turniere": Tournament.objects.filter(datum__gte=heute, oeffentlich=True)[:4],
-        "meine_aufstellungen": member.lineups.select_related("match", "match__team")[:5]
-        if member
-        else [],
+        "news": NewsPost.objects.filter(veroeffentlicht=True)[:4] if has_comms else [],
+        "kommende_spiele": (
+            list(
+                LeagueMatch.objects.filter(datum__gte=heute)
+                .select_related("team")
+                .order_by("datum")[:4]
+            )
+            if has_teams
+            else []
+        ),
+        "kommende_turniere": (
+            list(Tournament.objects.filter(datum__gte=heute, oeffentlich=True)[:4])
+            if has_tournaments
+            else []
+        ),
+        "meine_aufstellungen": (
+            list(member.lineups.select_related("match", "match__team")[:5])
+            if (member and has_teams)
+            else []
+        ),
     }
     return render(request, "core/dashboard_mitglied.html", kontext)
 
@@ -476,15 +542,32 @@ def audit_list(request):
 def suche(request):
     """Globale Suche über Mitglieder, Turniere und News."""
     begriff = request.GET.get("q", "").strip()
+    rolle = role_of(request.user)
     ergebnisse = {"mitglieder": [], "turniere": [], "news": []}
     if begriff:
-        ergebnisse["mitglieder"] = Member.objects.filter(
-            Q(vorname__icontains=begriff) | Q(nachname__icontains=begriff) | Q(email__icontains=begriff)
-        )[:10]
-        ergebnisse["turniere"] = Tournament.objects.filter(name__icontains=begriff)[:10]
-        ergebnisse["news"] = NewsPost.objects.filter(titel__icontains=begriff)[:10]
+        # Berechtigungsmatrix §3.8: Mitgliederliste (alle) ist Vorstandssache
+        if rolle == ADMIN_GROUP:
+            ergebnisse["mitglieder"] = Member.objects.filter(
+                Q(vorname__icontains=begriff) | Q(nachname__icontains=begriff) | Q(email__icontains=begriff)
+            )[:10]
+        # Turniere: Nicht-Admins sehen nur öffentliche Turniere
+        if is_module_active("tournaments", request):
+            turnier_qs = (
+                Tournament.objects.all()
+                if rolle == ADMIN_GROUP
+                else Tournament.objects.filter(oeffentlich=True)
+            )
+            ergebnisse["turniere"] = turnier_qs.filter(name__icontains=begriff)[:10]
+        # News: Nicht-Admins sehen nur veröffentlichte News
+        if is_module_active("comms", request):
+            news_qs = (
+                NewsPost.objects.all()
+                if rolle == ADMIN_GROUP
+                else NewsPost.objects.filter(veroeffentlicht=True)
+            )
+            ergebnisse["news"] = news_qs.filter(titel__icontains=begriff)[:10]
     return render(
         request,
         "core/suche.html",
-        {"begriff": begriff, "ergebnisse": ergebnisse, "treffer": sum(len(v) for v in ergebnisse.values())},
+        {"begriff": begriff, "ergebnisse": ergebnisse, "treffer": sum(len(v) for v in ergebnisse.values()), "user_role": rolle},
     )

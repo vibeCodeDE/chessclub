@@ -155,7 +155,26 @@ def verarbeitungstaetigkeiten():
 @transaction.atomic
 def anonymisiere_member(member, *, benutzer=None):
     """Entfernt Kontaktdaten, behält Finanz- und Spielhistorie (PRD N1.3)."""
-    vorher = f"{member.vorname} {member.nachname}"
+    # 1. Verknüpften User-Account deaktivieren und bereinigen
+    alt_user = member.user
+    if alt_user:
+        alt_user.is_active = False
+        alt_user.email = ""
+        alt_user.first_name = ""
+        alt_user.last_name = ""
+        alt_user.set_unusable_password()
+        alt_user.save()
+
+    # 2. SEPA-Mandat anonymisieren und widerrufen
+    mandat = SepaMandate.objects.filter(member=member).first()
+    if mandat:
+        mandat.kontoinhaber = "Anonymisiert"
+        mandat.status = SepaMandate.Status.WIDERRUFEN
+        mandat.widerrufen_am = mandat.widerrufen_am or timezone.localdate()
+        mandat.save()
+
+    # 3. Mitglied anonymisieren (Signale werden durch _is_anonymizing unterdrückt)
+    member._is_anonymizing = True
     member.vorname = ANONYMISIERT_VORNAME
     member.nachname = ANONYMISIERT_NACHNAME
     member.geburtsdatum = None
@@ -168,13 +187,23 @@ def anonymisiere_member(member, *, benutzer=None):
     member.user = None
     member.anonymisiert_am = timezone.now()
     member.save()
+
+    # 4. Offene Änderungswünsche bereinigen
     ChangeRequest.objects.filter(member=member).update(
         wunschwert="", kommentar="", status=ChangeRequest.Status.ABGELEHNT
     )
+
+    # 5. Historische personenbezogene Werte im AuditLog maskieren
+    AuditLog.objects.filter(
+        member=member,
+        feld__in=["vorname", "nachname", "geburtsdatum", "strasse", "plz", "ort", "email", "telefon"],
+    ).update(alt_wert="[anonymisiert]", neu_wert="[anonymisiert]")
+
+    # 6. Abschluss-Protokoll ohne Klarnamen
     AuditLog.objects.create(
         benutzer=benutzer,
         aktion="Mitglied anonymisiert",
-        text=f"Kontaktdaten von „{vorher}“ (ID {member.pk}) nach Ablauf der Frist entfernt.",
+        text=f"Kontaktdaten von Mitglied ID {member.pk} nach Ablauf der Frist entfernt.",
         member=member,
     )
     return member

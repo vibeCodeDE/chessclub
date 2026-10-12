@@ -13,6 +13,7 @@ POSTGRES_USER="${POSTGRES_USER:-schachverein}"
 POSTGRES_DB="${POSTGRES_DB:-schachverein}"
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+KUMA_PUSH_URL="${KUMA_PUSH_URL:-}"
 
 # 1. Pflichtprüfung: Schlüssel vorhanden? (PRD N2.1)
 if [ -z "${BACKUP_ENCRYPTION_KEY:-}" ]; then
@@ -55,5 +56,15 @@ fi
 echo "Bereinige Backups älter als ${BACKUP_RETENTION_DAYS} Tage in ${BACKUP_DIR}..."
 find "$BACKUP_DIR" -name 'schachverein_*.sql.gz.enc' -type f -mtime "+$BACKUP_RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name 'schachverein_*.sql.gz' -type f -mtime "+$BACKUP_RETENTION_DAYS" -delete
+
+# 5. Monitoring Push-Ping (PRD N2.8 / T24b)
+if [ -n "$KUMA_PUSH_URL" ]; then
+    echo "Melde erfolgreiches Backup an Uptime Kuma..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsS -m 10 "$KUMA_PUSH_URL" >/dev/null 2>&1 || echo "WARNUNG: Push-Ping an Uptime Kuma fehlgeschlagen." >&2
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -O /dev/null -T 10 "$KUMA_PUSH_URL" || echo "WARNUNG: Push-Ping an Uptime Kuma fehlgeschlagen." >&2
+    fi
+fi
 
 echo "Backup-Lauf abgeschlossen."

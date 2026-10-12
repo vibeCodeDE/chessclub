@@ -44,19 +44,35 @@ def code_erzeugen(secret, *, zeitpunkt=None, schritt=None):
     return str(roh % (10**STELLEN)).zfill(STELLEN)
 
 
-def code_pruefen(secret, code):
-    """Prüft einen vom Nutzer eingegebenen Code (Toleranz ±1 Zeitfenster)."""
+def code_pruefen_schritt(secret, code, *, letzter_zeitschritt=None):
+    """Prüft einen vom Nutzer eingegebenen Code (Toleranz ±1 Zeitfenster).
+
+    Gibt bei Erfolg den gültigen Zeitschritt (int) zurück, sonst None.
+    Replay-Schutz: Wurde der Code bereits im selben oder einem früheren
+    Zeitschritt eingelöst (<= letzter_zeitschritt), wird er abgewiesen.
+    """
     if not code:
-        return False
+        return None
     code = "".join(zeichen for zeichen in str(code) if zeichen.isdigit())
     if len(code) != STELLEN:
-        return False
+        return None
     jetzt = time.time()
     zaehler = int(jetzt // SCHRITT_SEKUNDEN)
     for abweichung in range(-FENSTER, FENSTER + 1):
-        if hmac.compare_digest(code_erzeugen(secret, schritt=SCHRITT_SEKUNDEN, zeitpunkt=(zaehler + abweichung) * SCHRITT_SEKUNDEN), code):
-            return True
-    return False
+        kandidat_schritt = zaehler + abweichung
+        if letzter_zeitschritt is not None and kandidat_schritt <= letzter_zeitschritt:
+            continue
+        if hmac.compare_digest(
+            code_erzeugen(secret, schritt=SCHRITT_SEKUNDEN, zeitpunkt=kandidat_schritt * SCHRITT_SEKUNDEN),
+            code,
+        ):
+            return kandidat_schritt
+    return None
+
+
+def code_pruefen(secret, code, *, letzter_zeitschritt=None):
+    """Prüft einen vom Nutzer eingegebenen Code (Toleranz ±1 Zeitfenster)."""
+    return code_pruefen_schritt(secret, code, letzter_zeitschritt=letzter_zeitschritt) is not None
 
 
 def otpauth_uri(secret, konto, aussteller=None):

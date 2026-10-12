@@ -153,11 +153,55 @@ docker compose -f docker-compose.prod.yml exec app python manage.py check
 
 ---
 
-## 7. Monitoring & Fehlerbenachrichtigung (PRD N2.5, N2.8)
+## 7. Monitoring & Fehlerbenachrichtigung (PRD N2.5, N2.8 / ADR-009 / T24b)
 
-* `GET /health/` liefert `{"status": "ok"}` – für HTTP-Healthchecks durch Uptime Kuma / Monitoring.
-* Fehler ab Stufe `ERROR` werden automatisch per E-Mail an `DJANGO_ADMINS` gesendet (`LOGGING` in `config/settings.py`).
-* Logs im Betrieb: `docker compose -f docker-compose.prod.yml logs -f app caddy backup`.
+In `docker-compose.prod.yml` ist **Uptime Kuma** (`louislam/uptime-kuma:1-alpine`) als leichtgewichtiger Monitoring-Dienst integriert.
+
+### 7.1 Zugriff & Sicherheit (PRD N2.8)
+* **Port-Bindung:** Uptime Kuma lauscht auf `127.0.0.1:3001:3001` und ist damit von außen **nicht** ohne Weiteres erreichbar.
+* **Admin-Zugriff:** Der Zugriff erfolgt über einen sicheren SSH-Port-Forwarding-Tunnel:
+  ```bash
+  ssh -L 3001:127.0.0.1:3001 user@vereinsserver
+  ```
+  Im Browser `http://localhost:3001` aufrufen. Beim ersten Start erzwingt Uptime Kuma die Erstellung eines Admin-Benutzers mit starkem Passwort.
+* **Datenschutz (DSGVO):** Uptime Kuma speichert keine personenbezogenen Mitglieder- oder Vereinsdaten. Sämtliche Alarm-Mails enthalten ausschließlich technische Dienstnamen, Status und Zeitstempel.
+
+### 7.2 Konfiguration der Monitore
+1. **HTTP-Monitor für die Web-App:**
+   * **Typ:** `HTTP(s)`
+   * **Name:** `Schachverein Portal`
+   * **URL:** `http://app:8000/health/`
+   * **Intervall:** 60 Sekunden (Timeout: 10 Sekunden)
+   * **Erwarteter Status:** HTTP 200 (Payload: `{"status": "ok"}`)
+
+2. **Push-Monitor für das nächtliche Backup:**
+   * **Typ:** `Push`
+   * **Name:** `Schachverein DB-Backup`
+   * **Intervall:** 86400 Sekunden (24 Stunden)
+   * **Wiederholungen / Grace Period:** 7200 Sekunden (2 Stunden Pufferzeit)
+   * **Push-URL:** Die von Uptime Kuma erzeugte URL (z. B. `http://uptime-kuma:3001/api/push/<TOKEN>?status=up&msg=OK`) in `.env.prod` als `KUMA_PUSH_URL` hinterlegen.
+   * `tools/backup.sh` sendet nach jedem fehlerfreien, verschlüsselten Dump automatisch einen Ping an diesen Endpunkt. Bleibt das Backup aus, löst Uptime Kuma Alarm aus.
+
+### 7.3 Benachrichtigungen & Fehler
+* **SMTP-Alarmierung:** In Uptime Kuma unter *Einstellungen → Benachrichtigungen* SMTP mit den Vereins-Mail-Zugangsdaten (aus `.env.prod`) einrichten.
+* **Django Error-Mailing:** Unbehandelte Serverfehler ab Stufe `ERROR` werden unabhängig von Uptime Kuma über das Django-Logging (`config/settings.py`) direkt per E-Mail an `DJANGO_ADMINS` gesendet.
+* **Logs im laufenden Betrieb:**
+  ```bash
+  docker compose -f docker-compose.prod.yml logs -f app caddy backup uptime-kuma
+  ```
+
+### 7.4 Manueller Ausfalltest (Acceptance Test)
+1. **App-Ausfall simulieren:**
+   ```bash
+   docker compose -f docker-compose.prod.yml stop app
+   ```
+   Innerhalb von ~60–90 Sekunden geht eine Alarm-Mail mit dem Betreff `[Down] Schachverein Portal` ein.
+2. **Wiederanlauf prüfen:**
+   ```bash
+   docker compose -f docker-compose.prod.yml start app
+   ```
+   Innerhalb von 60 Sekunden trifft die Entwarnung `[Up] Schachverein Portal` ein.
+3. **Backup-Monitor testen:** Bei Ausbleiben des täglichen Dumps alarmiert Uptime Kuma nach Ablauf der Karenzzeit.
 
 ---
 
@@ -170,3 +214,26 @@ docker compose -f docker-compose.prod.yml exec app python manage.py check
 | Datenauskunft (Ein-Klick PDF/JSON) | auf Anfrage | Mitgliedsseite → „Datenauskunft (DSGVO)“ |
 | Audit-Protokoll sichten | quartalsweise | `/audit/` |
 | Backup-Restore-Test | jährlich | Abschnitt 5 (Tabelle ergänzen) |
+
+---
+
+## 9. Alternative: Managed Deployment auf Scalingo (PaaS, EU)
+
+Für den Betrieb **ohne Linux-Server-Administration** ist das Projekt für die europäische Plattform **Scalingo** vorbereitet (Rechenzentrum in der EU, 100 % DSGVO-konform, kein US Cloud Act):
+
+### Bereitgestellte Dateien:
+* `Procfile`: Definiert den Webprozess (`gunicorn`) und führt bei jedem Release automatisch `python manage.py migrate --noinput` aus.
+* `runtime.txt`: Erzwingt Python 3.12.
+* `scalingo.json`: Ermöglicht 1-Klick-Bereitstellung mit automatischem `postgresql:postgresql-sandbox` Addon und Standard-Umgebungsvariablen.
+* `requirements.txt`: Beinhaltet `whitenoise` für effizientes Ausliefern statischer Dateien ohne separaten Webserver.
+
+### Inbetriebnahme in 3 Schritten:
+1. **App erstellen:** Auf [scalingo.com](https://scalingo.com) neue App mit Region *Europe (Paris / osc-fr1)* anlegen.
+2. **PostgreSQL Addon hinzufügen:** Unter *Addons* das Addon **Scalingo PostgreSQL** buchen (setzt automatisch `SCALINGO_POSTGRESQL_URL`).
+3. **Umgebungsvariablen setzen:**
+   * `DJANGO_SETTINGS_MODULE=config.production`
+   * `DJANGO_SECRET_KEY` (Zufallswert, mind. 50 Zeichen)
+   * `IBAN_FERNET_KEY` (mit `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`)
+   * `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` (+ SMTP-Zugangsdaten)
+4. **Git Push:** Repository mit Scalingo verknüpfen (`scalingo git-setup` oder GitHub-Integration) und `git push scalingo main` ausführen.
+

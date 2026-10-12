@@ -207,7 +207,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Verify:* **Integrationstest:** Backup → leere DB → Restore → Daten da + Integritäts-Abgleich; **Negativtest:** korruptes Backup bzw. fehlender Schlüssel wird mit klarem Fehler abgewiesen, statt stillschweigend einen leeren Datenbestand zu schreiben. · *Files:* `docker-compose.prod.yml`, `Caddyfile`, `tools/backup.sh`, `tools/restore.sh`, `docs/deployment.md`, `config/tests/test_deployment.py` · *Größe:* M · *PRD:* N2.1, N2.4, N1.1 · *Release:* v1 · *Deps:* T23
 
 
-- [ ] **T24b: Monitoring mit Uptime Kuma** *(v1.1)*
+- [x] **T24b: Monitoring mit Uptime Kuma** *(v1.1 — umgesetzt)*
   Monitoring-Container in `docker-compose.prod.yml`: Prüfung der Health-Check-Route, Push-Monitor für das nächtliche Backup, Alarm per E-Mail an die Admin-Adresse. Anleitung in `docs/deployment.md`, Abschnitt „Monitoring".
   *Acceptance:* Stoppt man den App-Container, kommt innerhalb des eingestellten Intervalls genau eine Alarm-Mail; bleibt die Backup-Meldung aus, kommt ebenfalls eine; nach Wiederanlauf folgt eine Entwarnung.
   *Verify:* Integrationstest per Compose-Config (`docker compose -f docker-compose.prod.yml config`) + dokumentierter manueller Ausfalltest — **Negativtest:** Der Monitor ist von außen nicht ohne Login erreichbar; Alarm-Mails enthalten keine Personendaten (nur Dienstname, Zeit). · *Files:* `docker-compose.prod.yml`, `docs/deployment.md` · *Größe:* S · *PRD:* N2.8 · *Release:* v1.1 · *Deps:* T24
@@ -273,14 +273,18 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   AuditLog-Protokollierung und UI-Übersicht `/mitglieder/dsb-sync/`.
   *Design:* [ADR-016](../docs/decisions/ADR-016-dsb-schnittstellen-architektur.md), reiner Fachservice `members.services.dsb_sync` ohne HTTP-Abhängigkeit.
   *Acceptance:* Verbandsdaten werden gecacht abgerufen; Drift-Erkennung identifiziert DWZ-Abweichungen, fehlende Verbands- und Vereinsmitglieder sowie Statusdiskrepanzen; DWZ-Werte lassen sich einzeln oder gesammelt übernehmen; AuditLog erfasst Abgleiche und Wertänderungen; Nicht-Admins werden abgewiesen.
-  *Verify:* `pytest members/tests/test_dsb_sync.py` — **Negativtest:** Fehlende Konfiguration wirft `DSBConfigError`; Netzwerk- und JSON-Fehler sauber abgefangen; Rollen „mitglied" und „kapitaen" erhalten 403; `assertNumQueries` prüft O(1)-Query-Budget. · *Files:* `members/models.py`, `members/services/dsb_sync.py`, `members/views.py`, `members/urls.py`, `members/templates/members/dsb_sync.html`, `members/tests/test_dsb_sync.py` · *Größe:* M · *PRD:* K3.6 · *Release:* v1.1 · *Deps:* T3, T5
+- [x] **T30: Modul-Toggles im Admin-Panel (UI- und Feature-Schalter)** *(v1.1)*
+  De-/Aktivierung optionaler Satellitenmodule (`teams`, `tournaments`, `cashbook`, `comms`) im Django Admin Panel über das Singleton-Modell `ModuleSettings` (ADR-019).
+  *Design:* [ADR-019](../docs/decisions/ADR-019-modul-toggles-im-admin-panel.md). Reines Singleton-Modell in `core/models.py`, Fachlogik in `core/services.py:is_module_active`, URL-Schutz mit 404 über `ModulAktivMiddleware`, dynamische Filterung in `core/context_processors.py`, Kacheln im Dashboard dynamisch, Finanzbuchungs-Integrität in `dues` bleibt im Hintergrund unangetastet, AuditLog-Erfassung bei Einstellungsänderung.
+  *Acceptance:* Superadmin/Vorstand kann Checkboxen im Admin (`/admin/core/modulesettings/`) ändern; inaktive Module verschwinden aus Navigation, Dashboard und Suche; direkte URL-Aufrufe inaktiver Module liefern 404; Reaktivierung stellt alle Daten sofort wieder her; Nicht-Admins werden im Admin abgewiesen (403); Änderung erzeugt AuditLog.
+  *Verify:* `pytest core/tests/test_module_toggles.py` — **Negativtest:** Rollen „mitglied" und „kapitaen" erhalten 403 im Admin; Aufruf von Routen deaktivierter Module liefert 404; AuditLog erfasst geänderte Felder. · *Files:* `core/models.py`, `core/services.py`, `core/middleware.py`, `core/admin.py`, `core/context_processors.py`, `core/views.py`, `config/settings.py`, Templates, Migration · *Größe:* M · *PRD:* S7.4 · *Release:* v1.1 · *Deps:* T2, T5, T6
 
-**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29.
+**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30.
 
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6)
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4)
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
 - **Out of scope (K):** nuLiga-Mutations-Export / TRF16 (ADR-016 Säule 3), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
@@ -296,6 +300,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | S4.6 | T16b *(v1.1)* |
 | M5.1 / M5.2 | T13 / T14 |
 | M7.1 / M7.2 / M7.3 | T6 + T11 / T1 + T2 / T5 |
+| S7.4 | T30 *(v1.1 / ADR-019)* |
 | N1.1 | T24 (Hoststandort + kein CDN/Tracker) |
 | N1.2 / N1.3 / N1.4 | T23 |
 | N1.5 | T5 (Logins/Änderungen) + T12 (Detail-Zugriffe) |

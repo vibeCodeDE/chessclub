@@ -40,12 +40,14 @@
         <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Beitragslauf
       </a>
     {% else %}
-      <a class="btn secondary button button-secondary" href="{% url 'teams:meine_aufstellungen' %}">
-        <svg class="icon icon-sm"><use href="#i-swords"></use></svg> Meine Einsätze
-      </a>
-      <a class="btn button button-primary" href="{% url 'teams:match_list' %}">
-        <svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Spielplan
-      </a>
+      {% if module_settings.spielbetrieb_aktiv %}
+        <a class="btn secondary button button-secondary" href="{% url 'teams:meine_aufstellungen' %}">
+          <svg class="icon icon-sm"><use href="#i-swords"></use></svg> Meine Einsätze
+        </a>
+        <a class="btn button button-primary" href="{% url 'teams:match_list' %}">
+          <svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Spielplan
+        </a>
+      {% endif %}
     {% endif %}
   </div>
 </div>
@@ -103,6 +105,7 @@
     </div>
   </section>
 
+  {% if module_settings.kassenbuch_aktiv and kasse %}
   <section class="stat-card">
     <div class="stat-label">
       <span>Vereinskasse {{ jahr }}</span>
@@ -114,6 +117,7 @@
       <span class="cash-out"><svg class="icon icon-sm" style="width:12px;height:12px" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>{{ kasse.ausgaben|floatformat:2 }} € <small>aus</small></span>
     </div>
   </section>
+  {% endif %}
 
   <section class="stat-card monthly-stat">
     <div class="stat-label">
@@ -133,6 +137,7 @@
 </div>
 {% else %}
 <div class="stats-grid">
+  {% if module_settings.spielbetrieb_aktiv %}
   <section class="stat-card">
     <div class="stat-label">
       <span>Meine Mannschaften</span>
@@ -161,7 +166,9 @@
     <div class="stat-value">{{ kommende_spiele|length }}</div>
     <div class="stat-bottom"><span>geplante Ligaspiele</span></div>
   </section>
+  {% endif %}
 
+  {% if module_settings.turniere_aktiv %}
   <section class="stat-card">
     <div class="stat-label">
       <span>Turniere</span>
@@ -170,6 +177,7 @@
     <div class="stat-value">{{ kommende_turniere|length }}</div>
     <div class="stat-bottom"><span>bevorstehende Termine</span></div>
   </section>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -291,9 +299,11 @@
           <h2>Nächste Termine</h2>
           <p>Was im Verein als Nächstes ansteht.</p>
         </div>
+        {% if module_settings.spielbetrieb_aktiv %}
         <a class="text-button" href="{% url 'teams:match_list' %}">
           Zum Spielplan <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-up-right"></use></svg>
         </a>
+        {% endif %}
       </div>
       <div class="event-list">
         {% for spiel in kommende_spiele %}

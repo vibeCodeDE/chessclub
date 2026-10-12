@@ -456,15 +456,45 @@ class ICalFeedTests(TestCase):
         self.assertEqual(res3.status_code, 403)
 
     def test_assert_num_queries_fuer_feeds(self):
-        # Genau 2 Queries für Team-Feed: 1 Team-Lookup + 1 Match-Abfrage mit select_related
-        with self.assertNumQueries(2):
+        # Genau 3 Queries für Team-Feed: 1 ModulAktivMiddleware (ModuleSettings) + 1 Team-Lookup + 1 Match-Abfrage mit select_related
+        with self.assertNumQueries(3):
             res = self.client.get(f"/mannschaften/{self.team1.pk}/ical/{self.team1.ical_token}/")
             self.assertEqual(res.status_code, 200)
 
         from teams.models import LeagueCalendarFeed
         feed_token = LeagueCalendarFeed.get_token()
-        # Genau 2 Queries für Gesamt-Feed: 1 Feed-Lookup + 1 Match-Abfrage mit select_related
-        with self.assertNumQueries(2):
+        # Genau 3 Queries für Gesamt-Feed: 1 ModulAktivMiddleware (ModuleSettings) + 1 Feed-Lookup + 1 Match-Abfrage mit select_related
+        with self.assertNumQueries(3):
             res = self.client.get(f"/ical/gesamt/{feed_token}/")
             self.assertEqual(res.status_code, 200)
+
+    def test_negativ_kapitaen_erhaelt_403_beim_erstellen_und_bearbeiten_von_mannschaften(self):
+        self.client.force_login(self.kapitaen_user)
+        # Mannschaft erstellen
+        res_create = self.client.post("/mannschaften/neu/", {"name": "Neue Mannschaft", "brettanzahl": 4})
+        self.assertEqual(res_create.status_code, 403)
+        # Mannschaft bearbeiten
+        res_edit = self.client.post(f"/mannschaften/{self.team1.pk}/bearbeiten/", {"name": "Geändert", "brettanzahl": 4})
+        self.assertEqual(res_edit.status_code, 403)
+
+    def test_negativ_kapitaen_erhaelt_403_beim_erstellen_und_bearbeiten_von_ligaspielen(self):
+        self.client.force_login(self.kapitaen_user)
+        # Ligaspiel erstellen
+        res_create = self.client.post("/spiele/neu/", {"team": self.team1.pk, "gegner": "SV Test", "datum": "2026-10-15"})
+        self.assertEqual(res_create.status_code, 403)
+        # Ligaspiel bearbeiten
+        res_edit = self.client.post(f"/spiele/{self.match1.pk}/bearbeiten/", {"team": self.team1.pk, "gegner": "SV Neu", "datum": "2026-10-15"})
+        self.assertEqual(res_edit.status_code, 403)
+
+    def test_negativ_kapitaen_ohne_kapitaenamt_darf_nicht_aufstellen(self):
+        # team2 hat kapitaen=None, match3 gehört zu team2
+        self.team2.kapitaen = None
+        self.team2.save()
+        self.client.force_login(self.kapitaen_user)
+        res = self.client.post(
+            f"/spiele/{self.match3.pk}/brett/1/",
+            {"member": "", "gegner_name": "Gegner", "ergebnis": "1"},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(res.status_code, 403)
 
