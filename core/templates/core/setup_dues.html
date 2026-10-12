@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 
 {% block title %}Vereins-Setup · Beitragskategorien{% endblock %}
-{% block page_title %}Vereins-Setup & Beitragskategorien{% endblock %}
+{% block page_title %}Vereins-Setup &amp; Beitragskategorien{% endblock %}
 
 {% block crumbs %}
-<span class="crumbs-detail">· Schritt 2: Beitragskategorien</span>
+<div class="crumbs">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a> › <a href="{% url 'core:club_setup_profile' %}">Vereins-Setup</a> › Beitragskategorien
+</div>
 {% endblock %}
 
 {% block page_actions %}
-<div class="page-heading">
+<div class="page-head">
   <div>
     <h1>Beitragskategorien einrichten</h1>
-    <p>Definiere die Beitragskategorien deines Vereins (z. B. Erwachsene, Jugendliche, Familie, Passiv). Mitglieder werden diesen Kategorien zugeordnet.</p>
+    <p class="lede">Definiere die Beitragskategorien deines Vereins (z. B. Erwachsene, Jugendliche, Familie, Passiv). Jedes Mitglied wird einer Kategorie zugeordnet.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{% url 'dues:category_list' %}">Zur Beitragsverwaltung</a>
   </div>
 </div>
 {% endblock %}
@@ -19,9 +24,12 @@
 {% block content %}
 {% include "core/includes/setup_nav.html" %}
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:24px;align-items:start">
+<div class="grid main-side">
   <div class="card">
-    <h2 style="font-size:18px;margin-bottom:12px">Vorhandene Beitragskategorien</h2>
+    <div class="card-head">
+      <h2>Vorhandene Beitragskategorien</h2>
+      <span class="sub">Übersicht aller definierten Tarife und zugeordneten Mitglieder.</span>
+    </div>
     {% if kategorien %}
       <div class="table-container">
         <table class="table">
@@ -38,9 +46,9 @@
               <tr>
                 <td>
                   <strong>{{ k.name }}</strong>
-                  {% if k.beschreibung %}<div style="font-size:12px;color:var(--text-muted)">{{ k.beschreibung }}</div>{% endif %}
+                  {% if k.beschreibung %}<div class="cell-sub">{{ k.beschreibung }}</div>{% endif %}
                 </td>
-                <td>{{ k.betrag }} €</td>
+                <td><strong>{{ k.betrag|floatformat:2 }} €</strong></td>
                 <td>
                   {% if k.aktiv %}
                     <span class="badge badge-aktiv">Aktiv</span>
@@ -48,42 +56,59 @@
                     <span class="badge badge-neutral">Inaktiv</span>
                   {% endif %}
                 </td>
-                <td>{{ k.mitglieder.count }}</td>
+                <td>{{ k.mitglieder_anzahl }}</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     {% else %}
-      <p style="color:var(--text-muted)">Bisher sind keine Beitragskategorien angelegt.</p>
+      <div class="empty-state">
+        <p class="muted">Bisher sind noch keine Beitragskategorien angelegt.</p>
+      </div>
     {% endif %}
   </div>
 
-  <div class="card">
-    <h2 style="font-size:18px;margin-bottom:12px">Neue Beitragskategorie anlegen</h2>
-    <form method="post" class="form-grid">
+  <div class="card form-card">
+    <div class="card-head">
+      <h2>Neue Kategorie anlegen</h2>
+      <span class="sub">Schnellaufnahme für das Vereins-Setup.</span>
+    </div>
+    <form class="card-body" method="post">
       {% csrf_token %}
-      <div style="margin-bottom:16px">
-        <label for="id_name"><strong>Name der Kategorie*</strong></label>
-        {{ form.name }}
-        {% if form.name.errors %}<div class="form-error">{{ form.name.errors }}</div>{% endif %}
+      <div class="form-grid">
+        <div class="field {% if form.name.field.required %}required{% endif %}{% if form.name.errors %} has-error{% endif %}">
+          <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+          {{ form.name }}
+          {{ form.name.errors }}
+        </div>
+
+        <div class="field {% if form.beschreibung.errors %} has-error{% endif %}">
+          <label for="{{ form.beschreibung.id_for_label }}">{{ form.beschreibung.label }}</label>
+          {{ form.beschreibung }}
+          {{ form.beschreibung.errors }}
+        </div>
+
+        <div class="field {% if form.betrag.field.required %}required{% endif %}{% if form.betrag.errors %} has-error{% endif %}">
+          <label for="{{ form.betrag.id_for_label }}">{{ form.betrag.label }}</label>
+          {{ form.betrag }}
+          {% if form.betrag.help_text %}<span class="help">{{ form.betrag.help_text }}</span>{% endif %}
+          {{ form.betrag.errors }}
+        </div>
+
+        <div class="field">
+          <span class="check">
+            {{ form.aktiv }}
+            <label for="{{ form.aktiv.id_for_label }}">Kategorie ist aktiv und wählbar</label>
+          </span>
+        </div>
       </div>
-      <div style="margin-bottom:16px">
-        <label for="id_beschreibung"><strong>Beschreibung</strong></label>
-        {{ form.beschreibung }}
+
+      <div class="form-actions">
+        <button type="submit" class="btn" style="width:100%">
+          <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Kategorie speichern
+        </button>
       </div>
-      <div style="margin-bottom:16px">
-        <label for="id_betrag"><strong>Jahresbeitrag (€)*</strong></label>
-        {{ form.betrag }}
-        {% if form.betrag.errors %}<div class="form-error">{{ form.betrag.errors }}</div>{% endif %}
-      </div>
-      <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
-        {{ form.aktiv }}
-        <label for="id_aktiv" style="margin-bottom:0">Kategorie ist aktiv und wählbar</label>
-      </div>
-      <button type="submit" class="btn button button-primary" style="width:100%">
-        <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Kategorie speichern
-      </button>
     </form>
   </div>
 </div>

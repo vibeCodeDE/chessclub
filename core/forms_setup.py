@@ -8,7 +8,10 @@ from dues.models import FeeCategory
 from teams.models import Team
 
 
-class ClubProfileForm(forms.ModelForm):
+from members.forms import StyledFormMixin
+
+
+class ClubProfileForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = ClubProfile
         fields = [
@@ -35,6 +38,10 @@ class ClubProfileForm(forms.ModelForm):
             "sepa_iban": forms.TextInput(attrs={"placeholder": "z. B. DE89 3704 0044 0532 0130 00"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._style()
+
 
 class MemberCsvUploadForm(forms.Form):
     csv_file = forms.FileField(
@@ -49,7 +56,7 @@ class MemberCsvUploadForm(forms.Form):
     )
 
 
-class QuickTeamForm(forms.ModelForm):
+class QuickTeamForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Team
         fields = ["name", "liga", "altersklasse", "brettanzahl", "aktiv"]
@@ -57,3 +64,7 @@ class QuickTeamForm(forms.ModelForm):
             "name": forms.TextInput(attrs={"placeholder": "z. B. 1. Mannschaft"}),
             "liga": forms.TextInput(attrs={"placeholder": "z. B. Bezirksliga Staffel Süd"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._style()

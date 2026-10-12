@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 
 {% block title %}Vereins-Setup · Stammdaten{% endblock %}
-{% block page_title %}Vereins-Setup & Stammdaten{% endblock %}
+{% block page_title %}Vereins-Setup &amp; Stammdaten{% endblock %}
 
 {% block crumbs %}
-<span class="crumbs-detail">· Verein einrichten & echte Daten pflegen</span>
+<div class="crumbs">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a> › <a href="{% url 'core:club_setup_profile' %}">Vereins-Setup</a> › Stammdaten
+</div>
 {% endblock %}
 
 {% block page_actions %}
-<div class="page-heading">
+<div class="page-head">
   <div>
-    <h1>Vereins-Setup & Stammdaten</h1>
-    <p>Hinterlege hier die offiziellen Vereinsangaben, Spielabendzeiten und SEPA-Gläubigerdaten. Alle Angaben werden sofort in der Datenbank gespeichert.</p>
+    <h1>Vereins-Setup &amp; Stammdaten</h1>
+    <p class="lede">Hinterlege hier die offiziellen Vereinsangaben, Klubzeiten und SEPA-Gläubigerdaten. Alle Angaben werden direkt in der Datenbank gespeichert.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{% url 'core:dashboard' %}">Zum Dashboard</a>
   </div>
 </div>
 {% endblock %}
@@ -19,109 +24,125 @@
 {% block content %}
 {% include "core/includes/setup_nav.html" %}
 
-<div class="card" style="max-width:850px;margin-bottom:24px">
-  <form method="post" class="form-grid">
-    {% csrf_token %}
+<form method="post" data-ajax data-ajax-reset>
+  {% csrf_token %}
 
-    <div style="margin-bottom:20px">
-      <h2 style="font-size:18px;margin-bottom:6px">1. Allgemeine Vereinsdaten</h2>
-      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">Diese Angaben erscheinen auf der Website, im Header und in offiziellen Mails/Briefen.</p>
-
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin-bottom:16px">
-        <div>
-          <label for="id_name"><strong>Vereinsname (vollständig)*</strong></label>
+  <div class="card form-card" style="margin-bottom:20px">
+    <div class="card-head">
+      <h2>1. Allgemeine Vereinsdaten</h2>
+      <span class="sub">Erscheinen auf der öffentlichen Vereinsseite, im Seitenkopf und in offiziellen Schreiben.</span>
+    </div>
+    <div class="card-body">
+      <div class="form-grid cols-2">
+        <div class="field {% if form.name.field.required %}required{% endif %}{% if form.name.errors %} has-error{% endif %}">
+          <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
           {{ form.name }}
-          {% if form.name.errors %}<div class="form-error">{{ form.name.errors }}</div>{% endif %}
+          {% if form.name.help_text %}<span class="help">{{ form.name.help_text }}</span>{% endif %}
+          {{ form.name.errors }}
         </div>
-        <div>
-          <label for="id_kurzname"><strong>Kurzname / Kürzel</strong></label>
+
+        <div class="field {% if form.kurzname.field.required %}required{% endif %}{% if form.kurzname.errors %} has-error{% endif %}">
+          <label for="{{ form.kurzname.id_for_label }}">{{ form.kurzname.label }}</label>
           {{ form.kurzname }}
-          {% if form.kurzname.errors %}<div class="form-error">{{ form.kurzname.errors }}</div>{% endif %}
+          {% if form.kurzname.help_text %}<span class="help">{{ form.kurzname.help_text }}</span>{% endif %}
+          {{ form.kurzname.errors }}
         </div>
-      </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin-bottom:16px">
-        <div>
-          <label for="id_kontakt_email"><strong>Kontakt-E-Mail</strong></label>
+        <div class="field {% if form.kontakt_email.field.required %}required{% endif %}{% if form.kontakt_email.errors %} has-error{% endif %}">
+          <label for="{{ form.kontakt_email.id_for_label }}">{{ form.kontakt_email.label }}</label>
           {{ form.kontakt_email }}
-          {% if form.kontakt_email.errors %}<div class="form-error">{{ form.kontakt_email.errors }}</div>{% endif %}
+          {% if form.kontakt_email.help_text %}<span class="help">{{ form.kontakt_email.help_text }}</span>{% endif %}
+          {{ form.kontakt_email.errors }}
         </div>
-        <div>
-          <label for="id_gruendungsjahr"><strong>Gründungsjahr</strong></label>
+
+        <div class="field {% if form.gruendungsjahr.field.required %}required{% endif %}{% if form.gruendungsjahr.errors %} has-error{% endif %}">
+          <label for="{{ form.gruendungsjahr.id_for_label }}">{{ form.gruendungsjahr.label }}</label>
           {{ form.gruendungsjahr }}
-          {% if form.gruendungsjahr.errors %}<div class="form-error">{{ form.gruendungsjahr.errors }}</div>{% endif %}
+          {% if form.gruendungsjahr.help_text %}<span class="help">{{ form.gruendungsjahr.help_text }}</span>{% endif %}
+          {{ form.gruendungsjahr.errors }}
         </div>
-        <div>
-          <label for="id_ort"><strong>Ort</strong></label>
+
+        <div class="field {% if form.ort.field.required %}required{% endif %}{% if form.ort.errors %} has-error{% endif %}">
+          <label for="{{ form.ort.id_for_label }}">{{ form.ort.label }}</label>
           {{ form.ort }}
-          {% if form.ort.errors %}<div class="form-error">{{ form.ort.errors }}</div>{% endif %}
+          {% if form.ort.help_text %}<span class="help">{{ form.ort.help_text }}</span>{% endif %}
+          {{ form.ort.errors }}
         </div>
-      </div>
 
-      <div style="margin-bottom:16px">
-        <label for="id_spiellokal"><strong>Spiellokal & Anschrift</strong></label>
-        {{ form.spiellokal }}
-        {% if form.spiellokal.errors %}<div class="form-error">{{ form.spiellokal.errors }}</div>{% endif %}
-      </div>
+        <div class="field {% if form.spiellokal.field.required %}required{% endif %}{% if form.spiellokal.errors %} has-error{% endif %}">
+          <label for="{{ form.spiellokal.id_for_label }}">{{ form.spiellokal.label }}</label>
+          {{ form.spiellokal }}
+          {% if form.spiellokal.help_text %}<span class="help">{{ form.spiellokal.help_text }}</span>{% endif %}
+          {{ form.spiellokal.errors }}
+        </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin-bottom:16px">
-        <div>
-          <label for="id_spielabend_zeiten"><strong>Spielabend / Trainingszeiten Erwachsene</strong></label>
+        <div class="field {% if form.spielabend_zeiten.field.required %}required{% endif %}{% if form.spielabend_zeiten.errors %} has-error{% endif %}">
+          <label for="{{ form.spielabend_zeiten.id_for_label }}">{{ form.spielabend_zeiten.label }}</label>
           {{ form.spielabend_zeiten }}
-          {% if form.spielabend_zeiten.errors %}<div class="form-error">{{ form.spielabend_zeiten.errors }}</div>{% endif %}
+          {% if form.spielabend_zeiten.help_text %}<span class="help">{{ form.spielabend_zeiten.help_text }}</span>{% endif %}
+          {{ form.spielabend_zeiten.errors }}
         </div>
-        <div>
-          <label for="id_jugend_zeiten"><strong>Trainingszeiten Jugend</strong></label>
+
+        <div class="field {% if form.jugend_zeiten.field.required %}required{% endif %}{% if form.jugend_zeiten.errors %} has-error{% endif %}">
+          <label for="{{ form.jugend_zeiten.id_for_label }}">{{ form.jugend_zeiten.label }}</label>
           {{ form.jugend_zeiten }}
-          {% if form.jugend_zeiten.errors %}<div class="form-error">{{ form.jugend_zeiten.errors }}</div>{% endif %}
+          {% if form.jugend_zeiten.help_text %}<span class="help">{{ form.jugend_zeiten.help_text }}</span>{% endif %}
+          {{ form.jugend_zeiten.errors }}
+        </div>
+
+        <div class="field col-span-2 {% if form.beschreibung.field.required %}required{% endif %}{% if form.beschreibung.errors %} has-error{% endif %}">
+          <label for="{{ form.beschreibung.id_for_label }}">{{ form.beschreibung.label }}</label>
+          {{ form.beschreibung }}
+          {% if form.beschreibung.help_text %}<span class="help">{{ form.beschreibung.help_text }}</span>{% endif %}
+          {{ form.beschreibung.errors }}
         </div>
       </div>
-
-      <div style="margin-bottom:16px">
-        <label for="id_beschreibung"><strong>Kurzbeschreibung (für Startseite / Fußzeile)</strong></label>
-        {{ form.beschreibung }}
-        {% if form.beschreibung.errors %}<div class="form-error">{{ form.beschreibung.errors }}</div>{% endif %}
-      </div>
     </div>
+  </div>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
-
-    <div style="margin-bottom:20px">
-      <h2 style="font-size:18px;margin-bottom:6px">2. SEPA- & Finanzangaben des Vereins</h2>
-      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:16px">Wird für den standardisierten SEPA-Lastschriftexport (pain.008) sowie Mahnbriefe genutzt.</p>
-
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin-bottom:16px">
-        <div>
-          <label for="id_sepa_glaeubiger_id"><strong>SEPA-Gläubiger-ID</strong></label>
+  <div class="card form-card">
+    <div class="card-head">
+      <h2>2. SEPA- &amp; Finanzangaben des Vereins</h2>
+      <span class="sub">Wird für den standardisierten Lastschriftexport (pain.008) und Mahnbriefe genutzt.</span>
+    </div>
+    <div class="card-body">
+      <div class="form-grid cols-2">
+        <div class="field {% if form.sepa_glaeubiger_id.field.required %}required{% endif %}{% if form.sepa_glaeubiger_id.errors %} has-error{% endif %}">
+          <label for="{{ form.sepa_glaeubiger_id.id_for_label }}">{{ form.sepa_glaeubiger_id.label }}</label>
           {{ form.sepa_glaeubiger_id }}
-          {% if form.sepa_glaeubiger_id.errors %}<div class="form-error">{{ form.sepa_glaeubiger_id.errors }}</div>{% endif %}
+          {% if form.sepa_glaeubiger_id.help_text %}<span class="help">{{ form.sepa_glaeubiger_id.help_text }}</span>{% endif %}
+          {{ form.sepa_glaeubiger_id.errors }}
         </div>
-        <div>
-          <label for="id_sepa_glaeubiger_name"><strong>Gläubiger-Name</strong></label>
+
+        <div class="field {% if form.sepa_glaeubiger_name.field.required %}required{% endif %}{% if form.sepa_glaeubiger_name.errors %} has-error{% endif %}">
+          <label for="{{ form.sepa_glaeubiger_name.id_for_label }}">{{ form.sepa_glaeubiger_name.label }}</label>
           {{ form.sepa_glaeubiger_name }}
-          {% if form.sepa_glaeubiger_name.errors %}<div class="form-error">{{ form.sepa_glaeubiger_name.errors }}</div>{% endif %}
+          {% if form.sepa_glaeubiger_name.help_text %}<span class="help">{{ form.sepa_glaeubiger_name.help_text }}</span>{% endif %}
+          {{ form.sepa_glaeubiger_name.errors }}
         </div>
-      </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin-bottom:16px">
-        <div>
-          <label for="id_sepa_iban"><strong>Vereins-IBAN (Gutschriftskonto)</strong></label>
+        <div class="field {% if form.sepa_iban.field.required %}required{% endif %}{% if form.sepa_iban.errors %} has-error{% endif %}">
+          <label for="{{ form.sepa_iban.id_for_label }}">{{ form.sepa_iban.label }}</label>
           {{ form.sepa_iban }}
-          {% if form.sepa_iban.errors %}<div class="form-error">{{ form.sepa_iban.errors }}</div>{% endif %}
+          {% if form.sepa_iban.help_text %}<span class="help">{{ form.sepa_iban.help_text }}</span>{% endif %}
+          {{ form.sepa_iban.errors }}
         </div>
-        <div>
-          <label for="id_sepa_bic"><strong>Vereins-BIC</strong></label>
+
+        <div class="field {% if form.sepa_bic.field.required %}required{% endif %}{% if form.sepa_bic.errors %} has-error{% endif %}">
+          <label for="{{ form.sepa_bic.id_for_label }}">{{ form.sepa_bic.label }}</label>
           {{ form.sepa_bic }}
-          {% if form.sepa_bic.errors %}<div class="form-error">{{ form.sepa_bic.errors }}</div>{% endif %}
+          {% if form.sepa_bic.help_text %}<span class="help">{{ form.sepa_bic.help_text }}</span>{% endif %}
+          {{ form.sepa_bic.errors }}
         </div>
       </div>
-    </div>
 
-    <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end">
-      <button type="submit" class="btn button button-primary">
-        <svg class="icon icon-sm"><use href="#i-check"></use></svg> Vereinsstammdaten speichern
-      </button>
+      <div class="form-actions" style="margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
+        <button class="btn" type="submit">
+          <svg class="icon icon-sm"><use href="#i-check"></use></svg> Vereinsstammdaten speichern
+        </button>
+        <a class="btn ghost" href="{% url 'core:dashboard' %}">Abbrechen</a>
+      </div>
     </div>
-  </form>
-</div>
+  </div>
+</form>
 {% endblock %}

@@ -162,7 +162,7 @@
   3. **Web-Interface (`/verein/setup/`):** Strukturierte Reiterführung mit `@role_required(ADMIN_GROUP)` für Profil & Stammdaten, Beitragskategorien, Mannschaften und geführten CSV-Import mit Vorschau, Fehlerhinweisen und Download einer CSV-Mustervorlage.
   4. **CLI-Command (`members/management/commands/import_members.py`):** Unterstützung für Skript- und One-Off-Container-Import (`--dry-run`).
   5. **Integration & Querschnitt:** Templates, Kontextprozessor (`core/context_processors.py`), Dashboard-Banner und SEPA-Export lesen vorrangig die Datenbank-Stammdaten.
-- **Beleg:** `docker compose exec app pytest core/tests/test_club_profile.py members/tests/test_member_import.py` → **13 passed** in 3.69s; Gesamttestlauf `docker compose exec app pytest` → **510 passed, 239 subtests passed** in 38.62s (100% grün). Negative Rollentests (403 für Nicht-Admins) und Dry-Run-Integrität nachgewiesen.
+- **Beleg:** `docker compose exec app pytest core/tests/test_club_profile.py members/tests/test_member_import.py` → **13 passed** in 6.13s; Gesamttestlauf `docker compose exec app pytest` → **511 passed, 239 subtests passed** in 34.82s (100% grün). Negative Rollentests (403 für Nicht-Admins) und Dry-Run-Integrität nachgewiesen.
 
 ---
 

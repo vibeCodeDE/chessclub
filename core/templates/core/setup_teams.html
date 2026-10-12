@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 
 {% block title %}Vereins-Setup · Mannschaften{% endblock %}
-{% block page_title %}Vereins-Setup & Mannschaften{% endblock %}
+{% block page_title %}Vereins-Setup &amp; Mannschaften{% endblock %}
 
 {% block crumbs %}
-<span class="crumbs-detail">· Schritt 3: Mannschaften</span>
+<div class="crumbs">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a> › <a href="{% url 'core:club_setup_profile' %}">Vereins-Setup</a> › Mannschaften
+</div>
 {% endblock %}
 
 {% block page_actions %}
-<div class="page-heading">
+<div class="page-head">
   <div>
     <h1>Mannschaften einrichten</h1>
-    <p>Lege die aktiven Mannschaften deines Vereins für den Ligaspielbetrieb an (z. B. 1. Mannschaft, 2. Mannschaft, Jugendmannschaft).</p>
+    <p class="lede">Lege die aktiven Mannschaften deines Vereins für den Ligaspielbetrieb an (z. B. 1. Mannschaft, 2. Mannschaft, Jugendmannschaft).</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{% url 'teams:team_list' %}">Zum Spielbetrieb</a>
   </div>
 </div>
 {% endblock %}
@@ -19,16 +24,19 @@
 {% block content %}
 {% include "core/includes/setup_nav.html" %}
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:24px;align-items:start">
+<div class="grid main-side">
   <div class="card">
-    <h2 style="font-size:18px;margin-bottom:12px">Vorhandene Mannschaften</h2>
+    <div class="card-head">
+      <h2>Vorhandene Mannschaften</h2>
+      <span class="sub">Übersicht der registrierten Teams für die aktuelle Saison.</span>
+    </div>
     {% if teams %}
       <div class="table-container">
         <table class="table">
           <thead>
             <tr>
               <th>Mannschaft</th>
-              <th>Liga</th>
+              <th>Liga / Staffel</th>
               <th>Bretter</th>
               <th>Status</th>
             </tr>
@@ -38,7 +46,7 @@
               <tr>
                 <td><strong>{{ t.name }}</strong></td>
                 <td>{{ t.liga|default:"–" }}</td>
-                <td>{{ t.brettanzahl }}</td>
+                <td>{{ t.brettanzahl }} Bretter</td>
                 <td>
                   {% if t.aktiv %}
                     <span class="badge badge-aktiv">Aktiv</span>
@@ -52,40 +60,56 @@
         </table>
       </div>
     {% else %}
-      <p style="color:var(--text-muted)">Bisher sind keine Mannschaften angelegt.</p>
+      <div class="empty-state">
+        <p class="muted">Bisher sind noch keine Mannschaften angelegt.</p>
+      </div>
     {% endif %}
   </div>
 
-  <div class="card">
-    <h2 style="font-size:18px;margin-bottom:12px">Neue Mannschaft anlegen</h2>
-    <form method="post" class="form-grid">
+  <div class="card form-card">
+    <div class="card-head">
+      <h2>Neue Mannschaft anlegen</h2>
+      <span class="sub">Schnellaufnahme für den Spielbetrieb.</span>
+    </div>
+    <form class="card-body" method="post">
       {% csrf_token %}
-      <div style="margin-bottom:16px">
-        <label for="id_name"><strong>Name der Mannschaft*</strong></label>
-        {{ form.name }}
-        {% if form.name.errors %}<div class="form-error">{{ form.name.errors }}</div>{% endif %}
-      </div>
-      <div style="margin-bottom:16px">
-        <label for="id_liga"><strong>Liga / Staffel</strong></label>
-        {{ form.liga }}
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div>
-          <label for="id_altersklasse"><strong>Altersklasse</strong></label>
-          {{ form.altersklasse }}
+      <div class="form-grid">
+        <div class="field {% if form.name.field.required %}required{% endif %}{% if form.name.errors %} has-error{% endif %}">
+          <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+          {{ form.name }}
+          {{ form.name.errors }}
         </div>
-        <div>
-          <label for="id_brettanzahl"><strong>Bretter</strong></label>
-          {{ form.brettanzahl }}
+
+        <div class="field {% if form.liga.errors %} has-error{% endif %}">
+          <label for="{{ form.liga.id_for_label }}">{{ form.liga.label }}</label>
+          {{ form.liga }}
+          {{ form.liga.errors }}
+        </div>
+
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label for="{{ form.altersklasse.id_for_label }}">{{ form.altersklasse.label }}</label>
+            {{ form.altersklasse }}
+          </div>
+          <div class="field">
+            <label for="{{ form.brettanzahl.id_for_label }}">{{ form.brettanzahl.label }}</label>
+            {{ form.brettanzahl }}
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="check">
+            {{ form.aktiv }}
+            <label for="{{ form.aktiv.id_for_label }}">Mannschaft ist aktiv</label>
+          </span>
         </div>
       </div>
-      <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
-        {{ form.aktiv }}
-        <label for="id_aktiv" style="margin-bottom:0">Mannschaft ist aktiv</label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn" style="width:100%">
+          <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mannschaft anlegen
+        </button>
       </div>
-      <button type="submit" class="btn button button-primary" style="width:100%">
-        <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Mannschaft anlegen
-      </button>
     </form>
   </div>
 </div>

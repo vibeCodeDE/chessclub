@@ -116,7 +116,7 @@ def parse_members_csv(content: Union[str, bytes, io.IOBase]) -> List[Dict[str, s
             if col_idx < len(normalized_headers):
                 field_key = normalized_headers[col_idx]
                 row_dict[field_key] = val.strip()
-        row_dict["_zeilennummer"] = str(row_idx)
+        row_dict["zeilennummer"] = str(row_idx)
         rows.append(row_dict)
 
     return rows
@@ -148,7 +148,7 @@ def validate_members_import(rows: List[Dict[str, str]]) -> Dict[str, Any]:
     kategorien_map = {k.name.strip().lower(): k for k in FeeCategory.objects.all()}
 
     for row in rows:
-        zeile_nr = row.get("_zeilennummer", "?")
+        zeile_nr = row.get("zeilennummer", "?")
         fehler = []
         daten = {}
 
@@ -258,7 +258,7 @@ def validate_members_import(rows: List[Dict[str, str]]) -> Dict[str, Any]:
                 if not daten["kontoinhaber"]:
                     daten["kontoinhaber"] = f"{vorname} {nachname}"
 
-        daten["_zeilennummer"] = zeile_nr
+        daten["zeilennummer"] = zeile_nr
 
         if fehler:
             invalid_rows.append({"zeile": zeile_nr, "fehler": fehler, "rohdaten": row})

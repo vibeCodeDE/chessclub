@@ -1,14 +1,6 @@
-<div class="tabs-nav" style="display:flex;gap:8px;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto;padding-bottom:2px">
-  <a href="{% url 'core:club_setup_profile' %}" class="btn {% if aktiver_reiter == 'profil' %}button button-primary{% else %}button button-secondary secondary{% endif %}" style="white-space:nowrap;font-size:14px">
-    1. Vereinsprofil & Stammdaten
-  </a>
-  <a href="{% url 'core:club_setup_dues' %}" class="btn {% if aktiver_reiter == 'beitraege' %}button button-primary{% else %}button button-secondary secondary{% endif %}" style="white-space:nowrap;font-size:14px">
-    2. Beitragskategorien
-  </a>
-  <a href="{% url 'core:club_setup_teams' %}" class="btn {% if aktiver_reiter == 'mannschaften' %}button button-primary{% else %}button button-secondary secondary{% endif %}" style="white-space:nowrap;font-size:14px">
-    3. Mannschaften
-  </a>
-  <a href="{% url 'core:club_setup_members_import' %}" class="btn {% if aktiver_reiter == 'import' %}button button-primary{% else %}button button-secondary secondary{% endif %}" style="white-space:nowrap;font-size:14px">
-    4. Mitglieder-Import (CSV)
-  </a>
+<div class="tabs">
+  <a href="{% url 'core:club_setup_profile' %}" class="{% if aktiver_reiter == 'profil' %}is-active{% endif %}">1. Vereinsprofil &amp; Stammdaten</a>
+  <a href="{% url 'core:club_setup_dues' %}" class="{% if aktiver_reiter == 'beitraege' %}is-active{% endif %}">2. Beitragskategorien</a>
+  <a href="{% url 'core:club_setup_teams' %}" class="{% if aktiver_reiter == 'mannschaften' %}is-active{% endif %}">3. Mannschaften</a>
+  <a href="{% url 'core:club_setup_members_import' %}" class="{% if aktiver_reiter == 'import' %}is-active{% endif %}">4. Mitglieder-Import (CSV)</a>
 </div>
