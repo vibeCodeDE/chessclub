@@ -1,6 +1,5 @@
 """Fachlogik für Modul-Einstellungen und Querschnittsfunktionen (T30 / ADR-019)."""
 
-from typing import Optional
 
 from django.http import HttpRequest
 
@@ -19,7 +18,7 @@ MODUL_SCHLUESSEL = {
 }
 
 
-def get_club_profile(request: Optional[HttpRequest] = None):
+def get_club_profile(request: HttpRequest | None = None):
     """Liefert die Singleton-Vereinsstammdaten (mit Request-Caching)."""
     if request is not None and hasattr(request, "_club_profile"):
         return request._club_profile
@@ -36,7 +35,7 @@ def get_club_profile(request: Optional[HttpRequest] = None):
     return profil
 
 
-def get_module_settings(request: Optional[HttpRequest] = None) -> ModuleSettings:
+def get_module_settings(request: HttpRequest | None = None) -> ModuleSettings:
     """Liefert die Singleton-Einstellungen der Module (mit Request-Caching)."""
     if request is not None and hasattr(request, "_module_settings"):
         return request._module_settings
@@ -55,7 +54,7 @@ def get_module_settings(request: Optional[HttpRequest] = None) -> ModuleSettings
     return settings_obj
 
 
-def is_module_active(module_key: str, request: Optional[HttpRequest] = None) -> bool:
+def is_module_active(module_key: str, request: HttpRequest | None = None) -> bool:
     """Reine Fachfunktion: Prüft, ob das angefragte Satellitenmodul aktiv ist.
 
     Kernmodule ('core', 'members', 'dues') sind immer aktiv (True).

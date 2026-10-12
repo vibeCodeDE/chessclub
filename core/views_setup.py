@@ -1,16 +1,10 @@
 """Views für den zentralen Einrichtungs- und Onboarding-Bereich (PRD S7.5, ADR-020)."""
 
 import csv
-import json
-from decimal import Decimal
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
-from django.utils import timezone
-from django.views.decorators.http import require_POST
 
 from core.forms_setup import (
     ClubProfileForm,

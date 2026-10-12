@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 
 from core.models import TwoFactorDevice
 from core.roles import ADMIN_GROUP
-from core.twofa import code_pruefen, code_pruefen_schritt, neues_secret, otpauth_uri
+from core.twofa import code_pruefen_schritt, neues_secret, otpauth_uri
 
 SESSION_SCHLUESSEL = "_2fa_user_id"
 SESSION_SECRET = "_2fa_secret"

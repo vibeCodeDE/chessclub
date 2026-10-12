@@ -1,10 +1,10 @@
 """Tests für DSB- / DWZ-Synchronisation und Drift Detection (ADR-016 / K3.6)."""
 
 import json
+import urllib.error
 from datetime import date
 from io import BytesIO
 from unittest.mock import MagicMock, patch
-import urllib.error
 
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
@@ -19,7 +19,6 @@ from members.services.dsb_sync import (
     detect_drift,
     fetch_dsb_vereinsliste,
     parse_dsb_data,
-    sync_dwz_for_member,
     sync_dwz_from_report,
 )
 
@@ -261,7 +260,7 @@ class SyncDWZTests(TestCase):
 
     def test_sync_dwz_idempotent(self):
         """Zweiter Sync-Lauf ohne Änderungen führt zu 0 Updates."""
-        member = make_member("Max", "Mustermann", pkz="1001", dwz=1850, dwz_index=45)
+        make_member("Max", "Mustermann", pkz="1001", dwz=1850, dwz_index=45)
         parsed_dsb = parse_dsb_data(SAMPLE_DSB_PAYLOAD)
         report = detect_drift(members_qs=Member.objects.all(), dsb_data=parsed_dsb)
 

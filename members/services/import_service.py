@@ -7,14 +7,13 @@ import csv
 import io
 import re
 from datetime import date, datetime
-from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from django.db import transaction
 from django.utils import timezone
 
 from core.models import AuditLog
-from dues.models import FeeCategory, IBAN_MUSTER, SepaMandate, normalize_iban
+from dues.models import IBAN_MUSTER, FeeCategory, SepaMandate, normalize_iban
 from members.models import Member
 
 HEADER_MAPPING = {
@@ -64,7 +63,7 @@ HEADER_MAPPING = {
 }
 
 
-def _decode_content(data: Union[str, bytes, io.IOBase]) -> str:
+def _decode_content(data: str | bytes | io.IOBase) -> str:
     """Dekodiert Rohdaten oder Datei-Objekte zuverlässig nach UTF-8 (mit Fallback auf Latin-1)."""
     if isinstance(data, str):
         return data
@@ -84,7 +83,7 @@ def _decode_content(data: Union[str, bytes, io.IOBase]) -> str:
     return raw.decode("latin-1", errors="replace")
 
 
-def parse_members_csv(content: Union[str, bytes, io.IOBase]) -> List[Dict[str, str]]:
+def parse_members_csv(content: str | bytes | io.IOBase) -> list[dict[str, str]]:
     """Liest eine CSV-Zeichenkette oder Datei ein und normalisiert Header."""
     text = _decode_content(content).strip()
     if not text:
@@ -122,7 +121,7 @@ def parse_members_csv(content: Union[str, bytes, io.IOBase]) -> List[Dict[str, s
     return rows
 
 
-def _parse_date(val: Optional[str]) -> Optional[date]:
+def _parse_date(val: str | None) -> date | None:
     """Parst ein Datum aus verschiedenen Standardformaten."""
     if not val:
         return None
@@ -139,7 +138,7 @@ def _parse_date(val: Optional[str]) -> Optional[date]:
     raise ValueError(f"Ungültiges Datumsformat: '{val}'. Erwartet wird DD.MM.YYYY oder YYYY-MM-DD.")
 
 
-def validate_members_import(rows: List[Dict[str, str]]) -> Dict[str, Any]:
+def validate_members_import(rows: list[dict[str, str]]) -> dict[str, Any]:
     """Validiert geparste Zeilen und bereitet sie für die Speicherung vor."""
     valid_rows = []
     invalid_rows = []
@@ -276,9 +275,9 @@ def validate_members_import(rows: List[Dict[str, str]]) -> Dict[str, Any]:
 
 
 def execute_members_import(
-    valid_rows: List[Dict[str, Any]],
-    actor: Optional[Any] = None,
-) -> Dict[str, Any]:
+    valid_rows: list[dict[str, Any]],
+    actor: Any | None = None,
+) -> dict[str, Any]:
     """Übernimmt die validierten Zeilen atomar in die Datenbank."""
     created_members = []
     created_mandates_count = 0

@@ -4,11 +4,14 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      DJANGO_SETTINGS_MODULE: config.settings
       # Ohne POSTGRES_HOST fällt settings.py auf SQLite zurück – dann liefe der
       # Postgres-spezifische Teil (select_for_update) nicht und die Testabdeckung
       # wiche von der lokalen Docker-Umgebung ab.

@@ -87,8 +87,9 @@ class ScalingoDeploymentConfigurationTests(TestCase):
     def test_ensure_admin_creates_or_updates_superuser(self):
         """ensure_admin erstellt oder aktualisiert Superadmin aus Environment-Variablen."""
         from io import StringIO
-        from django.core.management import call_command
+
         from django.contrib.auth import get_user_model
+        from django.core.management import call_command
 
         User = get_user_model()
         out = StringIO()

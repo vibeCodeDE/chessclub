@@ -14,7 +14,6 @@ from cashbook.models import CashEntry, storniere_kassenbuchung
 from .models import (
     DunningLetter,
     FeeAmount,
-    FeeCategory,
     MembershipFee,
     Payment,
     SepaMandate,

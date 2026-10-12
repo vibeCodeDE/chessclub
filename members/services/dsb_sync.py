@@ -8,13 +8,13 @@ Reine Funktionen ohne HTTP-Kontext:
 - AuditLog-Protokollierung
 """
 
-from dataclasses import dataclass, field
 import json
 import logging
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
@@ -53,11 +53,11 @@ class DriftReport:
     total_verein: int
     total_verband: int
     verein: str = ""
-    fehlt_im_verband: List[Member] = field(default_factory=list)
-    fehlt_im_verein: List[Dict[str, Any]] = field(default_factory=list)
-    dwz_abweichungen: List[Dict[str, Any]] = field(default_factory=list)
-    status_abweichungen: List[Dict[str, Any]] = field(default_factory=list)
-    synchrone_mitglieder: List[Dict[str, Any]] = field(default_factory=list)
+    fehlt_im_verband: list[Member] = field(default_factory=list)
+    fehlt_im_verein: list[dict[str, Any]] = field(default_factory=list)
+    dwz_abweichungen: list[dict[str, Any]] = field(default_factory=list)
+    status_abweichungen: list[dict[str, Any]] = field(default_factory=list)
+    synchrone_mitglieder: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def hat_abweichungen(self) -> bool:
@@ -79,10 +79,10 @@ class DriftReport:
 
 
 def _get_config(
-    vkz: Optional[str] = None,
-    token: Optional[str] = None,
-    base_url: Optional[str] = None,
-) -> Tuple[str, str, str]:
+    vkz: str | None = None,
+    token: str | None = None,
+    base_url: str | None = None,
+) -> tuple[str, str, str]:
     resolved_vkz = (vkz or getattr(settings, "DSB_VKZ", "")).strip()
     resolved_token = (token or getattr(settings, "DSB_API_TOKEN", "")).strip()
     resolved_url = (
@@ -102,12 +102,12 @@ def _get_config(
 
 
 def fetch_dsb_vereinsliste(
-    vkz: Optional[str] = None,
-    token: Optional[str] = None,
-    base_url: Optional[str] = None,
+    vkz: str | None = None,
+    token: str | None = None,
+    base_url: str | None = None,
     force: bool = False,
     timeout: int = 30,
-) -> Tuple[Dict[str, Any], bool]:
+) -> tuple[dict[str, Any], bool]:
     """Ruft die Mitgliederliste des Vereins über die offizielle JSON-Schnittstelle ab.
 
     Gibt ein Tuple ``(daten, from_cache)`` zurück.
@@ -154,7 +154,7 @@ def fetch_dsb_vereinsliste(
     return parsed, False
 
 
-def parse_dsb_data(raw_data: Any, vkz: str = "") -> Dict[str, Any]:
+def parse_dsb_data(raw_data: Any, vkz: str = "") -> dict[str, Any]:
     """Validiert und normalisiert die JSON-Rückgabe des DSB-Wertungsportals."""
     if isinstance(raw_data, str):
         try:
@@ -250,7 +250,7 @@ def parse_dsb_data(raw_data: Any, vkz: str = "") -> Dict[str, Any]:
 
 def detect_drift(
     members_qs=None,
-    dsb_data: Optional[Dict[str, Any]] = None,
+    dsb_data: dict[str, Any] | None = None,
     from_cache: bool = False,
 ) -> DriftReport:
     """Gleicht den Vereinsbestand mit den DSB-Verbandsdaten ab.
@@ -284,9 +284,9 @@ def detect_drift(
     )
 
     # Indizierung der Vereinsmitglieder zur schnellen Zuordnung
-    by_pkz: Dict[str, Member] = {}
-    by_zps: Dict[str, Member] = {}
-    by_name: Dict[Tuple[str, str], List[Member]] = {}
+    by_pkz: dict[str, Member] = {}
+    by_zps: dict[str, Member] = {}
+    by_name: dict[tuple[str, str], list[Member]] = {}
 
     for m in members:
         if m.pkz:
@@ -301,7 +301,7 @@ def detect_drift(
 
     # 1. Matching-Durchlauf
     for idx, sp in enumerate(spieler_list):
-        matched_member: Optional[Member] = None
+        matched_member: Member | None = None
 
         if sp["pkz"] and sp["pkz"] in by_pkz:
             matched_member = by_pkz[sp["pkz"]]
@@ -394,7 +394,7 @@ def detect_drift(
 @transaction.atomic
 def sync_dwz_for_member(
     member: Member,
-    dsb_player: Dict[str, Any],
+    dsb_player: dict[str, Any],
     benutzer=None,
 ) -> bool:
     """Übernimmt DWZ, Index und Verbandskennungen für ein einzelnes Mitglied."""

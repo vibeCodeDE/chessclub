@@ -6,6 +6,7 @@ Aufruf:
 """
 
 import os
+
 from django.core.management.base import BaseCommand, CommandError
 
 from members.services.import_service import (

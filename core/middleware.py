@@ -49,6 +49,7 @@ class ModulAktivMiddleware:
         url_name = resolver_match.url_name
 
         from django.http import Http404
+
         from core.services import is_module_active
 
         if app_name == "teams" and not is_module_active("teams", request):

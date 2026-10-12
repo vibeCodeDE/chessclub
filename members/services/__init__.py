@@ -1,9 +1,9 @@
 from .dsb_sync import (
+    DriftReport,
     DSBConfigError,
     DSBNetworkError,
     DSBParseError,
     DSBSyncError,
-    DriftReport,
     detect_drift,
     fetch_dsb_vereinsliste,
     parse_dsb_data,

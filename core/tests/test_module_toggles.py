@@ -127,7 +127,7 @@ class ModuleNavigationTests(TestCase):
         self.assertNotContains(response, 'href="/kasse/"')
         self.assertNotContains(response, 'href="/turniere/verwalten/"')
         # Sektion Turniere komplett ausgeblendet
-        self.assertNotIn("Turnierverwaltung", [l["label"] for l in response.context["nav_links"]])
+        self.assertNotIn("Turnierverwaltung", [link["label"] for link in response.context["nav_links"]])
 
         # 3. Spielbetrieb und News deaktivieren
         self.cfg.spielbetrieb_aktiv = False

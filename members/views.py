@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.models import AuditLog
-from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_required
+from core.roles import ADMIN_GROUP, role_required
 from core.ui import fehler, is_ajax, ok, paginate
 from dues.models import FeeCategory, MembershipFee, Payment
 
@@ -465,6 +465,7 @@ def change_request_reject(request, pk):
 def dsb_sync_view(request):
     """Verbandsabgleich mit dem DSB-Wertungsportal und Drift Detection (ADR-016 / K3.6)."""
     from django.conf import settings
+
     from members.services.dsb_sync import (
         DSBSyncError,
         detect_drift,

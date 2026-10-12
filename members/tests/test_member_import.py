@@ -1,12 +1,12 @@
 import io
 from datetime import date
+
 from django.contrib.auth.models import Group, User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import AuditLog
-from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, MITGLIED_GROUP
+from core.roles import ADMIN_GROUP, MITGLIED_GROUP
 from dues.models import FeeAmount, FeeCategory, SepaMandate
 from members.models import Member
 from members.services.import_service import (
@@ -77,6 +77,7 @@ class MemberImportServiceTests(TestCase):
     def test_management_command_import_members(self):
         """Testet das CLI-Command import_members inkl. Dry-Run."""
         import tempfile
+
         from django.core.management import call_command
 
         with tempfile.NamedTemporaryFile("w+", suffix=".csv", delete=False) as tf:
