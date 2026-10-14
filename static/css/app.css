@@ -44,7 +44,9 @@
   --text: #1a2820;
   --ink: #1a2820;
   --ink-soft: #384d40;
-  --muted: #5e7164;
+  --muted: #4e6255;
+
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
 
   --border: #dee6dd;
   --border-strong: #cbd7ca;
@@ -109,10 +111,16 @@ body {
 }
 
 h1, h2, h3, h4, p { margin: 0; }
-h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.25; color: var(--forest-dark); }
+h1 { font-family: var(--display); font-size: 30px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.2; color: var(--forest-dark); }
+.page-heading h1, .page-head h1 { font-family: var(--display); font-weight: 500; font-size: 32px; letter-spacing: -0.025em; color: var(--forest-dark); }
 h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.4; color: var(--forest); }
 h3 { font-size: 14.5px; font-weight: 600; color: var(--ink); }
 p { font-size: 14px; color: var(--muted); line-height: 1.55; }
+
+/* Erzwungenes tabular-nums für Zahlenkolonnen (DESIGN.md / Hebel D4) */
+table.data, .mono, .scoreline, .num, .stat-value, .money-value, .badge, [data-brettpunkte], [data-fee-open], [data-fee-paid] {
+  font-variant-numeric: tabular-nums;
+}
 
 a { color: var(--forest); text-decoration: none; transition: color .15s; }
 a:hover { color: var(--forest-dark); text-decoration: none; }
@@ -1110,3 +1118,278 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================================================
+   Hebel D1: Touch-Pills für Brettpunkte am Spieltag (WCAG 2.5.5 >= 44x44px)
+   ========================================================================== */
+.result-pills {
+  display: inline-flex;
+  gap: 3px;
+  background: var(--bg);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  align-items: center;
+}
+.result-pill-label {
+  cursor: pointer;
+  margin: 0;
+  display: inline-flex;
+  user-select: none;
+}
+.result-pill-radio {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.result-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 40px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  background: transparent;
+  transition: all 0.15s ease;
+}
+.result-pill-label:hover .result-pill-btn {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.result-pill-radio:checked + .result-pill-btn {
+  background: var(--forest);
+  color: #ffffff;
+  box-shadow: var(--shadow-xs);
+}
+.result-pill-radio:checked + .result-pill-btn.win {
+  background: var(--success);
+  color: #ffffff;
+}
+.result-pill-radio:checked + .result-pill-btn.draw {
+  background: var(--gold-dark);
+  color: #ffffff;
+}
+.result-pill-radio:checked + .result-pill-btn.loss {
+  background: var(--danger);
+  color: #ffffff;
+}
+.result-pill-radio:focus-visible + .result-pill-btn {
+  outline: 2px solid var(--rust);
+  outline-offset: 1px;
+}
+
+/* ==========================================================================
+   Hebel F5: Smart Badges Leiste in der Mitgliederliste
+   ========================================================================== */
+.smart-badges-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  align-items: center;
+}
+.smart-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.smart-badge strong {
+  font-size: 11.5px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.smart-badge:hover {
+  border-color: var(--forest-light);
+  color: var(--forest-dark);
+  background: var(--surface-hover);
+  text-decoration: none;
+}
+.smart-badge.is-active {
+  background: var(--forest);
+  color: #ffffff;
+  border-color: var(--forest);
+}
+.smart-badge.is-active strong {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+.smart-badge.badge-warn-subtle.is-active {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: #ffffff;
+}
+.smart-badge.badge-danger-subtle.is-active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   Hebel D3: Systemweite A4-Druck-Engine (@media print)
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 15mm 15mm;
+  }
+  *, *::before, *::after {
+    background: transparent !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.35 !important;
+  }
+  .sidebar,
+  .sidebar-backdrop,
+  .topbar,
+  .loading-bar,
+  .skip-link,
+  .no-print,
+  .page-actions,
+  .page-heading-actions,
+  .filters,
+  .smart-badges-bar,
+  .pagination,
+  .toast,
+  .dialog,
+  .modal-backdrop,
+  .club-switcher,
+  .alert,
+  button:not(.print-keep),
+  [data-dialog-open] {
+    display: none !important;
+  }
+  .main, .main-shell, .content, .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .card, .print-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .card-head, .panel-heading {
+    border-bottom: 1px solid #333333 !important;
+    padding-bottom: 4pt !important;
+    margin-bottom: 8pt !important;
+  }
+  h1, h2, h3 {
+    color: #000000 !important;
+    page-break-after: avoid !important;
+  }
+  table.data, table.print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1.5px solid #000000 !important;
+    margin-top: 8pt !important;
+    margin-bottom: 12pt !important;
+  }
+  table.data th, table.data td,
+  table.print-table th, table.print-table td {
+    border: 1px solid #444444 !important;
+    padding: 4pt 6pt !important;
+    font-size: 9.5pt !important;
+    color: #000000 !important;
+  }
+  table.data thead th, table.print-table thead th {
+    background: #f0f0f0 !important;
+    font-weight: bold !important;
+    border-bottom: 1.5px solid #000000 !important;
+  }
+  thead {
+    display: table-header-group !important;
+  }
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  /* Spielbericht-Layout */
+  .match-print-header, .round-print-header {
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 8pt !important;
+    margin-bottom: 10pt !important;
+  }
+  .print-meta-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 4pt 12pt !important;
+    font-size: 9.5pt !important;
+    margin-top: 6pt !important;
+  }
+  .match-teams-box {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border: 1.5px solid #000000 !important;
+    padding: 8pt 14pt !important;
+    margin: 10pt 0 !important;
+    background: #f7f7f7 !important;
+  }
+  .team-name {
+    font-size: 13pt !important;
+  }
+  .match-vs {
+    font-size: 11pt !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+  }
+  .print-signatures {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 15pt !important;
+    margin-top: 35pt !important;
+    page-break-inside: avoid !important;
+  }
+  .sig-block {
+    flex: 1 !important;
+    text-align: center !important;
+  }
+  .sig-line {
+    border-top: 1px solid #000000 !important;
+    margin-bottom: 4pt !important;
+    height: 1px !important;
+  }
+  .sig-block p {
+    font-size: 8.5pt !important;
+    color: #444444 !important;
+  }
+  .print-footer-note {
+    margin-top: 15pt !important;
+    font-size: 8pt !important;
+    color: #555555 !important;
+    text-align: center !important;
+    border-top: 1px dotted #888888 !important;
+    padding-top: 4pt !important;
+  }
+}
+

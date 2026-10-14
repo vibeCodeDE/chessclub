@@ -1,12 +1,16 @@
 import csv
+from datetime import date, datetime, timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
 from django.db.models import Q, Sum
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -14,9 +18,19 @@ from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
 from core.ui import fehler, is_ajax, ok, paginate
 from dues.models import FeeCategory, MembershipFee, Payment
+from teams.models import LineupEntry
+from teams.services import escape_ical
+from tournaments.models import Tournament
 
 from .forms import ChangeRequestForm, MemberForm, MemberStatusForm, TrialInquiryForm
 from .models import ChangeRequest, Member, clean_member_value
+
+PERSONAL_CALENDAR_SALT = "member-personal-calendar"
+
+
+def get_personal_calendar_token(member):
+    signer = TimestampSigner(salt=PERSONAL_CALENDAR_SALT)
+    return signer.sign(str(member.pk))
 
 
 def _parse_filters(request):
@@ -25,11 +39,13 @@ def _parse_filters(request):
     if status not in Member.Status.values:
         status = ""
     kategorie = request.GET.get("kategorie", "")
-    return query, status, kategorie
+    filter_type = request.GET.get("filter", "").strip()
+    return query, status, kategorie, filter_type
 
 
-def _filtered_members(query, status, kategorie=""):
+def _filtered_members(query, status, kategorie="", filter_type=""):
     members = Member.objects.select_related("beitragskategorie")
+    heute = timezone.localdate()
     if query:
         members = members.filter(
             Q(vorname__icontains=query)
@@ -43,28 +59,56 @@ def _filtered_members(query, status, kategorie=""):
         members = members.filter(beitragskategorie__isnull=True)
     elif kategorie.isdigit():
         members = members.filter(beitragskategorie_id=int(kategorie))
+
+    if filter_type == "u18":
+        u18_cutoff = date(heute.year - 18, heute.month, heute.day)
+        members = members.filter(geburtsdatum__gt=u18_cutoff, status=Member.Status.AKTIV)
+    elif filter_type == "senioren":
+        senioren_cutoff = date(heute.year - 60, heute.month, heute.day)
+        members = members.filter(geburtsdatum__lte=senioren_cutoff, status=Member.Status.AKTIV)
+    elif filter_type == "ohne_kategorie":
+        members = members.filter(beitragskategorie__isnull=True, status=Member.Status.AKTIV)
+    elif filter_type == "ohne_mandat":
+        members = members.filter(status=Member.Status.AKTIV).exclude(sepa_mandat__status="aktiv")
+
     return members
 
 
 @role_required(ADMIN_GROUP)
 def member_list(request):
-    query, status, kategorie = _parse_filters(request)
-    members = _filtered_members(query, status, kategorie)
+    query, status, kategorie, filter_type = _parse_filters(request)
+    members = _filtered_members(query, status, kategorie, filter_type)
+    heute = timezone.localdate()
+    u18_cutoff = date(heute.year - 18, heute.month, heute.day)
+    senioren_cutoff = date(heute.year - 60, heute.month, heute.day)
+
+    smart_counts = {
+        "gesamt": Member.objects.count(),
+        "aktiv": Member.objects.filter(status=Member.Status.AKTIV).count(),
+        "u18": Member.objects.filter(status=Member.Status.AKTIV, geburtsdatum__gt=u18_cutoff).count(),
+        "senioren": Member.objects.filter(status=Member.Status.AKTIV, geburtsdatum__lte=senioren_cutoff).count(),
+        "ohne_kategorie": Member.objects.filter(
+            status=Member.Status.AKTIV, beitragskategorie__isnull=True
+        ).count(),
+        "ohne_mandat": Member.objects.filter(status=Member.Status.AKTIV).exclude(sepa_mandat__status="aktiv").count(),
+    }
+
     kontext = {
         "members": members,
+        "mitglieder": members,
         "page_obj": paginate(members, request, per_page=25),
         "q": query,
         "status": status,
         "status_choices": Member.Status.choices,
         "kategorie": kategorie,
         "kategorien": FeeCategory.objects.all(),
-        "gesamt": Member.objects.count(),
-        "aktiv_count": Member.objects.filter(status=Member.Status.AKTIV).count(),
+        "filter_type": filter_type,
+        "smart_counts": smart_counts,
+        "gesamt": smart_counts["gesamt"],
+        "aktiv_count": smart_counts["aktiv"],
         "passiv_count": Member.objects.filter(status=Member.Status.PASSIV).count(),
         "ausgetreten_count": Member.objects.filter(status=Member.Status.AUSGETRETEN).count(),
-        "ohne_kategorie_count": Member.objects.filter(
-            status=Member.Status.AKTIV, beitragskategorie__isnull=True
-        ).count(),
+        "ohne_kategorie_count": smart_counts["ohne_kategorie"],
         "status_form": MemberStatusForm(),
     }
     return render(request, "members/member_list.html", kontext)
@@ -222,8 +266,8 @@ def member_status(request, pk):
 
 @role_required(ADMIN_GROUP)
 def member_export(request):
-    query, status, kategorie = _parse_filters(request)
-    members = _filtered_members(query, status, kategorie)
+    query, status, kategorie, filter_type = _parse_filters(request)
+    members = _filtered_members(query, status, kategorie, filter_type)
     AuditLog.objects.create(
         benutzer=request.user,
         aktion="Mitgliederliste exportiert",
@@ -353,8 +397,96 @@ def profil(request):
             if member
             else []
         ),
+        "calendar_url": request.build_absolute_uri(
+            reverse("members:personal_calendar", kwargs={"token": get_personal_calendar_token(member)})
+        ) if member else None,
     }
     return render(request, "members/profil.html", kontext)
+
+
+def personal_calendar_feed(request, token):
+    """Abonnierbarer iCal-Feed für die persönlichen Einsätze eines Mitglieds (Hebel F4)."""
+    signer = TimestampSigner(salt=PERSONAL_CALENDAR_SALT)
+    try:
+        member_id = signer.unsign(token)
+    except (BadSignature, SignatureExpired) as err:
+        raise Http404("Ungültiger oder abgelaufener Kalender-Token.") from err
+
+    member = get_object_or_404(Member, pk=int(member_id))
+    heute = timezone.localdate()
+    start_datum = heute - timedelta(days=60)
+
+    # Persönliche Einsätze in Ligaspielen
+    lineups = (
+        LineupEntry.objects.filter(member=member, match__datum__gte=start_datum)
+        .select_related("match", "match__team")
+        .order_by("match__datum", "match__uhrzeit")
+    )
+    # Öffentliche Vereinsturniere
+    tournaments = Tournament.objects.filter(
+        datum__gte=start_datum, oeffentlich=True
+    ).order_by("datum")
+
+    verein = getattr(settings, "CLUB_NAME", "Schachverein")
+    now_utc = timezone.now().strftime("%Y%m%dT%H%M%SZ")
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        f"PRODID:-//{escape_ical(verein)}//PersoenlicherKalender//DE",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        f"X-WR-CALNAME:{escape_ical(f'{member.vorname} {member.nachname}')} – Mein Schachkalender",
+        "X-WR-TIMEZONE:Europe/Berlin",
+    ]
+
+    for entry in lineups:
+        m = entry.match
+        uid = f"pers-match-{m.pk}-{member.pk}@{getattr(settings, 'CLUB_SHORT', 'schach')}.local"
+        summary = f"Ligaspiel: {m.team.name} vs. {m.gegner} (Brett {entry.brett})"
+        desc = f"{member.vorname} {member.nachname} aufgestellt an Brett {entry.brett}. {m.get_status_display()}. Spielort: {m.ort or 'offen'}."
+        if m.uhrzeit:
+            start_dt = datetime.combine(m.datum, m.uhrzeit)
+            end_dt = start_dt + timedelta(hours=4)
+            dtstart = f"DTSTART:{start_dt.strftime('%Y%m%dT%H%M%S')}"
+            dtend = f"DTEND:{end_dt.strftime('%Y%m%dT%H%M%S')}"
+        else:
+            dtstart = f"DTSTART;VALUE=DATE:{m.datum.strftime('%Y%m%d')}"
+            dtend = f"DTEND;VALUE=DATE:{m.datum.strftime('%Y%m%d')}"
+
+        lines.extend([
+            "BEGIN:VEVENT",
+            f"UID:{uid}",
+            f"DTSTAMP:{now_utc}",
+            dtstart,
+            dtend,
+            f"SUMMARY:{escape_ical(summary)}",
+            f"DESCRIPTION:{escape_ical(desc)}",
+            f"LOCATION:{escape_ical(m.ort or '')}",
+            "END:VEVENT",
+        ])
+
+    for t in tournaments:
+        uid = f"pers-turnier-{t.pk}@{getattr(settings, 'CLUB_SHORT', 'schach')}.local"
+        summary = f"Turnier: {t.name}"
+        desc = f"{t.get_format_display()} mit {t.runden_anzahl} Runden. Ort: {t.ort or 'Vereinsheim'}."
+        dtstart = f"DTSTART;VALUE=DATE:{t.datum.strftime('%Y%m%d')}"
+        dtend = f"DTEND;VALUE=DATE:{t.datum.strftime('%Y%m%d')}"
+        lines.extend([
+            "BEGIN:VEVENT",
+            f"UID:{uid}",
+            f"DTSTAMP:{now_utc}",
+            dtstart,
+            dtend,
+            f"SUMMARY:{escape_ical(summary)}",
+            f"DESCRIPTION:{escape_ical(desc)}",
+            f"LOCATION:{escape_ical(t.ort or 'Vereinsheim')}",
+            "END:VEVENT",
+        ])
+
+    lines.append("END:VCALENDAR")
+    return HttpResponse("\r\n".join(lines), content_type="text/calendar; charset=utf-8")
+
 
 
 @role_required(ADMIN_GROUP)

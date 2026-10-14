@@ -83,6 +83,27 @@
           </ul>
         </div>
       {% endif %}
+
+      {% if calendar_url %}
+        <div class="card mt-2">
+          <div class="card-head">
+            <h2>Persönlicher Spielplan &amp; Kalender</h2>
+            <span class="sub">iCal / Webcal Termine</span>
+          </div>
+          <div class="card-body">
+            <p>Abonniere deine persönlichen Einsätze an den Ligabrettern und die Vereinsturniere direkt auf deinem Smartphone (Apple Kalender, Google Kalender, Outlook).</p>
+            <div class="flex gap-1 wrap center mt-1">
+              <a class="btn small" href="{{ calendar_url }}">
+                <svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Kalender abonnieren (.ics)
+              </a>
+              <button class="btn small secondary" type="button" onclick="navigator.clipboard.writeText('{{ calendar_url }}').then(() => { if (window.App && window.App.toast) window.App.toast('Kalender-Link kopiert!', 'success'); else alert('Kopiert!'); })">
+                Link kopieren
+              </button>
+            </div>
+            <p class="cell-sub mt-1">Dieser geheime Link synchronisiert deine Spieltage automatisch.</p>
+          </div>
+        </div>
+      {% endif %}
     {% endif %}
   </div>
 

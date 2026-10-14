@@ -13,6 +13,13 @@
 <div class="page-head">
   <p class="lede">{{ match.datum|date:"d.m.Y" }}{% if match.uhrzeit %}, {{ match.uhrzeit|time:"H:i" }} Uhr{% endif %} · {{ match.ort|default:match.team.liga|default:"Spielort offen" }}</p>
   <div class="page-actions">
+    <a class="btn secondary" href="{% url 'teams:match_print' match.pk %}">
+      <svg class="icon icon-sm"><use href="#i-print"></use></svg> Spielbericht drucken
+    </a>
+    <button class="btn secondary" type="button" id="copy-ticker-btn"
+            data-ticker-text="🏆 {{ match.team.name }} {{ match.brettpunkte_anzeige }} {{ match.gegner }} ({{ match.runde|default:match.team.liga }} am {{ match.datum|date:'d.m.Y' }})">
+      <svg class="icon icon-sm"><use href="#i-check"></use></svg> Ticker kopieren
+    </button>
     <a class="btn secondary" href="{% url 'teams:match_update' match.pk %}"><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Spieldaten</a>
     <a class="btn secondary" href="{% url 'teams:team_detail' match.team.pk %}">Mannschaft</a>
   </div>
@@ -65,12 +72,32 @@
             <input class="input" type="text" name="gegner_{{ brett.brett }}" placeholder="Gegner am Brett"
                    value="{{ brett.eintrag.gegner_name|default:'' }}"
                    {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="gegner_name"{% else %}disabled{% endif %}>
-            <select class="input" name="ergebnis_{{ brett.brett }}" aria-label="Ergebnis Brett {{ brett.brett }}"
-                    {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="ergebnis"{% else %}disabled{% endif %}>
-              {% for value, label in ergebnis_choices %}
-                <option value="{{ value }}" {% if brett.eintrag and brett.eintrag.ergebnis == value %}selected{% endif %}>{{ label|default:"Offen" }}</option>
-              {% endfor %}
-            </select>
+            <div class="result-pills" role="radiogroup" aria-label="Ergebnis Brett {{ brett.brett }}">
+              <label class="result-pill-label" title="Noch offen">
+                <input type="radio" class="result-pill-radio" name="ergebnis_{{ brett.brett }}" value=""
+                       {% if not brett.eintrag or not brett.eintrag.ergebnis %}checked{% endif %}
+                       {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="ergebnis"{% else %}disabled{% endif %}>
+                <span class="result-pill-btn">offen</span>
+              </label>
+              <label class="result-pill-label" title="Sieg (1 : 0)">
+                <input type="radio" class="result-pill-radio" name="ergebnis_{{ brett.brett }}" value="1"
+                       {% if brett.eintrag and brett.eintrag.ergebnis == "1" %}checked{% endif %}
+                       {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="ergebnis"{% else %}disabled{% endif %}>
+                <span class="result-pill-btn win">1 : 0</span>
+              </label>
+              <label class="result-pill-label" title="Remis (½ : ½)">
+                <input type="radio" class="result-pill-radio" name="ergebnis_{{ brett.brett }}" value="0.5"
+                       {% if brett.eintrag and brett.eintrag.ergebnis == "0.5" %}checked{% endif %}
+                       {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="ergebnis"{% else %}disabled{% endif %}>
+                <span class="result-pill-btn draw">½ : ½</span>
+              </label>
+              <label class="result-pill-label" title="Niederlage (0 : 1)">
+                <input type="radio" class="result-pill-radio" name="ergebnis_{{ brett.brett }}" value="0"
+                       {% if brett.eintrag and brett.eintrag.ergebnis == "0" %}checked{% endif %}
+                       {% if darf_aufstellen %}data-autosave="1" data-url="{% url 'teams:lineup_board_save' match.pk brett.brett %}" data-field-name="ergebnis"{% else %}disabled{% endif %}>
+                <span class="result-pill-btn loss">0 : 1</span>
+              </label>
+            </div>
           </div>
         </div>
       {% endfor %}
@@ -109,4 +136,24 @@
     </div>
   </div>
 {% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  var btn = document.getElementById("copy-ticker-btn");
+  if (btn) {
+    btn.addEventListener("click", function() {
+      var text = btn.getAttribute("data-ticker-text");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          if (window.App && window.App.toast) {
+            window.App.toast("Ergebnis in die Zwischenablage kopiert!", "success");
+          } else {
+            alert("Kopiert: " + text);
+          }
+        });
+      }
+    });
+  }
+});
+</script>
 {% endblock %}

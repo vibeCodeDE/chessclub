@@ -28,4 +28,5 @@ urlpatterns = [
     path("turniere/verwalten/<int:pk>/abschluss/", views.tournament_finish, name="tournament_finish"),
     path("turniere/verwalten/<int:pk>/export.csv", views.export_csv, name="export_csv"),
     path("turniere/verwalten/<int:pk>/druck/", views.print_results, name="print_results"),
+    path("turniere/verwalten/<int:pk>/runden/<int:runde_nr>/drucken/", views.round_print, name="round_print"),
 ]

@@ -63,7 +63,14 @@
     <div class="card">
       <div class="card-head">
         <h2>Paarungen {% if aktuelle_runde %}– Runde {{ aktuelle_runde.nummer }}{% endif %}</h2>
-        <span class="sub">Ergebnisse werden sofort gespeichert</span>
+        <div class="flex gap-1 center">
+          {% if aktuelle_runde %}
+            <a class="btn small secondary" href="{% url 'tournaments:round_print' turnier.pk aktuelle_runde.nummer %}" target="_blank">
+              <svg class="icon icon-sm"><use href="#i-print"></use></svg> Rundenaushang (A4)
+            </a>
+          {% endif %}
+          <span class="sub">Ergebnisse werden sofort gespeichert</span>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="data">

@@ -42,6 +42,27 @@
 </div>
 
 <div class="card mt-2">
+  <div class="smart-badges-bar">
+    <a href="{% url 'members:member_list' %}" class="smart-badge {% if not filter_type and not status and not kategorie %}is-active{% endif %}">
+      Alle <strong>{{ smart_counts.gesamt }}</strong>
+    </a>
+    <a href="{% url 'members:member_list' %}?status=aktiv" class="smart-badge {% if status == 'aktiv' and not filter_type %}is-active{% endif %}">
+      Aktiv <strong>{{ smart_counts.aktiv }}</strong>
+    </a>
+    <a href="{% url 'members:member_list' %}?filter=u18" class="smart-badge {% if filter_type == 'u18' %}is-active{% endif %}">
+      Jugend U18 <strong>{{ smart_counts.u18 }}</strong>
+    </a>
+    <a href="{% url 'members:member_list' %}?filter=senioren" class="smart-badge {% if filter_type == 'senioren' %}is-active{% endif %}">
+      Senioren 60+ <strong>{{ smart_counts.senioren }}</strong>
+    </a>
+    <a href="{% url 'members:member_list' %}?filter=ohne_kategorie" class="smart-badge badge-warn-subtle {% if filter_type == 'ohne_kategorie' %}is-active{% endif %}">
+      Ohne Beitragssatz <strong>{{ smart_counts.ohne_kategorie }}</strong>
+    </a>
+    <a href="{% url 'members:member_list' %}?filter=ohne_mandat" class="smart-badge badge-danger-subtle {% if filter_type == 'ohne_mandat' %}is-active{% endif %}">
+      Ohne SEPA-Mandat <strong>{{ smart_counts.ohne_mandat }}</strong>
+    </a>
+  </div>
+
   <form class="filters" method="get">
     <label class="visually-hidden" for="q">Suche</label>
     <input class="grow" type="search" id="q" name="q" value="{{ q }}" placeholder="Name, E-Mail oder Ort suchen…">

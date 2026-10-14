@@ -383,3 +383,22 @@ def print_results(request, pk):
         "tournaments/print_results.html",
         {"turnier": turnier, "stand": teilnehmer_stand(turnier), "heute": timezone.localdate()},
     )
+
+
+@role_required(ADMIN_GROUP)
+def round_print(request, pk, runde_nr):
+    """Offizieller A4-Rundenaushang für das Schwarze Brett (Hebel F3 & D3)."""
+    turnier = get_object_or_404(Tournament, pk=pk)
+    runde = get_object_or_404(TournamentRound, tournament=turnier, nummer=runde_nr)
+    paarungen = runde.paarungen.select_related("weiss", "schwarz").order_by("brett")
+    return render(
+        request,
+        "tournaments/round_print.html",
+        {
+            "turnier": turnier,
+            "runde": runde,
+            "paarungen": paarungen,
+            "heute": timezone.localdate(),
+        },
+    )
+

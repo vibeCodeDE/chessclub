@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Rundenaushang: Runde {{ runde.nummer }} – {{ turnier.name }}{% endblock %}
+{% block page_title %}Rundenaushang – Runde {{ runde.nummer }}{% endblock %}
+
+{% block page_actions %}
+<div class="page-head no-print">
+  <p class="lede">{{ turnier.name }} · Runde {{ runde.nummer }} von {{ turnier.runden_anzahl }} · {{ turnier.datum|date:"d.m.Y" }}</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'tournaments:manage_detail' turnier.pk %}">Zurück zum Turnier</a>
+    <button class="btn" type="button" onclick="window.print()">
+      <svg class="icon icon-sm"><use href="#i-print"></use></svg> Aushang drucken (A4)
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card print-sheet">
+  <div class="card-body">
+    <div class="round-print-header">
+      <div class="print-brand">
+        <h1 style="font-size:2rem;margin-bottom:0.25rem">{{ turnier.name }}</h1>
+        <h2 style="font-size:1.4rem;font-weight:600;color:var(--forest)">Rundenaushang · Runde {{ runde.nummer }}</h2>
+      </div>
+      <div class="print-meta-grid">
+        <div><strong>Datum:</strong> {{ turnier.datum|date:"d.m.Y" }}</div>
+        <div><strong>Spielort:</strong> {{ turnier.ort|default:"Vereinsheim" }}</div>
+        <div><strong>Modus:</strong> {{ turnier.get_format_display }}</div>
+        <div><strong>Teilnehmer:</strong> {{ turnier.teilnehmer_anzahl }} Spieler:innen</div>
+      </div>
+    </div>
+
+    <table class="data print-table mt-2">
+      <thead>
+        <tr>
+          <th style="width:4.5rem" class="center">Brett</th>
+          <th>Weiß (Spieler:in / Verein)</th>
+          <th style="width:5rem" class="num">DWZ</th>
+          <th>Schwarz (Spieler:in / Verein)</th>
+          <th style="width:5rem" class="num">DWZ</th>
+          <th style="width:8rem" class="center">Ergebnis</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in paarungen %}
+          <tr>
+            <td class="center mono" style="font-size:1.3rem"><strong>Brett {{ p.brett }}</strong></td>
+            <td class="cell-main">
+              <strong style="font-size:1.1rem">{{ p.weiss.name }}</strong>
+              {% if p.weiss.verein %}
+                <div class="cell-sub">{{ p.weiss.verein }}</div>
+              {% endif %}
+            </td>
+            <td class="num mono" style="font-size:1.05rem">{{ p.weiss.twz|default:"–" }}</td>
+            <td class="cell-main">
+              {% if p.schwarz %}
+                <strong style="font-size:1.1rem">{{ p.schwarz.name }}</strong>
+                {% if p.schwarz.verein %}
+                  <div class="cell-sub">{{ p.schwarz.verein }}</div>
+                {% endif %}
+              {% else %}
+                <span class="badge badge-neutral" style="font-size:1rem;padding:4px 10px">Spielfrei (Bye)</span>
+              {% endif %}
+            </td>
+            <td class="num mono" style="font-size:1.05rem">
+              {% if p.schwarz %}{{ p.schwarz.twz|default:"–" }}{% else %}–{% endif %}
+            </td>
+            <td class="center mono" style="font-size:1.15rem">
+              {% if p.ergebnis %}
+                <strong>{{ p.ergebnis_anzeige }}</strong>
+              {% else %}
+                <div class="result-box-placeholder">[ &nbsp; : &nbsp; ]</div>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="center">Keine Paarungen in dieser Runde vorhanden.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="print-footer-note mt-3">
+      Bitte die Ergebnisse nach Partieende umgehend am Schiedsrichtertisch melden. Erstellt am {{ heute|date:"d.m.Y" }}.
+    </div>
+  </div>
+</div>
+{% endblock %}

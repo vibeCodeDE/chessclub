@@ -14,6 +14,9 @@
     <button class="btn secondary" type="button" data-dialog-open="#sepa-dialog">
       <svg class="icon icon-sm"><use href="#i-download"></use></svg> SEPA-XML {{ jahr }}
     </button>
+    <button class="btn secondary" type="button" data-dialog-open="#sepa-verbuchen-dialog">
+      <svg class="icon icon-sm"><use href="#i-check"></use></svg> SEPA-Sammelverbuchung
+    </button>
     <a class="btn secondary" href="{% url 'dues:kassenbericht' %}?jahr={{ jahr }}">
       <svg class="icon icon-sm"><use href="#i-chart"></use></svg> Kassenbericht
     </a>
@@ -184,6 +187,35 @@
       <div class="modal-foot">
         <button class="btn secondary" type="button" data-dialog-close>Abbrechen</button>
         <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-download"></use></svg> SEPA-Datei erzeugen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="dialog modal-backdrop" id="sepa-verbuchen-dialog" data-dialog>
+  <div class="modal">
+    <div class="modal-head">
+      <h3>SEPA-Sammelverbuchung ({{ jahr }})</h3>
+      <button class="icon-btn" type="button" data-dialog-close aria-label="Schließen"><svg class="icon"><use href="#i-x"></use></svg></button>
+    </div>
+    <form method="post" action="{% url 'dues:sepa_sammelverbuchung' jahr %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <p>Bucht alle <strong>offenen oder teilweise bezahlten Posten mit aktivem SEPA-Mandat</strong> für das Beitragsjahr <strong>{{ jahr }}</strong> mit einem Klick als bezahlt (Zahlungsart: SEPA-Lastschrift).</p>
+        <div class="alert alert-info mt-1">
+          <strong>Hinweis:</strong> Führen Sie diesen Schritt aus, nachdem die Lastschriften bei Ihrer Bank erfolgreich eingezogen und gutgeschrieben wurden. Posten ohne Mandat oder bereits bezahlte Posten bleiben unberührt.
+        </div>
+        <div class="form-grid cols-1 mt-1">
+          <div class="field">
+            <label for="id_buchungsdatum">Buchungs- / Valutadatum</label>
+            <input type="date" id="id_buchungsdatum" name="buchungsdatum">
+            <span class="help">Optional. Standard: heutiges Tagesdatum.</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" type="button" data-dialog-close>Abbrechen</button>
+        <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-check"></use></svg> Jetzt als bezahlt verbuchen</button>
       </div>
     </form>
   </div>

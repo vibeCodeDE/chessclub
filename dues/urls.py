@@ -7,6 +7,7 @@ app_name = "dues"
 urlpatterns = [
     path("beitraege/", views.overview, name="overview"),
     path("beitraege/lauf/", views.run_beitragslauf, name="run_lauf"),
+    path("beitraege/lauf/<int:jahr>/sepa-verbuchen/", views.sepa_sammelverbuchung_view, name="sepa_sammelverbuchung"),
     path("beitraege/export.csv", views.export, name="export"),
     path("beitraege/sepa-export.xml", views.sepa_export, name="sepa_export"),
     path("beitraege/kategorien/", views.category_list, name="category_list"),

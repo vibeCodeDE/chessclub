@@ -1,8 +1,10 @@
 from django.contrib import admin
+from import_export.admin import ImportExportModelAdmin
 
 from core.models import AuditLog
 
 from .models import ChangeRequest, Member, MemberStatusChange
+from .resources import MemberResource
 
 
 class MemberStatusChangeInline(admin.TabularInline):
@@ -17,7 +19,8 @@ class MemberStatusChangeInline(admin.TabularInline):
 
 
 @admin.register(Member)
-class MemberAdmin(admin.ModelAdmin):
+class MemberAdmin(ImportExportModelAdmin):
+    resource_classes = [MemberResource]
     list_display = (
         "nachname",
         "vorname",
@@ -53,6 +56,32 @@ class MemberAdmin(admin.ModelAdmin):
                     member=member,
                 )
         return super().change_view(request, object_id, form_url, extra_context)
+
+    def get_data_for_export(self, request, queryset, **kwargs):
+        export_data = super().get_data_for_export(request, queryset, **kwargs)
+        if request.user.is_authenticated:
+            AuditLog.objects.create(
+                benutzer=request.user,
+                aktion="Mitgliederliste exportiert",
+                text=f"{queryset.count()} Mitglieder über den Django-Admin exportiert.",
+            )
+        return export_data
+
+    def process_result(self, result, request):
+        response = super().process_result(result, request)
+        if request.user.is_authenticated and not result.has_errors():
+            imported_count = len(result.rows)
+            AuditLog.objects.create(
+                benutzer=request.user,
+                aktion="Mitglieder importiert",
+                text=f"{imported_count} Mitglieder über den Django-Admin importiert.",
+            )
+        return response
+
+    def get_import_resource_kwargs(self, request, **kwargs):
+        resource_kwargs = super().get_import_resource_kwargs(request, **kwargs)
+        resource_kwargs["user"] = request.user
+        return resource_kwargs
 
 
 @admin.register(ChangeRequest)

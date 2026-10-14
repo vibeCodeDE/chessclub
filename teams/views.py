@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
@@ -204,6 +205,33 @@ def match_detail(request, pk):
     kontext["tabelle"] = tabelle(match.team.liga)
     kontext["gegner_tabelle"] = [zeile for zeile in kontext["tabelle"] if zeile["name"] == match.gegner]
     return render(request, "teams/match_detail.html", kontext)
+
+
+@role_required(*TEAM_ROLES)
+def match_print(request, pk):
+    """Offizielle A4-Druckansicht des Spielberichts (Hebel F2 & D3)."""
+    match = get_object_or_404(
+        LeagueMatch.objects.select_related("team", "team__kapitaen"), pk=pk
+    )
+    eintraege = {
+        eintrag.brett: eintrag
+        for eintrag in match.aufstellung.select_related("member").all()
+    }
+    bretter = []
+    for brett_nr in range(1, match.brettanzahl + 1):
+        bretter.append({
+            "brett": brett_nr,
+            "eintrag": eintraege.get(brett_nr),
+        })
+
+    kontext = {
+        "match": match,
+        "bretter": bretter,
+        "club_name": getattr(settings, "CLUB_NAME", "Schachverein"),
+        "heute": timezone.localdate(),
+    }
+    return render(request, "teams/match_print.html", kontext)
+
 
 
 def _match_patch(match):

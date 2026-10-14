@@ -164,6 +164,29 @@
   5. **Integration & Querschnitt:** Templates, Kontextprozessor (`core/context_processors.py`), Dashboard-Banner und SEPA-Export lesen vorrangig die Datenbank-Stammdaten.
 - **Beleg:** `docker compose exec app pytest core/tests/test_club_profile.py members/tests/test_member_import.py` → **13 passed** in 6.13s; Gesamttestlauf `docker compose exec app pytest` → **511 passed, 239 subtests passed** in 34.82s (100% grün). Negative Rollentests (403 für Nicht-Admins) und Dry-Run-Integrität nachgewiesen.
 
+### T32: django-import-export im Django Admin (Mitglieder & Kassenbuch) (2026-10-13)
+
+- **Problem & Kontext:** Im Django-Admin fehlte eine standardisierte Möglichkeit für Vorstände, Mitgliederdaten und Kassenbuchungen flexibel als CSV/TSV/JSON zu exportieren und zu importieren (PRD M1.5, S1.7, S6.2, ADR-021).
+- **Umsetzung (gemäß ADR-021):**
+  1. **Abhängigkeit & Konfiguration:** `django-import-export>=4.0` in `requirements.txt` ergänzt, `"import_export"` in `INSTALLED_APPS` und `IMPORT_EXPORT_USE_TRANSACTIONS = True` in `config/settings.py`.
+  2. **Ressourcen:**
+     - `MemberResource` (`members/resources.py`): Export/Import aller relevanten Profil- und Verbandskennungen (`zps_nummer`, `dwz` etc.), `ForeignKeyWidget` für `FeeCategory` über den Kategorienamen, `clean_model_instances = True`, Übernahme des Benutzers (`_changed_by`) zur Historisierung von Statuswechseln (`MemberStatusChange`).
+     - `CashEntryResource` (`cashbook/resources.py`): Abbildung von Einnahmen/Ausgaben und Storno-Gegenbuchungen, automatische Erfasser-Zuweisung (`erfasst_von`), `clean_model_instances = True` für Betrags- und Vorzeichenvalidierung.
+  3. **Admin-Integration (`ImportExportModelAdmin`):** `MemberAdmin` und `CashEntryAdmin` um Import-/Export-Routen erweitert; Löschschutz (`has_delete_permission = False`) bleibt strikt intakt; Hooks `get_data_for_export()` und `process_result()` protokollieren jeden Export und Import automatisch im `AuditLog` (DSGVO N1.5).
+### T33: Operative Exzellenz, Spieltags-Workflows & Design-Hebel (2026-10-13)
+
+- **Problem & Kontext:** Analyse der Vereins-Workflows ergab operative Reibungspunkte: Nach einem SEPA-Banklauf mussten Beiträge einzeln als bezahlt markiert werden; am Spielabend fehlte ein normierter A4-Spielberichtsbogen zum Unterschreiben und ein schneller WhatsApp-Ticker; Ergebniseingabe auf Smartphones am Brett war per `<select>` fummelig; Aushang der Turnierrunden am Schwarzen Brett war unvollständig; Mitglieder hatten keinen personalisierten Kalender für ihre Einsätze; Mitgliederliste bot keine Schnellfilter (U18, Senioren, fehlendes Mandat/Kategorie); Typografie und A4-Druckbild waren noch nicht für den Vereinssaal optimiert.
+- **Umsetzung (8 Hebel):**
+  1. **F1 SEPA-Sammelverbuchung:** Atomare Funktion `sepa_sammelverbuchung` in `dues/services.py` mit Kassenbucheintrag und AuditLog; View `sepa_sammelverbuchung_view` in `dues/views.py` und Bestätigungs-Modal in `dues/templates/dues/overview.html`.
+  2. **F2 Spielbericht A4 & WhatsApp-Ticker:** Druckfertige Ansicht `match_print` (`/spiele/<pk>/drucken/`) in `teams/views.py` und Template `teams/templates/teams/match_print.html` mit Aufstellung, Brettpunkten und Unterschriftenfeldern. WhatsApp-Ticker-Kopierbutton in `teams/templates/teams/match_detail.html`.
+  3. **D1 Touch-Pills am Brett:** Mobile Radio-Touch-Pills (≥ 44×44 px nach WCAG 2.5.5) mit automatischem Autosave per JavaScript in `teams/templates/teams/match_detail.html`.
+  4. **F3 Rundenaushang A4:** Ansicht `round_print` (`/turniere/verwalten/<pk>/runden/<nr>/drucken/`) in `tournaments/views.py` und Template `tournaments/templates/tournaments/round_print.html` für das Schwarze Brett am Spielabend.
+  5. **F4 Persönlicher iCal-Feed:** Signiertes Token (`TimestampSigner`) und ICS-Feed `personal_calendar_feed` (`/mitglieder/kalender/<token>.ics`) in `members/views.py` und Einbindung im Mitgliederprofil (`members/templates/members/profil.html`).
+  6. **F5 Mitglieder-Schnellfilter & Smart Badges:** Filter-Typen (U18, Senioren, ohne Kategorie, ohne SEPA-Mandat) und Zähler-Pills in `members/views.py` und `members/templates/members/member_list.html`.
+  7. **D2 & D4 Typografie & Kontraste:** Klassische Serif-Schrift (`--display`), `font-variant-numeric: tabular-nums` für Tabellen/DWZ/Ergebnisse und WCAG AAA-Kontrastverbesserung in `static/css/app.css`.
+  8. **D3 Systemweite Print-Engine:** `@media print`-Optimierung für sauberen A4-Druck ohne Header/Sidebar/Buttons in `static/css/app.css`.
+- **Beleg:** `docker compose exec app pytest dues/tests/test_sepa_sammelverbuchung.py teams/tests/test_match_print.py tournaments/tests/test_round_print.py members/tests/test_personal_calendar.py members/tests/test_member_filters.py` → **22 passed** in 5.00s; Gesamttestlauf `docker compose exec app pytest` → **545 passed, 239 subtests passed** in 42.01s (100% grün). Negative Rollentests (403 für unbefugte Rollen) in allen Modulen nachgewiesen.
+
 ---
 
 ## Nächste Schritte

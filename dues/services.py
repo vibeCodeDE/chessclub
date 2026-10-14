@@ -442,3 +442,49 @@ def erstelle_sepa_xml(
         "msg_id": msg_id,
     }
     return xml_bytes, metadaten
+
+
+@transaction.atomic
+def sepa_sammelverbuchung(jahr, benutzer=None, buchungsdatum=None, notiz=None):
+    """Verbucht alle offenen Beitragsposten eines Jahres mit aktivem SEPA-Mandat als eingezogen (Hebel F1).
+
+    Atomar, idempotent bezüglich bereits bezahlter Posten, erzeugt Kassenbuchungen
+    und protokolliert die Aktion im AuditLog.
+    """
+    from core.models import AuditLog
+
+    posten = MembershipFee.objects.filter(
+        jahr=jahr,
+        status__in=[MembershipFee.Status.OFFEN, MembershipFee.Status.TEILWEISE],
+        member__sepa_mandat__status=SepaMandate.Status.AKTIV,
+    ).select_related("member", "member__sepa_mandat")
+
+    if not posten.exists():
+        raise ValidationError(f"Keine offenen Posten mit aktivem SEPA-Mandat für das Beitragsjahr {jahr} gefunden.")
+
+    datum = buchungsdatum or timezone.localdate()
+    notiz_text = notiz or f"SEPA-Sammellastschrift Beitragsjahr {jahr}"
+    erfasste = []
+    gesamtsumme = Decimal("0.00")
+
+    for fee in posten:
+        offen = fee.offener_betrag
+        if offen > Decimal("0.00"):
+            zahlung = zahlung_erfassen(
+                fee=fee,
+                betrag=offen,
+                datum=datum,
+                art=Payment.Art.SEPA,
+                notiz=notiz_text,
+                benutzer=benutzer,
+            )
+            erfasste.append(zahlung)
+            gesamtsumme += offen
+
+    AuditLog.objects.create(
+        benutzer=benutzer,
+        aktion="SEPA-Sammelverbuchung",
+        text=f"SEPA-Sammelverbuchung für {jahr}: {len(erfasste)} Posten verbucht, Summe {gesamtsumme:.2f} €.",
+    )
+    return {"anzahl": len(erfasste), "summe": gesamtsumme, "zahlungen": erfasste}
+

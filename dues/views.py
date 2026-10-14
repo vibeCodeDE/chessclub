@@ -38,6 +38,7 @@ from .services import (
     erstelle_sepa_xml,
     mahntext,
     mahnung_erstellen,
+    sepa_sammelverbuchung,
     zahlung_erfassen,
     zahlung_stornieren,
 )
@@ -491,6 +492,43 @@ def sepa_export(request):
     response = HttpResponse(xml_bytes, content_type="application/xml; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="sepa-lastschrift-{jahr}.xml"'
     return response
+
+
+@role_required(ADMIN_GROUP)
+@require_POST
+def sepa_sammelverbuchung_view(request, jahr=None):
+    """Verbucht alle offenen Mandatsposten eines Jahres per Sammellastschrift (Hebel F1)."""
+    if jahr is None:
+        jahr = _jahr_aus_request(request)
+    datum_str = request.POST.get("buchungsdatum", "").strip()
+    buchungsdatum = None
+    if datum_str:
+        try:
+            buchungsdatum = date.fromisoformat(datum_str)
+        except ValueError:
+            pass
+    try:
+        res = sepa_sammelverbuchung(
+            jahr=jahr,
+            benutzer=request.user,
+            buchungsdatum=buchungsdatum,
+        )
+        messages.success(
+            request,
+            f"SEPA-Sammelverbuchung für {jahr} erfolgreich: {res['anzahl']} Posten verbucht ({res['summe']:.2f} €).",
+        )
+    except ValidationError as exc:
+        msg = (
+            exc.message
+            if hasattr(exc, "message")
+            else ", ".join(exc.messages)
+            if hasattr(exc, "messages")
+            else str(exc)
+        )
+        messages.error(request, msg)
+
+    return redirect(f"/beitraege/?jahr={jahr}")
+
 
 
 @role_required(ADMIN_GROUP)

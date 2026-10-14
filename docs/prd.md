@@ -242,3 +242,4 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v2.0 | 2026-10-07 | SEPA-XML-Export (pain.008.001.02, S2.7) für Beitragsläufe gemäß ADR-017 / T9c |
 | v2.1 | 2026-10-11 | Modul-Toggles (S7.4) im Django Admin Panel gemäß ADR-019 für Satellitenmodule spezifiziert (T30) |
 | v2.2 | 2026-10-12 | Vereins-Setup & Stammdaten im Browser (S7.5) und Mitglieder-CSV-Import (S1.7) gemäß ADR-020 spezifiziert (T31) |
+| v2.3 | 2026-10-13 | django-import-export im Django-Admin für Mitglieder und Kassenbuch (M1.5, S1.7, S6.2) gemäß ADR-021 spezifiziert und integriert (T32) |

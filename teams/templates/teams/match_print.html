@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Spielbericht: {{ match.team.name }} – {{ match.gegner }}{% endblock %}
+{% block page_title %}Spielbericht – {{ match.team.name }} vs. {{ match.gegner }}{% endblock %}
+
+{% block page_actions %}
+<div class="page-head no-print">
+  <p class="lede">{{ match.datum|date:"d.m.Y" }}{% if match.uhrzeit %}, {{ match.uhrzeit|time:"H:i" }} Uhr{% endif %} · {{ match.team.liga }} · {{ match.runde }}</p>
+  <div class="page-actions">
+    <a class="btn secondary" href="{% url 'teams:match_detail' match.pk %}">Zurück zum Spiel</a>
+    <button class="btn" type="button" onclick="window.print()">
+      <svg class="icon icon-sm"><use href="#i-print"></use></svg> Spielbericht drucken (A4)
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card print-sheet">
+  <div class="card-body">
+    <div class="match-print-header">
+      <div class="print-brand">
+        <h1>Offizieller Spielbericht</h1>
+        <p class="print-sub">{{ club_name }} · Spielbetrieb &amp; Mannschaftsmeisterschaft</p>
+      </div>
+      <div class="print-meta-grid">
+        <div><strong>Liga / Staffel:</strong> {{ match.team.liga|default:"–" }}</div>
+        <div><strong>Runde / Spieltag:</strong> {{ match.runde|default:"–" }}</div>
+        <div><strong>Spieldatum:</strong> {{ match.datum|date:"d.m.Y" }}{% if match.uhrzeit %}, {{ match.uhrzeit|time:"H:i" }} Uhr{% endif %}</div>
+        <div><strong>Spielort:</strong> {{ match.ort|default:"Vereinsheim" }}</div>
+      </div>
+    </div>
+
+    <div class="match-teams-box">
+      <div class="match-team-col">
+        <span class="team-label">Heimverein:</span>
+        <strong class="team-name">{% if match.heimspiel %}{{ match.team.name }}{% else %}{{ match.gegner }}{% endif %}</strong>
+      </div>
+      <div class="match-vs">gegen</div>
+      <div class="match-team-col">
+        <span class="team-label">Gastverein:</span>
+        <strong class="team-name">{% if match.heimspiel %}{{ match.gegner }}{% else %}{{ match.team.name }}{% endif %}</strong>
+      </div>
+    </div>
+
+    <table class="data print-table">
+      <thead>
+        <tr>
+          <th style="width:3.5rem" class="center">Brett</th>
+          <th>Spieler:in Heim</th>
+          <th style="width:5rem" class="num">DWZ</th>
+          <th>Spieler:in Gast</th>
+          <th style="width:5rem" class="num">DWZ</th>
+          <th style="width:7rem" class="center">Ergebnis</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bretter %}
+          <tr>
+            <td class="center mono"><strong>{{ b.brett }}</strong></td>
+            <td class="cell-main">
+              {% if match.heimspiel %}
+                {{ b.eintrag.spieler_name|default:"–" }}
+              {% else %}
+                {{ b.eintrag.gegner_name|default:"–" }}
+              {% endif %}
+            </td>
+            <td class="num mono">
+              {% if match.heimspiel and b.eintrag.member %}
+                {{ b.eintrag.member.dwz|default:"–" }}
+              {% else %}
+                –
+              {% endif %}
+            </td>
+            <td class="cell-main">
+              {% if match.heimspiel %}
+                {{ b.eintrag.gegner_name|default:"–" }}
+              {% else %}
+                {{ b.eintrag.spieler_name|default:"–" }}
+              {% endif %}
+            </td>
+            <td class="num mono">
+              {% if not match.heimspiel and b.eintrag.member %}
+                {{ b.eintrag.member.dwz|default:"–" }}
+              {% else %}
+                –
+              {% endif %}
+            </td>
+            <td class="center mono font-bold" style="font-size:1.05rem">
+              {% if b.eintrag.ergebnis == "1" %}
+                {% if match.heimspiel %}1 : 0{% else %}0 : 1{% endif %}
+              {% elif b.eintrag.ergebnis == "0.5" %}
+                ½ : ½
+              {% elif b.eintrag.ergebnis == "0" %}
+                {% if match.heimspiel %}0 : 1{% else %}1 : 0{% endif %}
+              {% else %}
+                – : –
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="print-total-row">
+          <td colspan="5" class="right"><strong>Endstand (Brettpunkte):</strong></td>
+          <td class="center mono font-bold" style="font-size:1.15rem">
+            {% if match.heimspiel %}
+              {{ match.ergebnis_eigen|default:"0.0" }} : {{ match.ergebnis_gegner|default:"0.0" }}
+            {% else %}
+              {{ match.ergebnis_gegner|default:"0.0" }} : {{ match.ergebnis_eigen|default:"0.0" }}
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td colspan="5" class="right"><strong>Mannschaftspunkte:</strong></td>
+          <td class="center mono font-bold">
+            {% if match.mannschaftspunkte == 2 %}
+              {% if match.heimspiel %}2 : 0{% else %}0 : 2{% endif %}
+            {% elif match.mannschaftspunkte == 1 %}
+              1 : 1
+            {% elif match.mannschaftspunkte == 0 %}
+              {% if match.heimspiel %}0 : 2{% else %}2 : 0{% endif %}
+            {% else %}
+              – : –
+            {% endif %}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="print-signatures">
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <p>Unterschrift Mannschaftsführer:in Heim</p>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <p>Unterschrift Schiedsrichter:in / Turnierleitung (falls benannt)</p>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <p>Unterschrift Mannschaftsführer:in Gast</p>
+      </div>
+    </div>
+
+    <div class="print-footer-note">
+      Erstellt mit {{ club_name }} am {{ heute|date:"d.m.Y" }}. Original verbleibt beim Heimverein zur Ergebnismeldung.
+    </div>
+  </div>
+</div>
+{% endblock %}
