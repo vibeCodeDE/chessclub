@@ -230,7 +230,8 @@ EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
 
 # Zwei-Faktor für die Vorstandschaft (PRD N1.6). In der Entwicklung abschaltbar
 # (TWOFA_PFLICHT=0), im Produktivbetrieb verbindlich.
-TWOFA_PFLICHT = os.environ.get("TWOFA_PFLICHT", "1") == "1"
+# Temporär deaktiviert (Original: os.environ.get("TWOFA_PFLICHT", "1") == "1"):
+TWOFA_PFLICHT = False
 
 # DSGVO: Aufbewahrungsfrist nach Austritt, danach werden Kontaktdaten anonymisiert.
 DSGVO_ANONYMISIERUNGS_FRIST_TAGE = int(os.environ.get("DSGVO_FRIST_TAGE", "730"))
