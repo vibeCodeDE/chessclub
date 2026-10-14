@@ -1,0 +1,172 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; Demo-Daten
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" style="max-width: 960px;">
+  <div style="margin-bottom: 1.5rem;">
+    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.6rem;">Demo-Daten-Verwaltung (Ein / Aus)</h1>
+    <p style="color: var(--body-quiet-color, #56695b); margin: 0; line-height: 1.5;">
+      Hier können Sie mit einem Klick realistische Beispieldaten für Vorführungen, Schulungen oder Funktionstests generieren und sicher wieder entfernen.
+    </p>
+  </div>
+
+  <!-- Status Card -->
+  <div style="background: var(--body-bg, #ffffff); border: 1px solid var(--border-color, #d0ded3); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color, #d0ded3); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+      <h2 style="margin: 0; font-size: 1.15rem; font-weight: 600;">Aktueller Systemstatus</h2>
+      <div>
+        {% if status_info.is_active %}
+          <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #e6f4ea; color: #137333; border-radius: 999px; font-weight: 600; font-size: 0.85rem;">
+            ● Demo-Daten aktiv
+          </span>
+        {% else %}
+          <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #f1f3f4; color: #5f6368; border-radius: 999px; font-weight: 600; font-size: 0.85rem;">
+            ○ Keine Demo-Daten geladen
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+      <div style="padding: 0.75rem; background: var(--darkened-bg, #f5f8f5); border-radius: 6px;">
+        <div style="font-size: 0.8rem; color: var(--body-quiet-color, #56695b);">Mitglieder</div>
+        <div style="font-size: 1.4rem; font-weight: 700;">{{ status_info.total_members }}</div>
+      </div>
+      <div style="padding: 0.75rem; background: var(--darkened-bg, #f5f8f5); border-radius: 6px;">
+        <div style="font-size: 0.8rem; color: var(--body-quiet-color, #56695b);">Beitragsposten</div>
+        <div style="font-size: 1.4rem; font-weight: 700;">{{ status_info.total_fees }}</div>
+      </div>
+      <div style="padding: 0.75rem; background: var(--darkened-bg, #f5f8f5); border-radius: 6px;">
+        <div style="font-size: 0.8rem; color: var(--body-quiet-color, #56695b);">Mannschaften</div>
+        <div style="font-size: 1.4rem; font-weight: 700;">{{ status_info.total_teams }}</div>
+      </div>
+      <div style="padding: 0.75rem; background: var(--darkened-bg, #f5f8f5); border-radius: 6px;">
+        <div style="font-size: 0.8rem; color: var(--body-quiet-color, #56695b);">Turniere</div>
+        <div style="font-size: 1.4rem; font-weight: 700;">{{ status_info.total_tournaments }}</div>
+      </div>
+      <div style="padding: 0.75rem; background: var(--darkened-bg, #f5f8f5); border-radius: 6px;">
+        <div style="font-size: 0.8rem; color: var(--body-quiet-color, #56695b);">Kassenbuchungen</div>
+        <div style="font-size: 1.4rem; font-weight: 700;">{{ status_info.total_cash }}</div>
+      </div>
+    </div>
+
+    {% if status_info.is_active %}
+      <div style="font-size: 0.9rem; line-height: 1.5; color: var(--body-quiet-color, #56695b);">
+        <strong>Demo-Zugänge:</strong> <code>vorstand</code>, <code>kassenwart</code>, <code>kapitaen</code>, <code>mitglied</code> &nbsp;·&nbsp;
+        <strong>Passwort:</strong> <code>schach2026</code>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Action Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- LOAD ACTION -->
+    <div style="background: var(--body-bg, #ffffff); border: 1px solid var(--border-color, #d0ded3); border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--link-fg, #1b382b);">♞ Demo-Daten laden („An“)</h3>
+        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--body-quiet-color, #56695b); margin-bottom: 1.25rem;">
+          Erzeugt ca. 48 fiktive Mitglieder, 4 Mannschaften mit Spielterminen, 3 Turniere, Beitragsforderungen mit Mahnungen, Kassenbucheinträge und Vereins-News.
+        </p>
+      </div>
+
+      <form method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="load">
+        {% if status_info.can_load %}
+          <button type="submit" class="button default" style="width: 100%; padding: 0.65rem 1rem; font-size: 0.95rem; font-weight: 600; cursor: pointer;">
+            Demo-Daten jetzt laden
+          </button>
+        {% else %}
+          <button type="button" disabled class="button" style="width: 100%; padding: 0.65rem 1rem; font-size: 0.95rem; opacity: 0.6; cursor: not-allowed;">
+            Bereits Daten vorhanden
+          </button>
+          <div style="font-size: 0.8rem; color: var(--body-quiet-color, #56695b); margin-top: 0.5rem; text-align: center;">
+            Um neue Demo-Daten zu laden, entfernen Sie bitte zuerst die vorhandenen Daten.
+          </div>
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- REMOVE ACTION -->
+    <div style="background: var(--body-bg, #ffffff); border: 1px solid var(--border-color, #d0ded3); border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #9e2a22;">✖ Demo-Daten entfernen („Aus“)</h3>
+        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--body-quiet-color, #56695b); margin-bottom: 1rem;">
+          Entfernt die Beispieldaten und Demo-Konten atomar aus der Datenbank. Das Audit-Protokoll bleibt zur Revision erhalten.
+        </p>
+
+        {% if status_info.has_real_data %}
+          <div style="background: #faeae8; border: 1px solid #f5c6cb; color: #721c24; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;">
+            ⚠️ <strong>Sicherheits-Sperre:</strong> Es wurden echte Produktivdaten oder manuell angelegte Mitglieder/Konten erkannt. Zum Schutz vor Datenverlust ist das automatische Löschen gesperrt.
+          </div>
+        {% endif %}
+      </div>
+
+      <form method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="remove">
+
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+            <input type="checkbox" name="confirm" value="1" id="id_confirm" {% if not status_info.can_remove %}disabled{% endif %} style="margin-top: 0.2rem;">
+            <span>Ich bestätige, dass alle Demo-Daten unwiderruflich gelöscht werden sollen.</span>
+          </label>
+        </div>
+
+        {% if status_info.can_remove %}
+          <button type="submit" class="button" style="width: 100%; padding: 0.65rem 1rem; font-size: 0.95rem; font-weight: 600; background: #9e2a22; color: #ffffff; border: none; border-radius: 4px; cursor: pointer;">
+            Demo-Daten entfernen
+          </button>
+        {% else %}
+          <button type="button" disabled class="button" style="width: 100%; padding: 0.65rem 1rem; font-size: 0.95rem; opacity: 0.5; cursor: not-allowed;">
+            Entfernen nicht möglich
+          </button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Audit History -->
+  <div style="background: var(--body-bg, #ffffff); border: 1px solid var(--border-color, #d0ded3); border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <h3 style="margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color, #d0ded3); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+      Audit-Protokoll der Demo-Aktivitäten
+    </h3>
+    {% if letzte_audits %}
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 480px;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color, #d0ded3); text-align: left;">
+              <th style="padding: 0.5rem;">Zeitpunkt</th>
+              <th style="padding: 0.5rem;">Benutzer</th>
+              <th style="padding: 0.5rem;">Aktion</th>
+              <th style="padding: 0.5rem;">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in letzte_audits %}
+              <tr style="border-bottom: 1px solid var(--border-color, #d0ded3);">
+                <td style="padding: 0.5rem; white-space: nowrap;">{{ a.zeitpunkt|date:"d.m.Y H:i" }}</td>
+                <td style="padding: 0.5rem;">{{ a.benutzer.username|default:"System" }}</td>
+                <td style="padding: 0.5rem; font-weight: 600;">{{ a.aktion }}</td>
+                <td style="padding: 0.5rem; color: var(--body-quiet-color, #56695b);">{{ a.text }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: var(--body-quiet-color, #56695b); font-size: 0.9rem; margin: 0;">
+        Bislang wurden keine Demo-Daten-Aktionen im Audit-Log erfasst.
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

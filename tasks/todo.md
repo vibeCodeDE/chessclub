@@ -185,7 +185,24 @@
   6. **F5 Mitglieder-Schnellfilter & Smart Badges:** Filter-Typen (U18, Senioren, ohne Kategorie, ohne SEPA-Mandat) und Zähler-Pills in `members/views.py` und `members/templates/members/member_list.html`.
   7. **D2 & D4 Typografie & Kontraste:** Klassische Serif-Schrift (`--display`), `font-variant-numeric: tabular-nums` für Tabellen/DWZ/Ergebnisse und WCAG AAA-Kontrastverbesserung in `static/css/app.css`.
   8. **D3 Systemweite Print-Engine:** `@media print`-Optimierung für sauberen A4-Druck ohne Header/Sidebar/Buttons in `static/css/app.css`.
-- **Beleg:** `docker compose exec app pytest dues/tests/test_sepa_sammelverbuchung.py teams/tests/test_match_print.py tournaments/tests/test_round_print.py members/tests/test_personal_calendar.py members/tests/test_member_filters.py` → **22 passed** in 5.00s; Gesamttestlauf `docker compose exec app pytest` → **545 passed, 239 subtests passed** in 42.01s (100% grün). Negative Rollentests (403 für unbefugte Rollen) in allen Modulen nachgewiesen.
+### T34: Demo-Daten-Steuerung im Django Admin Panel (Ein/Aus, 2026-10-14)
+
+- **Problem & Kontext:** Für Präsentationen und Vorführungen (z. B. auf Scalingo oder bei Vorständen ohne CLI-Zugriff) müssen Demo-Daten direkt im Browser erzeugt und wieder sauber entfernt werden können. Dabei muss sichergestellt sein, dass niemals versehentlich echte Vereinsdaten gelöscht werden und alle Vorgänge revisionssicher im `AuditLog` protokolliert werden (S7.6, ADR-022).
+- **Umsetzung (gemäß ADR-022):**
+  1. **Reine Fachlogik (`core/services.py`):**
+     - `get_demo_data_status()`: Liefert Echtzeit-Metriken (Mitglieder, Beiträge, Mannschaften, Turniere, Kasse) und prüft über Heuristiken (`has_real_data`), ob echte Mitglieder oder Konten existieren.
+     - `install_demo_data(user)`: Führt Seeding aus und protokolliert im `AuditLog`.
+     - `remove_demo_data(user, confirm)`: Verlangt Checkbox-Bestätigung, verweigert Löschen bei erkannten Produktivdaten (`has_real_data`), leert bei reinem Demo-Bestand atomar die Daten und erfasst dies im `AuditLog`.
+  2. **Admin-Integration:**
+     - Proxy-Modell `DemoData` in `core/models.py` (Migration `core/0009_demodata.py`).
+     - `DemoDataAdmin` in `core/admin.py` mit `change_list_template = "admin/core/demodata/change_list.html"`.
+     - Schnelleinstieg über den Header in `templates/admin/base_site.html`.
+     - `--clear`-Option in `core/management/commands/seed_demo.py` ergänzt.
+  3. **UI & Barrierefreiheit:**
+     - Dashboard mit Statuskarten, Kennzahlen, Demo-Zugangsdaten (`vorstand`, `kassenwart`, `kapitaen`, `mitglied` / `schach2026`).
+     - Zwei getrennte Aktionen: Grüner Button „Demo-Daten jetzt laden“ und roter Button „Demo-Daten entfernen“ mit Sicherheits-Checkbox und Sperre bei echten Daten.
+     - Tabelle der letzten Audit-Einträge mit horizontalem Scroll-Wrapper für 360 px Responsive-Design.
+- **Beleg:** `docker compose exec app pytest core/tests/test_admin_demodata.py core/tests/test_seed_demo.py` → **15 passed**; Gesamttestlauf `docker compose exec app pytest` → **555 passed, 239 subtests passed** in 49.11s (100% grün). Negativtests: Nicht-Staff abgewiesen (302/403), Löschen ohne Checkbox abgewiesen, Löschen bei echten Daten verweigert.
 
 ---
 

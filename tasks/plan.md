@@ -297,12 +297,18 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   8. *D3 (Print-Engine):* Systemweite `@media print`-Optimierung für sauberen A4-Druck.
   *Verify:* `pytest dues/tests/test_sepa_sammelverbuchung.py teams/tests/test_match_print.py tournaments/tests/test_round_print.py members/tests/test_personal_calendar.py members/tests/test_member_filters.py` — **Negativtests:** 403-Checks für unberechtigte Rollen, Signatur-Manipulation im Token, Status-Validierung. · *Files:* `dues/`, `teams/`, `tournaments/`, `members/`, `static/css/app.css` · *Größe:* M · *Release:* v1.1 · *Deps:* T8, T9, T16, T17, T19, T20
 
+- [x] **T34: Demo-Daten-Steuerung im Django Admin Panel (Ein/Aus, S7.6, ADR-022)** *(v1.1)*
+  Webbasierte Steuerung für das Laden und sichere Entfernen von Beispieldaten direkt im Django Admin Panel (`/admin/core/demodata/`).
+  *Design:* [ADR-022](../docs/decisions/ADR-022-demo-daten-steuerung-im-admin-panel.md). Reine Fachfunktionen in `core/services.py` (`get_demo_data_status`, `install_demo_data`, `remove_demo_data`), Proxy-Modell `DemoData` in `core/models.py`, `DemoDataAdmin` in `core/admin.py`, benutzerfreundliches Admin-Template mit Statuskarten, Bestätigungs-Checkbox, Revisionssicherheit via `AuditLog` und Schutz vor versehentlichem Löschen echter Produktivdaten.
+  *Acceptance:* Vorstand/Superadmin kann Demo-Daten mit einem Klick erzeugen und sicher wieder entfernen; Versuch des Löschens bei Vorhandensein echter Daten wird verweigert; unbefugte Rollen (Mitglied, Kapitän) werden mit 302/403 abgewiesen; jede Aktion wird im AuditLog protokolliert; Dark/Light Mode barrierefrei nach WCAG 2.1 AA.
+  *Verify:* `pytest core/tests/test_admin_demodata.py` — **Negativtests:** Nicht-Staff abgewiesen, Löschen ohne Checkbox abgewiesen, Löschen bei echten Daten verweigert. · *Files:* `core/services.py`, `core/models.py`, `core/admin.py`, `templates/admin/core/demodata/change_list.html`, `core/tests/test_admin_demodata.py` · *Größe:* S · *Release:* v1.1 · *Deps:* T2, T5, T30
+
 **Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30, T31, T32, T33.
 
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design, T34 Demo-Daten-Steuerung (S7.6)
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
 - **Out of scope (K):** nuLiga-Mutations-Export / TRF16 (ADR-016 Säule 3), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
@@ -320,6 +326,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | M7.1 / M7.2 / M7.3 | T6 + T11 / T1 + T2 / T5 |
 | S7.4 | T30 *(v1.1 / ADR-019)* |
 | S7.5 / S1.7 | T31 *(v1.1 / ADR-020)* |
+| S7.6 | T34 *(v1.1 / ADR-022)* |
 | N1.1 | T24 (Hoststandort + kein CDN/Tracker) |
 | N1.2 / N1.3 / N1.4 | T23 |
 | N1.5 | T5 (Logins/Änderungen) + T12 (Detail-Zugriffe) |

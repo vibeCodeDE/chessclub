@@ -19,6 +19,7 @@
 {% endblock %}
 
 {% block userlinks %}
+  <a href="{% url 'admin:core_demodata_changelist' %}" style="margin-right: 0.8rem; font-weight: 500;">♞ Demo-Daten</a>
   <a href="{% url 'core:dashboard' %}" class="admin-back-link">← Zum Vereins-Dashboard</a>
   {{ block.super }}
 {% endblock %}

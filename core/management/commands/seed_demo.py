@@ -129,10 +129,16 @@ class Command(BaseCommand):
     help = "Legt realistische Demo-Daten für die Vereinsverwaltung an."
 
     def add_arguments(self, parser):
-        parser.add_argument("--reset", action="store_true", help="Vorhandene Daten vorher löschen.")
+        parser.add_argument("--reset", action="store_true", help="Vorhandene Daten vorher löschen und neu erzeugen.")
+        parser.add_argument("--clear", action="store_true", help="Demo-Daten vollständig entfernen, ohne sie neu anzulegen.")
 
     def handle(self, *args, **options):
         random.seed(42)
+        if options.get("clear"):
+            self._reset()
+            self.stdout.write(self.style.SUCCESS("Demo-Daten erfolgreich entfernt."))
+            return
+
         if options["reset"]:
             self._reset()
         elif Member.objects.exists():

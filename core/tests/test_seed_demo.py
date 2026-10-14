@@ -76,3 +76,10 @@ class SeedDemoTests(TestCase):
         mitglieder = Member.objects.count()
         call_command("seed_demo", verbosity=0)
         self.assertEqual(Member.objects.count(), mitglieder)
+
+    def test_clear_raeumt_vollstaendig_auf(self):
+        call_command("seed_demo", verbosity=0)
+        self.assertGreater(Member.objects.count(), 0)
+        call_command("seed_demo", "--clear", verbosity=0)
+        self.assertEqual(Member.objects.count(), 0)
+        self.assertEqual(MembershipFee.objects.count(), 0)

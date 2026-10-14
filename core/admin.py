@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditLog, ClubProfile, ModuleSettings, TwoFactorDevice
+from .models import AuditLog, ClubProfile, DemoData, ModuleSettings, TwoFactorDevice
 
 
 @admin.register(AuditLog)
@@ -113,4 +113,63 @@ class ClubProfileAdmin(admin.ModelAdmin):
                 aktion="Vereinsprofil im Admin geändert",
                 text=f"Geänderte Felder: {', '.join(form.changed_data)}",
             )
+
+
+@admin.register(DemoData)
+class DemoDataAdmin(admin.ModelAdmin):
+    change_list_template = "admin/core/demodata/change_list.html"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser or request.user.groups.filter(name="admin").exists()
+
+    def changelist_view(self, request, extra_context=None):
+        from django.contrib import messages
+        from django.core.exceptions import PermissionDenied
+        from django.shortcuts import redirect
+        from django.template.response import TemplateResponse
+
+        from .services import (
+            get_demo_data_status,
+            install_demo_data,
+            remove_demo_data,
+        )
+
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+
+        if request.method == "POST":
+            action = request.POST.get("action")
+            if action == "load":
+                success, msg = install_demo_data(user=request.user)
+                if success:
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+            elif action == "remove":
+                confirm = request.POST.get("confirm") == "1"
+                success, msg = remove_demo_data(user=request.user, confirm=confirm)
+                if success:
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+            return redirect("admin:core_demodata_changelist")
+
+        status_info = get_demo_data_status()
+        letzte_audits = AuditLog.objects.filter(aktion__icontains="Demo")[:10]
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Demo-Daten-Verwaltung",
+            "status_info": status_info,
+            "letzte_audits": letzte_audits,
+            "opts": self.model._meta,
+        }
+        return TemplateResponse(request, self.change_list_template, context)
+
 

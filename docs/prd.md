@@ -104,6 +104,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - S7.4 Modul-Toggles im Admin-Panel: Superadmin / Vorstand kann optionale Satellitenmodule (Spielbetrieb, Turniere, Kassenbuch, Kommunikation) im Django Admin an- und ausschalten (ADR-019)
 - S7.5 Vereins-Setup & Stammdatenverwaltung im Browser: Superadmin / Vorstand kann Stammdaten (Name, Anschrift, Spielabendzeiten, SEPA-Gläubiger-ID) in der Datenbank verwalten (ADR-020)
 - S1.7 Mitglieder-CSV-Import: Importfunktion für echte Mitgliederstammdaten inklusive Validierung, optionaler SEPA-Mandatsanlage und Audit-Protokollierung (ADR-020)
+- S7.6 Demo-Daten-Steuerung im Admin-Panel: Superadmin / Vorstand kann Beispieldaten für Vorführ- und Testzwecke im Django Admin ein- und ausschalten (laden/entfernen mit Schutz vor Überschreiben echter Daten und Audit-Trail, ADR-022)
 
 ### 3.8 Berechtigungsmatrix (M)
 
@@ -243,3 +244,4 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v2.1 | 2026-10-11 | Modul-Toggles (S7.4) im Django Admin Panel gemäß ADR-019 für Satellitenmodule spezifiziert (T30) |
 | v2.2 | 2026-10-12 | Vereins-Setup & Stammdaten im Browser (S7.5) und Mitglieder-CSV-Import (S1.7) gemäß ADR-020 spezifiziert (T31) |
 | v2.3 | 2026-10-13 | django-import-export im Django-Admin für Mitglieder und Kassenbuch (M1.5, S1.7, S6.2) gemäß ADR-021 spezifiziert und integriert (T32) |
+| v2.4 | 2026-10-14 | Demo-Daten-Steuerung im Django Admin Panel (S7.6) gemäß ADR-022 spezifiziert (T34) |

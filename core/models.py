@@ -163,6 +163,15 @@ class ModuleSettings(models.Model):
         return obj
 
 
+class DemoData(ModuleSettings):
+    """Proxy-Modell für die Steuerung der Demo-Daten im Django Admin (ADR-022, S7.6, T34)."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "Demo-Daten"
+        verbose_name_plural = "Demo-Daten (Ein/Aus)"
+
+
 class ClubProfile(models.Model):
     """Stammdaten und Vereinsprofil des Schachvereins (ADR-020, T31).
 
