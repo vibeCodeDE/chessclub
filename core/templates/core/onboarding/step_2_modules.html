@@ -1,0 +1,65 @@
+{% extends "core/onboarding/base_onboarding.html" %}
+
+{% block wizard_content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>Schritt 2: Modulauswahl &amp; Vereinszuschnitt</h2>
+    <span class="sub">Wähle aus, welche Funktionsbereiche dein Schachverein nutzen möchte. Nicht benötigte Module werden in Navigation und Dashboard ausgeblendet und können jederzeit reaktiviert werden.</span>
+  </div>
+
+  <div class="card-body">
+    <form method="post" action="{% url 'core:onboarding_step_2' %}">
+      {% csrf_token %}
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <label class="card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; cursor: pointer; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+          <input type="checkbox" name="homepage_aktiv" {% if form.homepage_aktiv.value %}checked{% endif %} style="margin-top: 4px; width: 20px; height: 20px;">
+          <div>
+            <strong style="font-size: 1rem; display: block;">🌐 Vereinshomepage (Öffentliche Webpräsenz)</strong>
+            <span style="color: var(--text-muted, #718096); font-size: 0.9rem;">Öffentliche Startseite, Vereinsvorstellung, Spielabendzeiten und Beitrittsinformationen. Abwählen, falls dein Verein bereits eine separate externe Vereinswebsite betreibt.</span>
+          </div>
+        </label>
+
+        <label class="card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; cursor: pointer; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+          <input type="checkbox" name="spielbetrieb_aktiv" {% if form.spielbetrieb_aktiv.value %}checked{% endif %} style="margin-top: 4px; width: 20px; height: 20px;">
+          <div>
+            <strong style="font-size: 1rem; display: block;">♟️ Spielbetrieb &amp; Mannschaften</strong>
+            <span style="color: var(--text-muted, #718096); font-size: 0.9rem;">Mannschaftsaufstellungen, Ligen, Spielpläne, Spielberichtsbögen und DWZ-Ranglisten.</span>
+          </div>
+        </label>
+
+        <label class="card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; cursor: pointer; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+          <input type="checkbox" name="turniere_aktiv" {% if form.turniere_aktiv.value %}checked{% endif %} style="margin-top: 4px; width: 20px; height: 20px;">
+          <div>
+            <strong style="font-size: 1rem; display: block;">🏆 Turniere &amp; Schweizer System</strong>
+            <span style="color: var(--text-muted, #718096); font-size: 0.9rem;">Vereinsturniere, Blitz- und Schnellschach, Schweizer System Paarungen, Buchholz-Wertung und Rundenaushänge.</span>
+          </div>
+        </label>
+
+        <label class="card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; cursor: pointer; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+          <input type="checkbox" name="kassenbuch_aktiv" {% if form.kassenbuch_aktiv.value %}checked{% endif %} style="margin-top: 4px; width: 20px; height: 20px;">
+          <div>
+            <strong style="font-size: 1rem; display: block;">💶 Kassenbuch &amp; Buchhaltung</strong>
+            <span style="color: var(--text-muted, #718096); font-size: 0.9rem;">Einnahmen-/Ausgabenrechnung, Belegführung, Jahresabschluss und revisionssichere Stornobuchungen.</span>
+          </div>
+        </label>
+
+        <label class="card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; cursor: pointer; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+          <input type="checkbox" name="nachrichten_aktiv" {% if form.nachrichten_aktiv.value %}checked{% endif %} style="margin-top: 4px; width: 20px; height: 20px;">
+          <div>
+            <strong style="font-size: 1rem; display: block;">📢 Kommunikation &amp; Vereinsnews</strong>
+            <span style="color: var(--text-muted, #718096); font-size: 0.9rem;">Öffentliche Neuigkeiten auf der Vereins-Homepage und E-Mail-Rundschreiben an Mitglieder.</span>
+          </div>
+        </label>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{% url 'core:onboarding_step_1' %}" class="btn ghost">← Zurück zu Schritt 1</a>
+        <button type="submit" class="btn primary" style="min-width: 160px; min-height: 44px;">
+          Speichern &amp; Weiter zu Schritt 3 →
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -35,6 +35,7 @@ class ModuleSettingsModelTests(TestCase):
     def test_singleton_get_solo_und_defaults(self):
         settings = ModuleSettings.get_solo()
         self.assertEqual(settings.pk, 1)
+        self.assertTrue(settings.homepage_aktiv)
         self.assertTrue(settings.spielbetrieb_aktiv)
         self.assertTrue(settings.turniere_aktiv)
         self.assertTrue(settings.kassenbuch_aktiv)
@@ -64,6 +65,14 @@ class ModuleSettingsModelTests(TestCase):
         self.assertEqual(eintrag.feld, "spielbetrieb_aktiv")
         self.assertEqual(eintrag.neu_wert, "False")
 
+    def test_homepage_modul_schluessel_und_status(self):
+        admin = make_user("admin_hp", ADMIN_GROUP)
+        settings = set_module_status("homepage", False, user=admin)
+        self.assertFalse(settings.homepage_aktiv)
+        self.assertFalse(is_module_active("homepage"))
+        self.assertFalse(is_module_active("vereinshomepage"))
+        self.assertFalse(is_module_active("webseite"))
+
 
 class ModuleSettingsAdminTests(TestCase):
     def setUp(self):
@@ -77,6 +86,7 @@ class ModuleSettingsAdminTests(TestCase):
         response = self.client.post(
             f"/admin/core/modulesettings/{self.cfg.pk}/change/",
             {
+                "homepage_aktiv": "on",
                 "spielbetrieb_aktiv": "on",
                 "turniere_aktiv": "on",
                 # Kassenbuch und News abgewählt
@@ -84,6 +94,7 @@ class ModuleSettingsAdminTests(TestCase):
         )
         self.assertRedirects(response, "/admin/core/modulesettings/")
         self.cfg.refresh_from_db()
+        self.assertTrue(self.cfg.homepage_aktiv)
         self.assertTrue(self.cfg.spielbetrieb_aktiv)
         self.assertTrue(self.cfg.turniere_aktiv)
         self.assertFalse(self.cfg.kassenbuch_aktiv)
@@ -139,6 +150,13 @@ class ModuleNavigationTests(TestCase):
         self.assertNotContains(response, 'href="/ankuendigungen/"')
         self.assertNotContains(response, 'href="/meine-einsaetze/"')
 
+        # 4. Homepage deaktivieren -> Vereinsseite ausgeblendet
+        self.cfg.homepage_aktiv = False
+        self.cfg.save()
+
+        response = self.client.get("/dashboard/")
+        self.assertNotIn("Vereinsseite", [link["label"] for link in response.context["nav_links"]])
+
 
 class ModuleUrlBlockTests(TestCase):
     def setUp(self):
@@ -174,6 +192,30 @@ class ModuleUrlBlockTests(TestCase):
         self.assertEqual(self.client.get("/ankuendigungen/").status_code, 404)
         self.assertEqual(self.client.get("/ankuendigungen/mail/").status_code, 404)
         self.assertEqual(self.client.get("/aktuelles/").status_code, 404)
+
+    def test_homepage_modul_routing_und_404(self):
+        """Negativtest: /verein/ liefert 404 bei deaktivierter Homepage; / leitet je nach Login um."""
+        # 1. Aktiv:
+        self.cfg.homepage_aktiv = True
+        self.cfg.save()
+        self.assertEqual(self.client.get("/verein/").status_code, 200)
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+        # 2. Deaktiviert:
+        self.cfg.homepage_aktiv = False
+        self.cfg.save()
+
+        # Gast: /verein/ liefert 404, / leitet zum Login (302)
+        self.assertEqual(self.client.get("/verein/").status_code, 404)
+        res_anon = self.client.get("/")
+        self.assertEqual(res_anon.status_code, 302)
+        self.assertEqual(res_anon.url, "/anmelden/")
+
+        # Eingeloggt: / leitet zum Dashboard (302)
+        self.client.force_login(self.admin)
+        res_auth = self.client.get("/")
+        self.assertEqual(res_auth.status_code, 302)
+        self.assertEqual(res_auth.url, "/dashboard/")
 
     def test_reaktivierung_macht_urls_wieder_erreichbar(self):
         self.client.force_login(self.admin)

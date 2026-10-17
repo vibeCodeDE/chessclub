@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group, User
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from core.models import TwoFactorDevice
+from core.models import OnboardingProgress, TwoFactorDevice
 from core.roles import ADMIN_GROUP
 from core.twofa import code_erzeugen, neues_secret, otpauth_uri
 
@@ -23,6 +23,7 @@ def make_user(username, group_name=None):
 class ZweiFaktorTests(TestCase):
     def setUp(self):
         self.admin = make_user("vorstand", ADMIN_GROUP)
+        OnboardingProgress.objects.create(pk=1, ist_abgeschlossen=True)
 
     def test_vorstand_muss_zwei_faktor_einrichten(self):
         response = self.client.post(

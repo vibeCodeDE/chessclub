@@ -1,0 +1,114 @@
+{% extends "core/onboarding/base_onboarding.html" %}
+
+{% block wizard_content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>Schritt 4: Mitglieder- und Bestandsdatenübernahme</h2>
+    <span class="sub">Wähle den einfachsten Weg für deinen Verein: Hole deine gemeldeten Spieler direkt über deine DSB-Kennziffer aus dem Wertungsportal oder lade eine bestehende CSV-/Excel-Mitgliederliste hoch.</span>
+  </div>
+
+  <div class="card-body">
+    {% if mitglieder_anzahl > 0 %}
+      <div class="card" style="background: #f0fff4; border: 1px solid #9ae6b4; padding: 14px 18px; border-radius: 8px; margin-bottom: 24px;">
+        <span style="color: #276749; font-weight: 600;">✓ Bereits {{ mitglieder_anzahl }} aktive Mitglieder im Verein registriert.</span>
+      </div>
+    {% endif %}
+
+    <!-- Hybrid-Wahl: 2 Karten nebeneinander -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px;">
+      
+      <!-- Weg A: DSB ZPS-Direktimport -->
+      <div class="card" style="padding: 20px; border: 2px solid var(--accent, #3182ce); border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 1.1rem; color: var(--accent, #2b6cb0);">Option A: Verbands-Direktabruf (DSB)</h3>
+            <span class="badge" style="background: #ebf8ff; color: #2b6cb0;">Schnellster Start</span>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-muted, #4a5568); margin-bottom: 16px;">
+            Ruft alle gemeldeten Spieler deines Vereins inklusive aktueller <strong>DWZ</strong>, <strong>DWZ-Index</strong> und <strong>FIDE-ID</strong> direkt aus dem DSB-Wertungsportal ab.
+          </p>
+
+          <form method="post" action="{% url 'core:onboarding_step_4' %}" id="zps-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="import_zps">
+            <div class="field" style="margin-bottom: 14px;">
+              <label for="zps_input" style="font-weight: 600;">5-stellige DSB-Vereinskennziffer (ZPS / VKZ)</label>
+              <input type="text" id="zps_input" name="zps_nummer" value="{{ club.zps_nummer }}" placeholder="z. B. C0101" maxlength="10" style="font-size: 1.05rem; font-weight: 600; text-transform: uppercase;">
+              <span class="help">Findest du auf schachbund.de oder im Vereinsportal deines Landesverbandes.</span>
+            </div>
+            <button type="submit" class="btn primary" style="width: 100%; min-height: 44px;">
+              ♟️ Spieler jetzt aus Verband abrufen
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Weg B: CSV-Upload -->
+      <div class="card" style="padding: 20px; border: 1px solid var(--border, #cbd5e0); border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 1.1rem;">Option B: CSV- / Excel-Upload</h3>
+            <span class="badge">Inkl. Adressen &amp; IBAN</span>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-muted, #4a5568); margin-bottom: 16px;">
+            Importiere deine bestehende Liste mit Anschriften, E-Mail-Adressen, Beitragskategorien und verschlüsselten SEPA-Mandaten.
+          </p>
+
+          <form method="post" action="{% url 'core:onboarding_step_4' %}" enctype="multipart/form-data" id="csv-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="validate_csv">
+            <div class="field" style="margin-bottom: 14px;">
+              <label for="csv_file_input" style="font-weight: 600;">CSV-Datei auswählen</label>
+              <input type="file" id="csv_file_input" name="csv_datei" accept=".csv,text/csv">
+              <span class="help">Trennzeichen: Semikolon (;) oder Komma (,). Kodierung: UTF-8 oder Latin-1.</span>
+            </div>
+            <button type="submit" class="btn secondary" style="width: 100%; min-height: 44px;">
+              📄 Datei hochladen &amp; prüfen (Dry-Run)
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dry-Run Vorschau falls vorhanden -->
+    {% if dry_run %}
+      <div class="card" style="margin-bottom: 24px; padding: 18px; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+        <h3>Ergebnis der Vorab-Prüfung (Dry-Run)</h3>
+        {% if dry_run.hat_fehler %}
+          <div class="alert alert-error" style="margin-bottom: 14px;">
+            <strong>Es wurden Fehler in der CSV-Datei gefunden. Bitte korrigiere diese Zeilen:</strong>
+            <ul>
+              {% for fehler in dry_run.fehler_liste %}
+                <li>Zeile {{ fehler.zeile }}: {{ fehler.nachricht }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% else %}
+          <div class="alert alert-success" style="margin-bottom: 14px;">
+            <strong>✓ Alle {{ dry_run.gueltige_zeilen|length }} Datensätze sind valide und bereit zum Import!</strong>
+          </div>
+          <form method="post" action="{% url 'core:onboarding_step_4' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="execute_csv">
+            <button type="submit" class="btn primary" style="min-height: 44px;">
+              ✓ Jetzt verbindlich importieren
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Navigation / Überspringen -->
+    <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <a href="{% url 'core:onboarding_step_3' %}" class="btn ghost">← Zurück zu Schritt 3</a>
+      <form method="post" action="{% url 'core:onboarding_step_4' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="skip">
+        <button type="submit" class="btn ghost" style="color: var(--text-muted, #718096);">
+          Schritt überspringen (Später importieren) →
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

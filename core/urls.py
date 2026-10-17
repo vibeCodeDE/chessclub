@@ -1,12 +1,22 @@
 from django.contrib.auth import views as django_auth_views
 from django.urls import path
 
-from . import auth_views, views, views_setup
+from . import auth_views, views, views_onboarding, views_setup
 
 app_name = "core"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("onboarding/", views_onboarding.onboarding_wizard_entry, name="onboarding_wizard"),
+    path("onboarding/schritt/1/", views_onboarding.onboarding_step_1_profile, name="onboarding_step_1"),
+    path("onboarding/schritt/2/", views_onboarding.onboarding_step_2_modules, name="onboarding_step_2"),
+    path("onboarding/schritt/3/", views_onboarding.onboarding_step_3_dues, name="onboarding_step_3"),
+    path("onboarding/schritt/4/", views_onboarding.onboarding_step_4_members, name="onboarding_step_4"),
+    path("onboarding/schritt/5/", views_onboarding.onboarding_step_5_staff, name="onboarding_step_5"),
+    path("onboarding/schritt/6/", views_onboarding.onboarding_step_6_finish, name="onboarding_step_6"),
+    path("onboarding/zurueck/<int:schritt>/", views_onboarding.onboarding_step_back, name="onboarding_step_back"),
+    path("onboarding/checklist/ausblenden/", views_onboarding.dismiss_onboarding_checklist, name="onboarding_checklist_dismiss"),
+    path("einladung/<str:token>/", auth_views.accept_invitation, name="accept_invitation"),
     path("produkt/", views.produkt_seite, name="produkt"),
     path("impressum/", views.rechtliches, {"seite": "impressum"}, name="impressum"),
     path("datenschutz/", views.rechtliches, {"seite": "datenschutz"}, name="datenschutz"),

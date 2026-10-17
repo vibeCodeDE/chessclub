@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
+from core.models import ClubProfile, OnboardingProgress
 from dues.models import FeeAmount, FeeCategory, MembershipFee
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, Team
@@ -261,6 +262,8 @@ class DashboardErweiterungenTests(TestCase):
         self.client.force_login(self.admin)
         self.kategorie = FeeCategory.objects.create(name="Erwachsene")
         FeeAmount.objects.create(kategorie=self.kategorie, jahr=2026, betrag=Decimal("90.00"))
+        ClubProfile.get_solo()
+        OnboardingProgress.get_solo()
 
     def test_ohne_kategorie_alert_erscheint(self):
         # Mitglied ohne Kategorie
@@ -287,16 +290,16 @@ class DashboardErweiterungenTests(TestCase):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        # Die View führt exakt 35 Queries aus (konstant, da kein N+1 pro Mitglied/Posten; inkl. 1 Query ModuleSettings, 1 Query ClubProfile)
-        with self.assertNumQueries(35):
+        # Die View führt exakt 42 Queries aus (konstant, da kein N+1 pro Mitglied/Posten; inkl. ModuleSettings, ClubProfile und Onboarding-Checkliste)
+        with self.assertNumQueries(42):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)
 
-        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 35 (kein N+1)
+        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 42 (kein N+1)
         for i in range(15, 25):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        with self.assertNumQueries(35):
+        with self.assertNumQueries(42):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)

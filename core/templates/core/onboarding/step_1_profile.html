@@ -1,0 +1,89 @@
+{% extends "core/onboarding/base_onboarding.html" %}
+
+{% block wizard_content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>Schritt 1: Vereinsstammdaten &amp; Spielabend</h2>
+    <span class="sub">Trage die grundlegenden Vereinsdaten und Trainingszeiten ein. Diese werden für die Vereinsseite, den Spielbetrieb und offizielle Dokumente verwendet.</span>
+  </div>
+
+  <div class="card-body">
+    <form method="post" action="{% url 'core:onboarding_step_1' %}">
+      {% csrf_token %}
+
+      <div class="form-grid cols-2">
+        <div class="field required {% if form.name.errors %}has-error{% endif %}">
+          <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+          {{ form.name }}
+          <span class="help">Der vollständige amtliche Vereinsname (z. B. Schachclub Königsspringer Musterstadt e.V.).</span>
+          {{ form.name.errors }}
+        </div>
+
+        <div class="field required {% if form.kurzname.errors %}has-error{% endif %}">
+          <label for="{{ form.kurzname.id_for_label }}">{{ form.kurzname.label }}</label>
+          {{ form.kurzname }}
+          <span class="help">Kompakter Name für Tabellen, Kopfzeilen und Navigation.</span>
+          {{ form.kurzname.errors }}
+        </div>
+
+        <div class="field {% if form.zps_nummer.errors %}has-error{% endif %}">
+          <label for="{{ form.zps_nummer.id_for_label }}">{{ form.zps_nummer.label }}</label>
+          {{ form.zps_nummer }}
+          <span class="help">5-stellige Kennziffer des DSB (z. B. C0101). Ermöglicht den automatischen Mitglieder- und DWZ-Abruf im weiteren Verlauf.</span>
+          {{ form.zps_nummer.errors }}
+        </div>
+
+        <div class="field required {% if form.kontakt_email.errors %}has-error{% endif %}">
+          <label for="{{ form.kontakt_email.id_for_label }}">{{ form.kontakt_email.label }}</label>
+          {{ form.kontakt_email }}
+          <span class="help">Offizielle E-Mail-Adresse für Vereinsmitteilungen und Systemmails.</span>
+          {{ form.kontakt_email.errors }}
+        </div>
+
+        <div class="field {% if form.gruendungsjahr.errors %}has-error{% endif %}">
+          <label for="{{ form.gruendungsjahr.id_for_label }}">{{ form.gruendungsjahr.label }}</label>
+          {{ form.gruendungsjahr }}
+          {{ form.gruendungsjahr.errors }}
+        </div>
+
+        <div class="field {% if form.ort.errors %}has-error{% endif %}">
+          <label for="{{ form.ort.id_for_label }}">{{ form.ort.label }}</label>
+          {{ form.ort }}
+          {{ form.ort.errors }}
+        </div>
+
+        <div class="field col-span-2 {% if form.spiellokal.errors %}has-error{% endif %}">
+          <label for="{{ form.spiellokal.id_for_label }}">{{ form.spiellokal.label }}</label>
+          {{ form.spiellokal }}
+          <span class="help">Anschrift und Raumangabe des Spiellokals / Klubheims.</span>
+          {{ form.spiellokal.errors }}
+        </div>
+
+        <div class="field {% if form.spielabend_zeiten.errors %}has-error{% endif %}">
+          <label for="{{ form.spielabend_zeiten.id_for_label }}">{{ form.spielabend_zeiten.label }}</label>
+          {{ form.spielabend_zeiten }}
+          {{ form.spielabend_zeiten.errors }}
+        </div>
+
+        <div class="field {% if form.jugend_zeiten.errors %}has-error{% endif %}">
+          <label for="{{ form.jugend_zeiten.id_for_label }}">{{ form.jugend_zeiten.label }}</label>
+          {{ form.jugend_zeiten }}
+          {{ form.jugend_zeiten.errors }}
+        </div>
+
+        <div class="field col-span-2 {% if form.beschreibung.errors %}has-error{% endif %}">
+          <label for="{{ form.beschreibung.id_for_label }}">{{ form.beschreibung.label }}</label>
+          {{ form.beschreibung }}
+          {{ form.beschreibung.errors }}
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="submit" class="btn primary" style="min-width: 160px; min-height: 44px;">
+          Speichern &amp; Weiter zu Schritt 2 →
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

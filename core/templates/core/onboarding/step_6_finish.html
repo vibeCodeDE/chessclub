@@ -1,0 +1,70 @@
+{% extends "core/onboarding/base_onboarding.html" %}
+
+{% block wizard_content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>Schritt 6: Zusammenfassung &amp; Produktivstart</h2>
+    <span class="sub">Überprüfe deine Einstellungen. Mit dem Klick auf „Produktivstart“ wird die Ersteinrichtung abgeschlossen und dein Vereinssystem freigeschaltet.</span>
+  </div>
+
+  <div class="card-body">
+    <!-- Übersichtskarten -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="card" style="padding: 16px; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096); display: block;">Verein</span>
+        <strong style="font-size: 1.1rem; display: block; margin-top: 4px;">{{ club.name|default:"Noch kein Name" }}</strong>
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096);">Kürzel: {{ club.kurzname|default:"–" }} | ZPS: {{ club.zps_nummer|default:"–" }}</span>
+      </div>
+
+      <div class="card" style="padding: 16px; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096); display: block;">Beitragskategorien</span>
+        <strong style="font-size: 1.1rem; display: block; margin-top: 4px;">{{ kategorien_count }} eingerichtet</strong>
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096);">Bereit für Beitragsläufe</span>
+      </div>
+
+      <div class="card" style="padding: 16px; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096); display: block;">Mitgliederbestand</span>
+        <strong style="font-size: 1.1rem; display: block; margin-top: 4px;">{{ mitglieder_count }} aktive Mitglieder</strong>
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096);">Im System erfasst</span>
+      </div>
+
+      <div class="card" style="padding: 16px; border: 1px solid var(--border, #cbd5e0); border-radius: 8px;">
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096); display: block;">Funktionäre</span>
+        <strong style="font-size: 1.1rem; display: block; margin-top: 4px;">{{ einladungen_count }} Einladungen</strong>
+        <span style="font-size: 0.85rem; color: var(--text-muted, #718096);">Vorstand &amp; Mannschaftsführer</span>
+      </div>
+    </div>
+
+    <!-- Demo-Daten Bereinigung (falls aktiv) -->
+    {% if demo_status.is_active %}
+      <div class="card alert-card" style="background: #fffaf0; border: 1px solid #ecc94b; border-left: 4px solid #dd6b20; padding: 18px; border-radius: 8px; margin-bottom: 24px;">
+        <h3 style="margin-top: 0; color: #c05621; font-size: 1.05rem;">⚠️ Demo-Daten sind derzeit geladen</h3>
+        {% if demo_status.has_real_data %}
+          <p style="margin-bottom: 0; font-size: 0.95rem; color: #744210;">
+            🛡️ <strong>Schutz vor Datenverlust:</strong> Es wurden reale Mitglieder oder individuelle Daten erfasst. Die automatische Pauschalbereinigung der Demo-Daten ist zum Schutz deiner Vereinsdaten gesperrt.
+          </p>
+        {% else %}
+          <p style="margin-bottom: 12px; font-size: 0.95rem; color: #744210;">
+            Deine Instanz enthält derzeit noch Beispieldaten (Testpartien, Testmitglieder, Testbuchungen). Für den echten Produktivbetrieb sollten diese entfernt werden.
+          </p>
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #744210;">
+            <input type="checkbox" name="cleanup_demodata" value="1" form="finish-form" checked style="width: 18px; height: 18px;">
+            Demo-Daten beim Abschluss jetzt sicher und rückstandsfrei entfernen (Empfohlen)
+          </label>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <form id="finish-form" method="post" action="{% url 'core:onboarding_step_6' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="complete">
+      <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{% url 'core:onboarding_step_5' %}" class="btn ghost">← Zurück zu Schritt 5</a>
+        <button type="submit" class="btn primary" style="min-width: 200px; min-height: 44px; font-weight: 700;">
+          🎉 Ersteinrichtung abschließen &amp; Go-Live!
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

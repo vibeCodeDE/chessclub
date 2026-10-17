@@ -191,8 +191,9 @@ class EncryptedBackupRestoreTests(SimpleTestCase):
         encrypted = openssl_aes_encrypt(compressed, self.key)
 
         wrong_key = "falscher-schluessel-98765"
-        with self.assertRaises((ValueError, Exception)):
-            openssl_aes_decrypt(encrypted, wrong_key)
+        with self.assertRaises((ValueError, gzip.BadGzipFile, Exception)):
+            decrypted = openssl_aes_decrypt(encrypted, wrong_key)
+            gzip.decompress(decrypted)
 
     def test_restore_with_corrupt_data_fails(self):
         """Negativtest: Beschädigte oder manipulierte Backup-Dateien werden abgewiesen."""

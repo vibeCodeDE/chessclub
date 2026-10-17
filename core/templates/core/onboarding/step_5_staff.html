@@ -1,0 +1,153 @@
+{% extends "core/onboarding/base_onboarding.html" %}
+
+{% block wizard_content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>Schritt 5: Funktionäre &amp; Vorstandskollegen einladen</h2>
+    <span class="sub">Lade Vorstandsmitglieder oder Mannschaftsführer per E-Mail ein. Sie erhalten einen sicheren Link zur selbstständigen Passwortvergabe und sofortigen Rollenzuweisung.</span>
+  </div>
+
+  <div class="card-body">
+    <!-- Formular für neue Einladung -->
+    <form method="post" action="{% url 'core:onboarding_step_5' %}" style="margin-bottom: 28px; padding: 20px; background: var(--bg, #f8fafc); border: 1px solid var(--border, #e2e8f0); border-radius: 8px;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="invite">
+      <h3 style="margin-top: 0; font-size: 1.05rem; margin-bottom: 16px;">Neuen Funktionär einladen</h3>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div class="form-group">
+          <label for="id_vorname" style="display: block; font-weight: 500; margin-bottom: 4px;">Vorname *</label>
+          <input type="text" id="id_vorname" name="vorname" required class="input" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border, #cbd5e0); border-radius: 6px;">
+        </div>
+
+        <div class="form-group">
+          <label for="id_nachname" style="display: block; font-weight: 500; margin-bottom: 4px;">Nachname *</label>
+          <input type="text" id="id_nachname" name="nachname" required class="input" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border, #cbd5e0); border-radius: 6px;">
+        </div>
+
+        <div class="form-group">
+          <label for="id_email" style="display: block; font-weight: 500; margin-bottom: 4px;">E-Mail-Adresse *</label>
+          <input type="email" id="id_email" name="email" required class="input" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border, #cbd5e0); border-radius: 6px;">
+        </div>
+
+        <div class="form-group">
+          <label for="id_rolle" style="display: block; font-weight: 500; margin-bottom: 4px;">Rolle im Verein *</label>
+          <select id="id_rolle" name="rolle" required class="input" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border, #cbd5e0); border-radius: 6px; background: white;">
+            <option value="admin">Vorstand / Administrator (Voller Zugriff)</option>
+            <option value="kapitaen">Mannschaftsführer / Kapitän (Spielbetrieb)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="text-align: right;">
+        <button type="submit" class="btn secondary" style="min-height: 40px; padding: 8px 18px; font-weight: 600;">
+          ✉️ Einladung versenden
+        </button>
+      </div>
+    </form>
+
+    <!-- Lokaler E-Mail-Hinweis -->
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 0.875rem; color: #166534;">
+      <strong>ℹ️ Lokaler Entwicklungsmodus:</strong> In der lokalen Docker-Umgebung werden E-Mails im System-Log ausgegeben und nicht real versendet. Du kannst den erzeugten Einladungslink einfach mit <strong>„Link kopieren“</strong> in die Zwischenablage übernehmen und in einem privaten/inkognito Browser-Tab öffnen, um die Registrierung zu testen.
+    </div>
+
+    <!-- Letzte Einladung Hinweis mit Direktlink -->
+    {% if letzte_einladung %}
+      <div class="alert alert-info" role="alert" style="margin-bottom: 24px; padding: 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;">
+          <strong style="color: #1e40af;">🎉 Einladungslink für {{ letzte_einladung.vorname }} {{ letzte_einladung.nachname }} ({{ letzte_einladung.email }}):</strong>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn small button-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}/einladung/{{ letzte_einladung.token }}/'); const b=this; b.textContent='Kopiert! ✓'; setTimeout(()=>b.textContent='📋 Link kopieren', 2000);">
+              📋 Link kopieren
+            </button>
+            <a href="{% url 'core:accept_invitation' token=letzte_einladung.token %}" target="_blank" rel="noopener" class="btn small button-secondary" style="padding: 6px 12px; font-size: 0.85rem;">
+              ↗ Link testen
+            </a>
+          </div>
+        </div>
+        <code style="display: block; word-break: break-all; background: #fff; padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 0.85rem; color: #1e293b;">
+          {{ request.scheme }}://{{ request.get_host }}/einladung/{{ letzte_einladung.token }}/
+        </code>
+      </div>
+    {% endif %}
+
+    <!-- Liste der bisherigen Einladungen -->
+    <h3 style="font-size: 1.05rem; margin-bottom: 12px;">Bestehende Einladungen</h3>
+    {% if einladungen %}
+      <div class="table-responsive" style="overflow-x: auto; margin-bottom: 24px;">
+        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border, #e2e8f0); text-align: left;">
+              <th style="padding: 10px;">Name</th>
+              <th style="padding: 10px;">E-Mail</th>
+              <th style="padding: 10px;">Rolle</th>
+              <th style="padding: 10px;">Status</th>
+              <th style="padding: 10px;">Gültig bis</th>
+              <th style="padding: 10px; text-align: right;">Aktion / Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for einladung in einladungen %}
+              <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                <td style="padding: 10px; font-weight: 500;">{{ einladung.vorname }} {{ einladung.nachname }}</td>
+                <td style="padding: 10px;">{{ einladung.email }}</td>
+                <td style="padding: 10px;">
+                  {% if einladung.rolle == "admin" %}
+                    <span class="badge" style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Vorstand</span>
+                  {% else %}
+                    <span class="badge" style="background: #ecfdf5; color: #065f46; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">Mannschaftsführer</span>
+                  {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                  {% if einladung.status == "angenommen" %}
+                    <span style="color: #16a34a; font-weight: 600;">✓ Angenommen</span>
+                  {% elif einladung.is_valid %}
+                    <span style="color: #d97706; font-weight: 500;">⏳ Offen</span>
+                  {% elif einladung.status == "widerrufen" %}
+                    <span style="color: #64748b;">Widerrufen</span>
+                  {% else %}
+                    <span style="color: #dc2626;">Abgelaufen</span>
+                  {% endif %}
+                </td>
+                <td style="padding: 10px; color: var(--muted, #64748b);">{{ einladung.gueltig_bis|date:"d.m.Y H:i" }}</td>
+                <td style="padding: 10px; text-align: right;">
+                  {% if einladung.is_valid %}
+                    <button type="button" class="btn small button-secondary" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}/einladung/{{ einladung.token }}/'); const b=this; b.textContent='Kopiert! ✓'; setTimeout(()=>b.textContent='📋 Link kopieren', 2000);">
+                      📋 Link kopieren
+                    </button>
+                    <a href="{% url 'core:accept_invitation' token=einladung.token %}" target="_blank" rel="noopener" class="btn small button-ghost" style="padding: 4px 6px; font-size: 0.8rem; margin-left: 4px;" title="In neuem Tab öffnen">
+                      ↗
+                    </a>
+                  {% elif einladung.status == "angenommen" %}
+                    <span style="color: #16a34a; font-size: 0.8rem;">Konto aktiv</span>
+                  {% else %}
+                    <span style="color: #94a3b8; font-size: 0.8rem;">Ungültig</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: var(--muted, #64748b); font-size: 0.9rem; margin-bottom: 24px;">
+        Noch keine Funktionäre eingeladen. Du kannst Funktionäre auch jederzeit später im Vorstandsbereich einladen.
+      </p>
+    {% endif %}
+
+    <!-- Navigation -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border, #e2e8f0); flex-wrap: wrap; gap: 12px;">
+      <a href="{% url 'core:onboarding_step_4' %}" class="btn ghost">← Zurück zu Schritt 4</a>
+      <form method="post" action="{% url 'core:onboarding_step_5' %}" style="display: inline-flex; gap: 10px;">
+        {% csrf_token %}
+        <button type="submit" name="action" value="skip" class="btn secondary">
+          Überspringen
+        </button>
+        <button type="submit" name="action" value="next" class="btn primary" style="min-width: 160px; min-height: 44px; font-weight: 600;">
+          Weiter zu Schritt 6 &rarr;
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

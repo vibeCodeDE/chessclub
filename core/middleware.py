@@ -62,6 +62,8 @@ class ModulAktivMiddleware:
             raise Http404("Das Modul Kommunikation ist derzeit deaktiviert.")
         if app_name == "core" and url_name in ("news_archiv", "news_detail") and not is_module_active("comms", request):
             raise Http404("Das Modul Kommunikation ist derzeit deaktiviert.")
+        if app_name == "core" and url_name == "verein" and not is_module_active("homepage", request):
+            raise Http404("Das Modul Vereinshomepage ist derzeit deaktiviert.")
 
         return None
 

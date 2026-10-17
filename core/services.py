@@ -1,9 +1,30 @@
 """Fachlogik für Modul-Einstellungen und Querschnittsfunktionen (T30 / ADR-019)."""
 
 
+from django.conf import settings
 from django.http import HttpRequest
 
 from .models import AuditLog, ModuleSettings
+
+
+def is_marketing_site(request: HttpRequest | None = None) -> bool:
+    """Prüft, ob der Request auf der zentralen Marketing-Website (z. B. schachverwaltung.de)
+    oder mit gesetztem IS_MARKETING_SITE=True läuft (ADR-024)."""
+    if getattr(settings, "IS_MARKETING_SITE", False):
+        return True
+    if request is not None:
+        try:
+            host = request.get_host().split(":")[0].strip().lower()
+        except Exception:
+            host = ""
+        product_hosts = getattr(settings, "PRODUCT_HOSTS", ["schachverwaltung.de", "www.schachverwaltung.de"])
+        if isinstance(product_hosts, str):
+            product_hosts = [h.strip().lower() for h in product_hosts.split(",") if h.strip()]
+        else:
+            product_hosts = [str(h).strip().lower() for h in product_hosts if h]
+        if host in product_hosts:
+            return True
+    return False
 
 MODUL_SCHLUESSEL = {
     "teams": "spielbetrieb_aktiv",
@@ -15,6 +36,9 @@ MODUL_SCHLUESSEL = {
     "comms": "nachrichten_aktiv",
     "nachrichten": "nachrichten_aktiv",
     "news": "nachrichten_aktiv",
+    "homepage": "homepage_aktiv",
+    "vereinshomepage": "homepage_aktiv",
+    "webseite": "homepage_aktiv",
 }
 
 
@@ -44,6 +68,7 @@ def get_module_settings(request: HttpRequest | None = None) -> ModuleSettings:
     except Exception:
         # Fallback vor Migrationen oder während Test-Scaffolds
         settings_obj = ModuleSettings(
+            homepage_aktiv=True,
             spielbetrieb_aktiv=True,
             turniere_aktiv=True,
             kassenbuch_aktiv=True,
@@ -214,4 +239,256 @@ def remove_demo_data(user=None, confirm: bool = False) -> tuple[bool, str]:
         )
 
     return True, "Demo-Daten wurden erfolgreich und sicher entfernt."
+
+
+def apply_default_fee_categories(user=None) -> int:
+    """Richtet schachspezifische Standard-Beitragskategorien im Onboarding ein."""
+    from decimal import Decimal
+    from django.db import transaction
+    from django.utils import timezone
+    from core.constants import DEFAULT_FEE_CATEGORIES
+    from dues.models import FeeCategory, FeeAmount
+
+    jahr = timezone.localdate().year
+    created_count = 0
+    with transaction.atomic():
+        for cat_data in DEFAULT_FEE_CATEGORIES:
+            cat, created = FeeCategory.objects.get_or_create(
+                name=cat_data["name"],
+                defaults={"beschreibung": cat_data["beschreibung"]},
+            )
+            FeeAmount.objects.update_or_create(
+                kategorie=cat,
+                jahr=jahr,
+                defaults={"betrag": Decimal(str(cat_data["betrag"]))},
+            )
+            if created:
+                created_count += 1
+
+        AuditLog.objects.create(
+            benutzer=user,
+            aktion="Beitragskategorien initialisiert",
+            text=f"{created_count} Standard-Beitragskategorien im Onboarding übernommen.",
+        )
+    return created_count
+
+
+def complete_onboarding(user, cleanup_demodata: bool = False) -> bool:
+    """Schließt den Onboarding-Assistenten final ab und bereinigt optional Demo-Daten."""
+    from django.utils import timezone
+    from .models import OnboardingProgress
+
+    if cleanup_demodata:
+        remove_demo_data(user=user, confirm=True)
+
+    progress = OnboardingProgress.get_solo()
+    progress.ist_abgeschlossen = True
+    progress.abgeschlossen_am = timezone.now()
+    progress.abgeschlossen_von = user
+    progress.save()
+
+    AuditLog.objects.create(
+        benutzer=user,
+        aktion="Onboarding abgeschlossen",
+        text=f"Das Vereins-Onboarding wurde von '{user.get_username()}' erfolgreich abgeschlossen.",
+    )
+    return True
+
+
+def get_onboarding_checklist_status(user=None) -> dict:
+    """Ermittelt den Erledigungsstatus der Onboarding-Aufgaben für das Vorstandsdashboard."""
+    from django.contrib.auth import get_user_model
+    from django.urls import reverse
+    from core.models import ClubProfile, OnboardingProgress, StaffInvitation
+    from core.roles import ADMIN_GROUP
+    from dues.models import FeeCategory
+    from members.models import Member
+    from teams.models import Team
+
+    User = get_user_model()
+    progress = OnboardingProgress.get_solo()
+
+    if progress.checklist_ausgeblendet:
+        return {
+            "sichtbar": False,
+            "aufgaben": [],
+            "gesamt_schritte": 0,
+            "erledigte_schritte": 0,
+            "fortschritt_prozent": 0,
+        }
+
+    club = ClubProfile.get_solo()
+    has_profile = bool(club.name and club.kontakt_email)
+    has_dues = FeeCategory.objects.filter(aktiv=True).exists()
+    has_members = Member.objects.filter(status="aktiv").exists()
+    has_teams = Team.objects.exists()
+    has_staff = (
+        StaffInvitation.objects.exists()
+        or User.objects.filter(groups__name=ADMIN_GROUP).count() > 1
+    )
+
+    aufgaben = [
+        {
+            "id": "profil",
+            "titel": "Vereinsprofil & Spiellokal hinterlegen",
+            "erledigt": has_profile,
+            "url": reverse("core:club_setup_profile"),
+        },
+        {
+            "id": "beitraege",
+            "titel": "Beitragskategorien einrichten",
+            "erledigt": has_dues,
+            "url": reverse("core:club_setup_dues"),
+        },
+        {
+            "id": "mitglieder",
+            "titel": "Mitglieder importieren oder anlegen",
+            "erledigt": has_members,
+            "url": reverse("core:club_setup_members_import"),
+        },
+        {
+            "id": "mannschaften",
+            "titel": "Erste Mannschaft anlegen",
+            "erledigt": has_teams,
+            "url": reverse("core:club_setup_teams"),
+        },
+        {
+            "id": "funktionaere",
+            "titel": "Vorstandskollegen oder Kapitäne einladen",
+            "erledigt": has_staff,
+            "url": reverse("core:onboarding_step_5"),
+        },
+    ]
+
+    erledigt_count = sum(1 for a in aufgaben if a["erledigt"])
+    gesamt_count = len(aufgaben)
+    prozent = int((erledigt_count / gesamt_count) * 100) if gesamt_count else 0
+
+    return {
+        "sichtbar": True,
+        "aufgaben": aufgaben,
+        "gesamt_schritte": gesamt_count,
+        "erledigte_schritte": erledigt_count,
+        "fortschritt_prozent": prozent,
+    }
+
+
+def create_staff_invitation(
+    email: str,
+    vorname: str,
+    nachname: str,
+    rolle: str,
+    invited_by,
+    send_mail: bool = True,
+    basis_url: str = "",
+):
+    """Erzeugt eine Einladung für einen Funktionär und verschickt optional die Einladungsmail."""
+    import secrets
+    from datetime import timedelta
+    from django.conf import settings
+    from django.core.mail import send_mail as django_send_mail
+    from django.utils import timezone
+    from core.models import ClubProfile, StaffInvitation
+
+    token = secrets.token_urlsafe(32)
+    gueltig_bis = timezone.now() + timedelta(days=7)
+
+    StaffInvitation.objects.filter(email__iexact=email.strip(), status="offen").update(
+        status="widerrufen"
+    )
+
+    invitation = StaffInvitation.objects.create(
+        email=email.strip().lower(),
+        vorname=vorname.strip(),
+        nachname=nachname.strip(),
+        rolle=rolle,
+        token=token,
+        gueltig_bis=gueltig_bis,
+        eingeladen_von=invited_by,
+        status="offen",
+    )
+
+    AuditLog.objects.create(
+        benutzer=invited_by,
+        aktion="Funktionärseinladung erstellt",
+        text=f"Einladung für {vorname} {nachname} ({email}) mit Rolle '{rolle}' erstellt.",
+    )
+
+    if send_mail:
+        club = ClubProfile.get_solo()
+        verein_name = club.name or "Schachverein"
+        link = f"{basis_url}/einladung/{token}/"
+        betreff = f"Einladung zur Vereinsverwaltung – {verein_name}"
+        nachricht = (
+            f"Hallo {vorname},\n\n"
+            f"du wurdest von {invited_by.get_full_name() or invited_by.username} eingeladen, "
+            f"im Vorstand oder Spielbetrieb von '{verein_name}' mitzuwirken (Rolle: {invitation.get_rolle_display()}).\n\n"
+            f"Bitte klicke auf den folgenden Link, um dein persönliches Passwort festzulegen:\n"
+            f"{link}\n\n"
+            f"Dieser Einladungslink ist 7 Tage lang gültig.\n\n"
+            f"Viele Grüße,\n{verein_name}"
+        )
+        try:
+            django_send_mail(
+                subject=betreff,
+                message=nachricht,
+                from_email=club.kontakt_email
+                or getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@schachverein.de"),
+                recipient_list=[email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
+    return invitation
+
+
+def accept_staff_invitation(token: str, username: str, password: str):
+    """Löst ein Einladungstoken ein, legt den Benutzer an und weist die Rolle zu."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Group
+    from django.db import transaction
+    from django.utils import timezone
+    from core.models import StaffInvitation
+
+    User = get_user_model()
+    try:
+        invitation = StaffInvitation.objects.get(token=token)
+    except StaffInvitation.DoesNotExist:
+        return False, None, "Der Einladungslink ist ungültig oder existiert nicht."
+
+    if not invitation.is_valid:
+        if invitation.status == "angenommen":
+            return False, None, "Diese Einladung wurde bereits angenommen."
+        return False, None, "Diese Einladung ist abgelaufen oder wurde widerrufen."
+
+    if User.objects.filter(username__iexact=username.strip()).exists():
+        return False, None, "Dieser Benutzername ist bereits vergeben."
+
+    with transaction.atomic():
+        user = User.objects.create_user(
+            username=username.strip(),
+            password=password,
+            first_name=invitation.vorname,
+            last_name=invitation.nachname,
+            email=invitation.email,
+            is_active=True,
+            is_staff=(invitation.rolle == "admin"),
+        )
+        grp, _ = Group.objects.get_or_create(name=invitation.rolle)
+        user.groups.add(grp)
+
+        invitation.status = "angenommen"
+        invitation.angenommen_am = timezone.now()
+        invitation.benutzer = user
+        invitation.save()
+
+        AuditLog.objects.create(
+            benutzer=user,
+            aktion="Funktionärseinladung angenommen",
+            text=f"Benutzer '{user.username}' ({invitation.email}) hat die Einladung als '{invitation.rolle}' angenommen.",
+        )
+
+    return True, user, "Einladung erfolgreich angenommen."
+
 

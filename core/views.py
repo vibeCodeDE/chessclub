@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Sum
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from cashbook.models import jahresabschluss
@@ -19,7 +19,7 @@ from core import produkt
 from core.dsgvo import datenauskunft, verarbeitungstaetigkeiten
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_of, role_required
-from core.services import is_module_active
+from core.services import is_marketing_site, is_module_active
 from dues.models import MembershipFee, Payment, jahres_uebersicht
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, Team
@@ -134,7 +134,16 @@ def health(request):
 
 
 def home(request):
-    """Öffentliche Startseite: News, Termine, Beitrittsinfo (PRD §2)."""
+    """Startseite: Entweder Produkt-Landingpage (auf Marketing-Domain/Einstellung)
+    oder öffentliche Vereinsseite bzw. Redirect zum internen Dashboard (ADR-023, ADR-024)."""
+    if is_marketing_site(request):
+        return produkt_seite(request)
+
+    if not is_module_active("homepage", request):
+        if request.user.is_authenticated:
+            return redirect("core:dashboard")
+        return redirect("core:login")
+
     heute = timezone.localdate()
     has_comms = is_module_active("comms", request)
     has_tournaments = is_module_active("tournaments", request)
@@ -443,6 +452,13 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
             "ohne_kategorie": ohne_kategorie,
             "zahlungen_monat": zahlungen_monat,
             "verlauf": verlauf,
+            "onboarding_widget": (
+                from_services_onboarding_widget := __import__(
+                    "core.services", fromlist=["get_onboarding_checklist_status"]
+                ).get_onboarding_checklist_status(user=request.user)
+            )
+            if rolle == ADMIN_GROUP
+            else None,
         }
     )
     return render(request, "core/dashboard.html", kontext)

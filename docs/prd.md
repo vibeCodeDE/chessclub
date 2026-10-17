@@ -36,7 +36,7 @@
 - **Datenbank:** PostgreSQL
 - **Frontend:** Server-seitig gerendert (Django Templates + Tailwind) — keine getrennte SPA nötig
 - **Deployment:** Docker Compose (App + DB + Backups) auf vereinseigenem Server, TLS via Reverse Proxy
-- **Website:** keine vorhandene — die App ist die öffentliche Präsenz (Startseite mit News/Terminen)
+- **Hauptanwendung & Website-Modul:** Die Hauptanwendung ist die **Schachverwaltung** (interne operative Vereinsverwaltung). Die öffentliche **Vereinshomepage** (Startseite mit News/Terminen, `/verein/`) ist ein modulares Add-on, das über `ModuleSettings.homepage_aktiv` flexibel aktiviert oder deaktiviert werden kann (ADR-023). Ist sie deaktiviert, leitet `/` direkt zum internen Dashboard bzw. zur Anmeldung.
 
 ---
 
@@ -245,3 +245,4 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v2.2 | 2026-10-12 | Vereins-Setup & Stammdaten im Browser (S7.5) und Mitglieder-CSV-Import (S1.7) gemäß ADR-020 spezifiziert (T31) |
 | v2.3 | 2026-10-13 | django-import-export im Django-Admin für Mitglieder und Kassenbuch (M1.5, S1.7, S6.2) gemäß ADR-021 spezifiziert und integriert (T32) |
 | v2.4 | 2026-10-14 | Demo-Daten-Steuerung im Django Admin Panel (S7.6) gemäß ADR-022 spezifiziert (T34) |
+| v2.5 | 2026-10-17 | Klarstellung Produktarchitektur: Haupt-App ist die Schachverwaltung, Vereinshomepage ist ein modulares Add-on (`homepage_aktiv`, ADR-023) |

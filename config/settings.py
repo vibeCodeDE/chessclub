@@ -9,7 +9,7 @@ _allowed = os.environ.get("DJANGO_ALLOWED_HOSTS") or os.environ.get("ALLOWED_HOS
 if _allowed:
     ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
 else:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".scalingo.io", "testserver"]
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".scalingo.io", "testserver", "schachverwaltung.de", ".schachverwaltung.de"]
 
 
 INSTALLED_APPS = [
@@ -298,6 +298,9 @@ DSB_CACHE_TIMEOUT = int(os.environ.get("DSB_CACHE_TIMEOUT", "86400"))  # 24 h se
 # Produkt-Landingpage (/produkt/): Name und Kontakt für den Verkauf als Dienstleistung.
 PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Schachverwaltung.de")
 PRODUCT_CONTACT = os.environ.get("PRODUCT_CONTACT", "kontakt@schachverwaltung.de")
+IS_MARKETING_SITE = os.environ.get("IS_MARKETING_SITE", "0") in ("1", "true", "True")
+_product_hosts = os.environ.get("PRODUCT_HOSTS", "schachverwaltung.de,www.schachverwaltung.de")
+PRODUCT_HOSTS = [h.strip().lower() for h in _product_hosts.split(",") if h.strip()]
 
 # Absender für System- und Gruppen-Mails (PRD M5.2) sowie Fehlerbenachrichtigung.
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", CLUB_CONTACT)

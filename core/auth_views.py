@@ -52,6 +52,10 @@ def anmelden(request):
             request.session[SESSION_FEHLSCHLAEGE] = 0
             return redirect("core:zwei_faktor")
         login(request, user)
+        if not ziel and _ist_vorstand(user):
+            from core.models import OnboardingProgress
+            if OnboardingProgress.is_onboarding_needed():
+                return redirect("core:onboarding_wizard")
         return redirect(ziel or "core:dashboard")
 
     return render(request, "registration/login.html", {"form": form})
@@ -142,6 +146,10 @@ def zwei_faktor(request):
             request.session.pop(SESSION_SCHLUESSEL, None)
             ziel = request.session.pop("_2fa_next", "")
             messages.success(request, "Anmeldung bestätigt.")
+            if not ziel and _ist_vorstand(user):
+                from core.models import OnboardingProgress
+                if OnboardingProgress.is_onboarding_needed():
+                    return redirect("core:onboarding_wizard")
             return redirect(ziel or "core:dashboard")
 
     if device is None:
@@ -172,3 +180,54 @@ def zwei_faktor_neu(request):
     request.session.pop(SESSION_SECRET, None)
     messages.info(request, "Bitte richten Sie das neue Gerät ein.")
     return redirect("core:zwei_faktor")
+
+
+def accept_invitation(request, token):
+    """Annahme einer Funktionärseinladung mit eigenem Passwort (PRD §3.8, US5)."""
+    from core.models import StaffInvitation
+    from core.services import accept_staff_invitation
+
+    try:
+        invitation = StaffInvitation.objects.get(token=token)
+    except StaffInvitation.DoesNotExist:
+        messages.error(request, "Der Einladungslink ist ungültig oder existiert nicht.")
+        return redirect("core:login")
+
+    if not invitation.is_valid:
+        if invitation.status == "angenommen":
+            messages.info(request, "Diese Einladung wurde bereits angenommen. Bitte melde dich an.")
+        else:
+            messages.error(request, "Dieser Einladungslink ist abgelaufen oder wurde widerrufen.")
+        return redirect("core:login")
+
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        password_confirm = request.POST.get("password_confirm", "")
+
+        if not username:
+            messages.error(request, "Bitte einen gewünschten Benutzernamen eingeben.")
+        elif password != password_confirm:
+            messages.error(request, "Die Passwörter stimmen nicht überein.")
+        elif len(password) < 8:
+            messages.error(request, "Das Passwort muss mindestens 8 Zeichen lang sein.")
+        else:
+            success, user, msg = accept_staff_invitation(
+                token=token, username=username, password=password
+            )
+            if success:
+                login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+                messages.success(
+                    request,
+                    f"Willkommen, {user.first_name}! Dein Benutzerkonto wurde erfolgreich aktiviert.",
+                )
+                return redirect("core:dashboard")
+            else:
+                messages.error(request, msg)
+
+    return render(
+        request,
+        "core/invitation_accept.html",
+        {"invitation": invitation},
+    )
+

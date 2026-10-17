@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Vereins-Onboarding · Schritt {{ aktueller_schritt }} von {{ schritte_anzahl|default:"6" }}{% endblock %}
+{% block page_title %}Vereins-Onboarding{% endblock %}
+
+{% block crumbs %}
+<div class="crumbs" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a> › <span>Vereins-Onboarding</span> › <span>Schritt {{ aktueller_schritt }} von {{ schritte_anzahl|default:"6" }}</span>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <div>
+    <h1>🚀 Willkommen bei deiner neuen Schachvereins-Software</h1>
+    <p class="lede">Richte deinen Schachverein in wenigen Minuten ein. Du kannst jeden Schritt speichern und jederzeit unterbrechen oder fortsetzen.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{% url 'core:dashboard' %}" title="Zurück zum regulären Dashboard">Später fortsetzen</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="onboarding-wrapper" style="max-width: 960px; margin: 0 auto;">
+  <!-- Fortschrittsbalken & Stepper -->
+  <div class="card onboarding-stepper-card" style="margin-bottom: 24px; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+      <span style="font-weight: 600; font-size: 0.95rem;">
+        Schritt {{ aktueller_schritt }} von {{ schritte_anzahl|default:"6" }}:
+        <span style="color: var(--accent, #2b6cb0);">{{ schritt_titel }}</span>
+      </span>
+      <span class="badge" style="font-size: 0.85rem;" aria-live="polite">
+        {{ fortschritt_prozent|default:"0" }}% abgeschlossen
+      </span>
+    </div>
+
+    <!-- Visueller Fortschrittsbalken nach WCAG 2.1 AA -->
+    <div role="progressbar"
+         aria-valuenow="{{ fortschritt_prozent|default:'0' }}"
+         aria-valuemin="0"
+         aria-valuemax="100"
+         aria-label="Fortschritt der Ersteinrichtung"
+         style="width: 100%; height: 10px; background: var(--bg-subtle, #e2e8f0); border-radius: 999px; overflow: hidden;">
+      <div style="width: {{ fortschritt_prozent|default:'0' }}%; height: 100%; background: var(--primary, #3182ce); transition: width 0.3s ease;"></div>
+    </div>
+
+    <!-- Stepper-Navigation -->
+    <nav aria-label="Onboarding Schritte" style="margin-top: 16px;">
+      <ol style="display: flex; justify-content: space-between; list-style: none; padding: 0; margin: 0; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        {% for s in alle_schritte %}
+          <li style="flex: 1; min-width: 110px; text-align: center;">
+            {% if s.nummer < aktueller_schritt %}
+              <a href="{% url 'core:onboarding_step_back' schritt=s.nummer %}" style="display: block; padding: 6px 4px; border-radius: 6px; background: var(--bg-subtle, #edf2f7); color: var(--text, #2d3748); text-decoration: none; font-size: 0.8rem; font-weight: 600;">
+                ✓ {{ s.titel }}
+              </a>
+            {% elif s.nummer == aktueller_schritt %}
+              <div style="padding: 6px 4px; border-radius: 6px; background: var(--primary, #3182ce); color: #fff; font-size: 0.8rem; font-weight: 700;" aria-current="step">
+                {{ s.nummer }}. {{ s.titel }}
+              </div>
+            {% else %}
+              <div style="padding: 6px 4px; border-radius: 6px; background: transparent; color: var(--text-muted, #a0aec0); font-size: 0.8rem;">
+                {{ s.nummer }}. {{ s.titel }}
+              </div>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </nav>
+  </div>
+
+  <!-- Schritt-Inhalt -->
+  <div class="onboarding-step-container">
+    {% block wizard_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

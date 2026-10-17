@@ -1,0 +1,54 @@
+{% if onboarding_widget and onboarding_widget.sichtbar %}
+<div class="card onboarding-checklist" style="margin-bottom: 24px; border-left: 4px solid var(--accent); background: var(--surface);">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+    <div>
+      <h2 style="font-size: 1.15rem; font-weight: 600; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+        <span>🏁 Erste Schritte im Verein</span>
+        <span class="badge" style="background: var(--surface-secondary, #f0f4f8); font-size: 0.8rem; padding: 2px 8px; border-radius: 12px;">
+          {{ onboarding_widget.erledigte_schritte }} von {{ onboarding_widget.gesamt_schritte }} erledigt
+        </span>
+      </h2>
+      <p style="color: var(--muted); margin: 0; font-size: 0.9rem;">
+        Vervollständige die Grundkonfiguration deines Vereins für den reibungslosen Spielbetrieb.
+      </p>
+    </div>
+    <form method="post" action="{% url 'core:onboarding_checklist_dismiss' %}" style="margin: 0;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm button-secondary" style="font-size: 0.8rem; padding: 4px 10px; cursor: pointer;" title="Checkliste ausblenden">
+        Ausblenden
+      </button>
+    </form>
+  </div>
+
+  <div style="margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+      <span style="font-weight: 500;">Fortschritt</span>
+      <span style="font-weight: 600;">{{ onboarding_widget.fortschritt_prozent }}%</span>
+    </div>
+    <div class="progress" role="progressbar" aria-label="Fortschritt der Ersteinrichtung" aria-valuenow="{{ onboarding_widget.fortschritt_prozent }}" aria-valuemin="0" aria-valuemax="100" style="height: 8px; background: var(--border, #e2e8f0); border-radius: 4px; overflow: hidden;">
+      <div class="progress-bar" style="width: {{ onboarding_widget.fortschritt_prozent }}%; height: 100%; background: var(--accent, #2563eb); transition: width 0.3s ease;"></div>
+    </div>
+  </div>
+
+  <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;">
+    {% for aufgabe in onboarding_widget.aufgaben %}
+      <li style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; background: var(--bg, #f8fafc); border: 1px solid var(--border, #e2e8f0);">
+        {% if aufgabe.erledigt %}
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #16a34a; color: white; font-size: 12px; flex-shrink: 0;" aria-label="Erledigt">
+            ✓
+          </span>
+          <span style="text-decoration: line-through; color: var(--muted); font-size: 0.9rem;">
+            {{ aufgabe.titel }}
+          </span>
+        {% else %}
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0;" aria-label="Offen">
+          </span>
+          <a href="{{ aufgabe.url }}" style="font-weight: 500; font-size: 0.9rem; color: var(--primary, #1d4ed8); text-decoration: none;">
+            {{ aufgabe.titel }} &rarr;
+          </a>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

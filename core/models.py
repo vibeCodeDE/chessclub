@@ -122,6 +122,11 @@ class ModuleSettings(models.Model):
     Kernmodule (core, members, dues) sind als Fundament nicht deaktivierbar.
     """
 
+    homepage_aktiv = models.BooleanField(
+        "Vereinshomepage (Öffentliche Webpräsenz)",
+        default=True,
+        help_text="Aktiviert die öffentliche Vereins-Startseite, Termine, Ansprechpartner und Vereinsdarstellung.",
+    )
     spielbetrieb_aktiv = models.BooleanField(
         "Spielbetrieb & Mannschaften",
         default=True,
@@ -183,6 +188,7 @@ class ClubProfile(models.Model):
 
     name = models.CharField("Vereinsname", max_length=150, blank=True)
     kurzname = models.CharField("Kurzname / Kürzel", max_length=50, blank=True)
+    zps_nummer = models.CharField("DSB-Vereinskennziffer", max_length=10, blank=True)
     kontakt_email = models.EmailField("Kontakt-E-Mail", blank=True)
     gruendungsjahr = models.CharField("Gründungsjahr", max_length=10, blank=True)
     ort = models.CharField("Ort", max_length=100, blank=True)
@@ -215,4 +221,111 @@ class ClubProfile(models.Model):
     def get_solo(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class OnboardingProgress(models.Model):
+    """Singleton zur Nachhaltung des Onboarding-Zustands eines Schachvereins."""
+
+    aktueller_schritt = models.PositiveSmallIntegerField("Aktueller Schritt", default=1)
+    schritte_abgeschlossen = models.JSONField("Abgeschlossene Schritte", default=list, blank=True)
+    ist_abgeschlossen = models.BooleanField("Onboarding abgeschlossen", default=False)
+    abgeschlossen_am = models.DateTimeField("Abgeschlossen am", null=True, blank=True)
+    abgeschlossen_von = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Abgeschlossen von",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="onboarding_abschluesse",
+    )
+    checklist_ausgeblendet = models.BooleanField("Dashboard-Checkliste ausgeblendet", default=False)
+
+    class Meta:
+        verbose_name = "Onboarding-Fortschritt"
+        verbose_name_plural = "Onboarding-Fortschritt"
+
+    def __str__(self):
+        status = "Abgeschlossen" if self.ist_abgeschlossen else f"Schritt {self.aktueller_schritt}"
+        return f"Onboarding: {status}"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def mark_step_completed(self, step_name: str, next_step: int | None = None):
+        if not isinstance(self.schritte_abgeschlossen, list):
+            self.schritte_abgeschlossen = []
+        if step_name not in self.schritte_abgeschlossen:
+            self.schritte_abgeschlossen.append(step_name)
+        if next_step is not None and next_step > self.aktueller_schritt:
+            self.aktueller_schritt = next_step
+        self.save()
+
+    @classmethod
+    def is_onboarding_needed(cls) -> bool:
+        progress = cls.get_solo()
+        if progress.ist_abgeschlossen:
+            return False
+        club = ClubProfile.get_solo()
+        return not bool(club.name)
+
+
+class StaffInvitation(models.Model):
+    """Temporäre Einladungen für Funktionäre (Vorstände & Mannschaftsführer)."""
+
+    ROLLE_CHOICES = [
+        ("admin", "Vorstand (Admin)"),
+        ("kapitaen", "Mannschaftsführer (Kapitän)"),
+    ]
+    STATUS_CHOICES = [
+        ("offen", "Offen"),
+        ("angenommen", "Angenommen"),
+        ("abgelaufen", "Abgelaufen"),
+        ("widerrufen", "Widerrufen"),
+    ]
+
+    email = models.EmailField("E-Mail", db_index=True)
+    vorname = models.CharField("Vorname", max_length=50)
+    nachname = models.CharField("Nachname", max_length=50)
+    rolle = models.CharField("Rolle", max_length=20, choices=ROLLE_CHOICES)
+    token = models.CharField("Einladungs-Token", max_length=64, unique=True, db_index=True)
+    status = models.CharField("Status", max_length=20, default="offen", choices=STATUS_CHOICES)
+    gueltig_bis = models.DateTimeField("Gültig bis", db_index=True)
+    erstellt_am = models.DateTimeField("Erstellt am", auto_now_add=True)
+    angenommen_am = models.DateTimeField("Angenommen am", null=True, blank=True)
+    eingeladen_von = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Eingeladen von",
+        on_delete=models.CASCADE,
+        related_name="ausgesprochene_einladungen",
+    )
+    benutzer = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Erstellter Benutzer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="staff_invitation",
+    )
+
+    class Meta:
+        verbose_name = "Funktionärseinladung"
+        verbose_name_plural = "Funktionärseinladungen"
+        ordering = ["-erstellt_am"]
+
+    def __str__(self):
+        return f"Einladung an {self.email} ({self.get_rolle_display()}) - {self.status}"
+
+    @property
+    def is_valid(self) -> bool:
+        return self.status == "offen" and timezone.now() <= self.gueltig_bis
+
 

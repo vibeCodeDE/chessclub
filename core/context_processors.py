@@ -62,6 +62,7 @@ NAV_STRUKTUR = [
     (
         "System",
         [
+            ("core:onboarding_wizard", "Onboarding-Assistent", "sparkle", {"admin"}, None),
             ("core:club_setup_profile", "Vereins-Setup & Daten", "sliders", {"admin"}, None),
             ("admin:index", "Verwaltung (Django-Admin)", "settings", {"admin"}, None),
             ("core:dsgvo_verzeichnis", "Verzeichnis Verarbeitungstätigkeiten", "shield", {"admin"}, None),
@@ -71,6 +72,8 @@ NAV_STRUKTUR = [
 
 
 def _is_nav_item_allowed(url_name, request):
+    if url_name == "core:home" and not is_module_active("homepage", request):
+        return False
     prefix = url_name.split(":")[0]
     if prefix == "teams" and not is_module_active("teams", request):
         return False

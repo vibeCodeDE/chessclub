@@ -206,6 +206,29 @@
 
 ---
 
+### T30b: Vereinshomepage als modulares Add-on (`homepage_aktiv`, ADR-023)
+- **Problem & Kontext:** Klarstellung der Produktarchitektur: Hauptanwendung ist die Schachverwaltung, die Vereinshomepage ist ein de-/aktivierbares Satellitenmodul (`homepage_aktiv`).
+- **Umsetzung (gemäß ADR-023):**
+  - Boolean-Feld `homepage_aktiv` in `ModuleSettings` (`core/models.py`).
+  - Fachlogik `is_module_active("homepage")` in `core/services.py`.
+  - URL-Schutz mit 404 für `/verein/` über `ModulAktivMiddleware`.
+  - Intelligente Weiterleitung bei `/`: Eingeloggte Nutzer zum Dashboard, Gäste zum Login bei inaktiver Homepage.
+  - Dynamisches Ausblenden von „Vereinsseite“ in `core/context_processors.py`.
+  - Auswahlkarte im Onboarding-Wizard Schritt 2 (`step_2_modules.html`).
+- **Beleg:** `docker compose exec app pytest core/tests/test_module_toggles.py` → **passed**; Negativtest: `/verein/` liefert 404 bei deaktivierter Homepage.
+
+---
+
+### T30c: Marketing-Site-Routing auf schachverwaltung.de (`IS_MARKETING_SITE`, ADR-024)
+- **Problem & Kontext:** Zwei-Welten-Routing für SaaS-Vertrieb vs. Vereinsbetrieb: Auf der Haupt-Marketingdomain (`schachverwaltung.de`) oder bei `IS_MARKETING_SITE=True` rendert `/` direkt die Produkt-Landingpage (`/produkt/`); auf Vereins-Subdomains oder Vereinsinstallationen verbleibt `/` auf der Vereinsinstanz.
+- **Umsetzung (gemäß ADR-024):**
+  - Reiner Fachservice `core.services.is_marketing_site()`.
+  - Konfigurationsvariablen `IS_MARKETING_SITE` und `PRODUCT_HOSTS` in `config/settings.py` und `.env.prod.example`.
+  - Routing-Weiche in `core/views.py:home`.
+- **Beleg:** `docker compose exec app pytest core/tests/test_produkt.py` → **passed**; Negativtest: Vereins-Subdomain liefert keine Verkaufssätze auf der Startseite.
+
+---
+
 ## Nächste Schritte
 
 1. **Pilotbetrieb & Abnahme** durch den Testverein mit den erstellten Mustern (`docs/einfuehrung_testverein.md`, `docs/abnahme.md`)

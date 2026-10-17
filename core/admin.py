@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import AuditLog, ClubProfile, DemoData, ModuleSettings, TwoFactorDevice
+from .models import (
+    AuditLog,
+    ClubProfile,
+    DemoData,
+    ModuleSettings,
+    OnboardingProgress,
+    StaffInvitation,
+    TwoFactorDevice,
+)
 
 
 @admin.register(AuditLog)
@@ -70,6 +78,7 @@ class TwoFactorDeviceAdmin(admin.ModelAdmin):
 class ModuleSettingsAdmin(admin.ModelAdmin):
     list_display = (
         "__str__",
+        "homepage_aktiv",
         "spielbetrieb_aktiv",
         "turniere_aktiv",
         "kassenbuch_aktiv",
@@ -171,5 +180,55 @@ class DemoDataAdmin(admin.ModelAdmin):
             "opts": self.model._meta,
         }
         return TemplateResponse(request, self.change_list_template, context)
+
+
+@admin.register(OnboardingProgress)
+class OnboardingProgressAdmin(admin.ModelAdmin):
+    """Zustand des Vereins-Onboardings (Singleton, revisionssicher)."""
+
+    list_display = (
+        "__str__",
+        "aktueller_schritt",
+        "ist_abgeschlossen",
+        "abgeschlossen_am",
+        "abgeschlossen_von",
+        "checklist_ausgeblendet",
+    )
+    readonly_fields = (
+        "aktueller_schritt",
+        "schritte_abgeschlossen",
+        "ist_abgeschlossen",
+        "abgeschlossen_am",
+        "abgeschlossen_von",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(StaffInvitation)
+class StaffInvitationAdmin(admin.ModelAdmin):
+    """Verwaltung von Funktionärseinladungen mit Revisionssicherheit."""
+
+    list_display = (
+        "email",
+        "vorname",
+        "nachname",
+        "rolle",
+        "status",
+        "gueltig_bis",
+        "erstellt_am",
+        "angenommen_am",
+    )
+    list_filter = ("status", "rolle")
+    search_fields = ("email", "vorname", "nachname")
+    readonly_fields = ("token", "erstellt_am", "angenommen_am", "benutzer")
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 

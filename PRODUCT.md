@@ -15,11 +15,11 @@ web
 
 ## Product Purpose
 
-Selbst gehostete, vollintegrierte Vereinsverwaltung und Webpräsenz für Schachvereine (< 200 Mitglieder). Löst fragmentierte Einzellösungen (Excel-Tabellen, Messenger-Gruppen, isolierte CMS) durch ein einheitliches, datensouveränes System ab. Erfolg bedeutet: Null Datenverlust, minimaler ehrenamtlicher Administrationsaufwand, absolute DSGVO-Konformität auf eigener Infrastruktur und barrierefreie Nutzung über alle Generationen hinweg.
+Selbst gehostete Schachverwaltung mit optionalem Vereinshomepage-Add-on für Schachvereine (< 200 Mitglieder). Die Hauptanwendung ist die spezialisierte **Schachverwaltung** zur operativen Führung des Vereins (Mitgliederstamm, Beitrags- und SEPA-Mandatswesen, Spielbetrieb, DWZ-Listen, Schweizer-System-Turniere und Kassenbuch). Die **Vereinshomepage** ist ein modulares Add-on, das Vereine mit bereits bestehender Vereinswebsite flexibel deaktivieren können. Löst fragmentierte Einzellösungen (Excel-Tabellen, Messenger-Gruppen, isolierte Insellösungen) durch ein einheitliches, datensouveränes System ab. Erfolg bedeutet: Null Datenverlust, minimaler ehrenamtlicher Administrationsaufwand, absolute DSGVO-Konformität auf eigener Infrastruktur und barrierefreie Nutzung über alle Generationen hinweg.
 
 ## Positioning
 
-Die einzige speziell auf Schachvereine zugeschnittene Lösung mit nativer Schweizer-System-Turnierverwaltung, DWZ-/Ligaspielbetrieb und vollständiger Datensouveränität (100 % selbst gehostet, null Drittanbieter-CDNs/Tracker, revisionssichere Buchhaltung per Gegenbuchung).
+Die einzige speziell auf Schachvereine zugeschnittene Softwareverwaltung mit nativer Schweizer-System-Turnierverwaltung, DWZ-/Ligaspielbetrieb und vollständiger Datensouveränität (100 % selbst gehostet, null Drittanbieter-CDNs/Tracker, revisionssichere Buchhaltung per Gegenbuchung) – einsetzbar als reine interne Verwaltungs-App oder kombiniert mit der integrierten Vereinshomepage.
 
 ## Operating Context
 
@@ -29,8 +29,8 @@ Die einzige speziell auf Schachvereine zugeschnittene Lösung mit nativer Schwei
 
 ## Capabilities and Constraints
 
-- **Kernfunktionen:** Mitgliederverwaltung mit Statusverlauf (aktiv/passiv/ausgetreten) und Änderungswunsch-Freigabe; Beitragsstufen, automatische Beitragsläufe und Mahnwesen (PDF); Kassenbuch mit Jahresabschluss-Export; Turniere mit Schweizer System; Mannschafts- und Ligaspielverwaltung; Ankündigungen und DSGVO-Auskunft/Anonymisierung.
-- **Zwei getrennte Oberflächen:** Öffentliche Vereinsseite (`static/css/site.css`, `templates/public_base.html`) und interne Verwaltungs-Shell (`static/css/app.css`, `templates/base.html`), strikt getrennt ohne CSS-Buildschritt.
+- **Kernfunktionen (Haupt-App Schachverwaltung):** Mitgliederverwaltung mit Statusverlauf (aktiv/passiv/ausgetreten) und Änderungswunsch-Freigabe; Beitragsstufen, automatische Beitragsläufe und Mahnwesen (PDF); Kassenbuch mit Jahresabschluss-Export; Turniere mit Schweizer System; Mannschafts- und Ligaspielverwaltung; Ankündigungen und DSGVO-Auskunft/Anonymisierung.
+- **Zwei getrennte Oberflächen & Modularität:** Die interne Verwaltungs-Shell (`static/css/app.css`, `templates/base.html`) als Hauptanwendung und das optionale Add-on Vereinshomepage (`static/css/site.css`, `templates/public_base.html`), schaltbar über `ModuleSettings.homepage_aktiv` (ADR-023). Ist die Homepage deaktiviert, leitet die Einstiegsroute direkt zum Dashboard bzw. zur Anmeldung.
 - **Harte Vorgaben:**
   - DSGVO N1.1: Keine externen CDNs, Tracker oder Drittanbieter-Fonts.
   - Finanzdaten werden nie gelöscht (Storno/Korrektur nur per Gegenbuchung und AuditLog; ADR-005, ADR-006).

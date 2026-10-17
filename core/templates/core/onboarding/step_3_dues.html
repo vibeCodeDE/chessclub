@@ -1,0 +1,92 @@
+{% extends "core/onboarding/base_onboarding.html" %}
+
+{% block wizard_content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>Schritt 3: Beitragsstruktur &amp; Standard-Kategorien</h2>
+    <span class="sub">Definiere die Beitragssätze deines Vereins. Du kannst mit einem Klick bewährte Standard-Kategorien für Schachvereine anlegen oder eigene Beitragssätze hinzufügen.</span>
+  </div>
+
+  <div class="card-body">
+    {% if not kategorien %}
+      <div class="card alert-card" style="background: var(--bg-subtle, #f7fafc); padding: 20px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid var(--accent, #3182ce);">
+        <h3 style="margin-top: 0; font-size: 1.05rem;">Schach-Standardvorlagen (Empfohlen)</h3>
+        <p style="margin-bottom: 16px; font-size: 0.95rem; color: var(--text-muted, #4a5568);">
+          Folgende typische Beitragssätze für deutsche Schachvereine können direkt übernommen werden:
+        </p>
+        <ul style="margin-bottom: 16px; padding-left: 20px; font-size: 0.9rem;">
+          {% for def_cat in default_categories %}
+            <li><strong>{{ def_cat.name }}</strong>: {{ def_cat.betrag|floatformat:2 }} € / Jahr ({{ def_cat.beschreibung }})</li>
+          {% endfor %}
+        </ul>
+        <form method="post" action="{% url 'core:onboarding_step_3' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="apply_defaults">
+          <button type="submit" class="btn primary" style="min-height: 44px;">
+            ⚡ Standard-Kategorien jetzt anlegen
+          </button>
+        </form>
+      </div>
+    {% else %}
+      <div style="margin-bottom: 24px;">
+        <h3>Vorhandene Beitragskategorien</h3>
+        <div class="table-wrap" style="overflow-x: auto;">
+          <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border, #cbd5e0); text-align: left;">
+                <th style="padding: 10px;">Bezeichnung</th>
+                <th style="padding: 10px;">Jahresbeitrag</th>
+                <th style="padding: 10px;">Beschreibung</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for k in kategorien %}
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 10px; font-weight: 600;">{{ k.name }}</td>
+                  <td style="padding: 10px; font-variant-numeric: tabular-nums;">{{ k.betrag|floatformat:2 }} €</td>
+                  <td style="padding: 10px; color: var(--text-muted, #718096);">{{ k.beschreibung|default:"–" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Schnellformular für weitere Kategorie -->
+    <details style="margin-bottom: 24px; padding: 14px; border: 1px dashed var(--border, #cbd5e0); border-radius: 8px;">
+      <summary style="font-weight: 600; cursor: pointer; color: var(--primary, #3182ce);">+ Weitere individuelle Beitragskategorie anlegen</summary>
+      <form method="post" action="{% url 'core:onboarding_step_3' %}" style="margin-top: 14px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_fee">
+        <div class="form-grid cols-2">
+          <div class="field required">
+            <label for="{{ fee_form.name.id_for_label }}">Kategorie-Name</label>
+            {{ fee_form.name }}
+          </div>
+          <div class="field required">
+            <label for="{{ fee_form.betrag.id_for_label }}">Jahresbeitrag in €</label>
+            {{ fee_form.betrag }}
+          </div>
+          <div class="field col-span-2">
+            <label for="{{ fee_form.beschreibung.id_for_label }}">Beschreibung</label>
+            {{ fee_form.beschreibung }}
+          </div>
+        </div>
+        <button type="submit" class="btn secondary" style="margin-top: 10px;">Kategorie speichern</button>
+      </form>
+    </details>
+
+    <form method="post" action="{% url 'core:onboarding_step_3' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="next">
+      <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{% url 'core:onboarding_step_2' %}" class="btn ghost">← Zurück zu Schritt 2</a>
+        <button type="submit" class="btn primary" style="min-width: 160px; min-height: 44px;">
+          Weiter zu Schritt 4 (Mitglieder) →
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -119,7 +119,11 @@
   </div>
 
   <aside class="dashboard-side-column">
+    {% if module_settings.homepage_aktiv %}
     <a class="club-evening-card" href="{% url 'core:verein' %}">
+    {% else %}
+    <div class="club-evening-card">
+    {% endif %}
       <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img" loading="lazy" width="400" height="235">
       <span class="photo-shade"></span>
       <div class="evening-content">
@@ -129,9 +133,15 @@
           <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-clock"></use></svg>
           Freitags ab 19:00 Uhr · Vereinsheim
         </span>
+        {% if module_settings.homepage_aktiv %}
         <span class="evening-link">Dabei sein <svg class="icon icon-sm" style="width:15px;height:15px"><use href="#i-arrow-up-right"></use></svg></span>
+        {% endif %}
       </div>
+    {% if module_settings.homepage_aktiv %}
     </a>
+    {% else %}
+    </div>
+    {% endif %}
 
     <section class="panel">
       <div class="panel-heading">

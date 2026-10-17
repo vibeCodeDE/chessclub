@@ -1,0 +1,46 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Einladung annehmen · {{ club_short }}{% endblock %}
+
+{% block card %}
+<span class="brand-mark" aria-hidden="true">♞</span>
+<h1>Einladung annehmen</h1>
+<p class="lede">
+  Hallo <strong>{{ invitation.vorname }} {{ invitation.nachname }}</strong>,<br>
+  du wurdest als <strong>{{ invitation.get_rolle_display }}</strong> für <em>{{ club_name|default:club_short }}</em> eingeladen.
+</p>
+
+<p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 20px;">
+  Bitte wähle deinen gewünschten Benutzernamen und ein sicheres Passwort, um dein Benutzerkonto zu aktivieren.
+</p>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="form-field">
+    <label for="id_username">Wunsch-Benutzername <span class="required-mark" aria-hidden="true">*</span></label>
+    <input class="input" type="text" id="id_username" name="username" autofocus autocomplete="username" required>
+    <small style="color: var(--muted); font-size: 0.8rem;">Diesen Namen nutzt du für zukünftige Anmeldungen.</small>
+  </div>
+
+  <div class="form-field">
+    <label for="id_password">Passwort <span class="required-mark" aria-hidden="true">*</span></label>
+    <input class="input" type="password" id="id_password" name="password" autocomplete="new-password" required minlength="8">
+    <small style="color: var(--muted); font-size: 0.8rem;">Mindestens 8 Zeichen.</small>
+  </div>
+
+  <div class="form-field">
+    <label for="id_password_confirm">Passwort wiederholen <span class="required-mark" aria-hidden="true">*</span></label>
+    <input class="input" type="password" id="id_password_confirm" name="password_confirm" autocomplete="new-password" required minlength="8">
+  </div>
+
+  <button class="form-submit" type="submit">
+    Konto aktivieren &amp; Anmelden <svg aria-hidden="true"><use href="#i-check"></use></svg>
+  </button>
+</form>
+
+<div class="auth-foot">
+  E-Mail-Adresse für dieses Konto: <strong>{{ invitation.email }}</strong><br>
+  <a href="{% url 'core:login' %}">Bereits ein Konto? Zur Anmeldung</a>
+</div>
+{% endblock %}

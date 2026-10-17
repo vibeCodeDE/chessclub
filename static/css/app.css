@@ -1393,3 +1393,109 @@ tbody tr.is-selected, table.data tbody tr.is-selected {
   }
 }
 
+/* ==========================================================================
+   Onboarding-Assistent & Ersteinrichtung (PRD S7.5, US1-US5, T031)
+   ========================================================================== */
+
+.onboarding-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.onboarding-progress-track {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border, #e2e8f0);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: var(--accent, #1b382b);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.onboarding-steps-list {
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 8px;
+}
+
+.onboarding-step-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: var(--muted, #64748b);
+  white-space: nowrap;
+  min-height: 44px; /* WCAG 2.1 AA Touch-Target */
+  min-width: 44px;
+  padding: 4px 6px;
+}
+
+.onboarding-step-item.active {
+  color: var(--text, #0f172a);
+  font-weight: 700;
+}
+
+.onboarding-step-item.completed {
+  color: var(--accent, #1b382b);
+}
+
+.onboarding-step-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border, #cbd5e0);
+  font-size: 0.8rem;
+  background: var(--surface, #ffffff);
+  flex-shrink: 0;
+}
+
+.onboarding-step-item.active .onboarding-step-bubble {
+  border-color: var(--accent, #1b382b);
+  background: var(--accent, #1b382b);
+  color: #ffffff;
+}
+
+.onboarding-step-item.completed .onboarding-step-bubble {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.btn-wizard-action {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+  .onboarding-step-item span.step-title {
+    display: none;
+  }
+  .onboarding-step-item {
+    padding: 0 4px;
+  }
+}
+

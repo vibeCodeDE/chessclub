@@ -40,13 +40,46 @@ class ProduktSeiteTests(TestCase):
             self.assertEqual(self.client.get(pfad).status_code, 200)
 
     def test_vereinsstartseite_bleibt_unveraendert(self):
-        """„/“ zeigt die Vereinsseite, die Produkt-Landingpage liegt unter „/produkt/“."""
+        """Standardmäßig („IS_MARKETING_SITE=False“) zeigt „/“ die Vereinsseite."""
         vereinsseite = self.client.get("/").content.decode()
         produktseite = self.client.get("/produkt/").content.decode()
         verkaufssatz = "Vereinsverwaltung, die Ihr Vorstand gerne benutzt."
         self.assertIn(settings.CLUB_SHORT, vereinsseite)
         self.assertIn(verkaufssatz, produktseite)
         self.assertNotIn(verkaufssatz, vereinsseite)
+
+    def test_marketing_site_auf_root_via_setting(self):
+        """Mit IS_MARKETING_SITE=True zeigt „/“ die Produkt-Landingpage (ADR-024)."""
+        with self.settings(IS_MARKETING_SITE=True):
+            antwort = self.client.get("/")
+            inhalt = antwort.content.decode()
+            self.assertEqual(antwort.status_code, 200)
+            self.assertIn("Vereinsverwaltung, die Ihr Vorstand gerne benutzt.", inhalt)
+
+    def test_marketing_site_auf_root_via_hostname(self):
+        """Anfragen an die Hauptdomain schachverwaltung.de zeigen die Produktseite auf „/“."""
+        with self.settings(
+            IS_MARKETING_SITE=False,
+            PRODUCT_HOSTS=["schachverwaltung.de", "www.schachverwaltung.de"],
+            ALLOWED_HOSTS=["schachverwaltung.de", "www.schachverwaltung.de", "testserver"],
+        ):
+            antwort = self.client.get("/", HTTP_HOST="schachverwaltung.de")
+            inhalt = antwort.content.decode()
+            self.assertEqual(antwort.status_code, 200)
+            self.assertIn("Vereinsverwaltung, die Ihr Vorstand gerne benutzt.", inhalt)
+
+    def test_vereins_subdomain_bleibt_vereinsseite(self):
+        """Anfragen an eine Vereins-Subdomain zeigen weiterhin die Vereinsseite auf „/“."""
+        with self.settings(
+            IS_MARKETING_SITE=False,
+            PRODUCT_HOSTS=["schachverwaltung.de", "www.schachverwaltung.de"],
+            ALLOWED_HOSTS=["sc-musterstadt.schachverwaltung.de", "testserver"],
+        ):
+            antwort = self.client.get("/", HTTP_HOST="sc-musterstadt.schachverwaltung.de")
+            inhalt = antwort.content.decode()
+            self.assertEqual(antwort.status_code, 200)
+            self.assertNotIn("Vereinsverwaltung, die Ihr Vorstand gerne benutzt.", inhalt)
+            self.assertIn(settings.CLUB_SHORT, inhalt)
 
     def test_preisstufen_sind_vollstaendig_und_stimmig(self):
         """Jede Stufe nennt Jahres-, Monats- und Einrichtungspreis; die Zahlen passen zusammen."""

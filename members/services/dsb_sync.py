@@ -456,3 +456,109 @@ def sync_dwz_from_report(
         )
 
     return updated_count
+
+
+@dataclass
+class DSBInitialImportResult:
+    erfolg: bool
+    vkz: str
+    vereinsname: str
+    anzahl_neu: int
+    anzahl_aktualisiert: int
+    anzahl_uebersprungen: int
+    fehler_meldungen: list[str] = field(default_factory=list)
+
+
+def import_dsb_initial(vkz: str, user=None) -> DSBInitialImportResult:
+    """Importiert alle gemeldeten Spieler eines Vereins aus dem DSB-Wertungsportal."""
+    from datetime import date
+    from members.models import Member
+
+    clean_vkz = (vkz or "").strip()
+    if not clean_vkz:
+        return DSBInitialImportResult(
+            erfolg=False,
+            vkz="",
+            vereinsname="",
+            anzahl_neu=0,
+            anzahl_aktualisiert=0,
+            anzahl_uebersprungen=0,
+            fehler_meldungen=["Bitte eine gültige DSB-Vereinskennziffer angeben."],
+        )
+
+    try:
+        daten, _ = fetch_dsb_vereinsliste(vkz=clean_vkz, force=True)
+    except Exception as exc:
+        return DSBInitialImportResult(
+            erfolg=False,
+            vkz=clean_vkz,
+            vereinsname="",
+            anzahl_neu=0,
+            anzahl_aktualisiert=0,
+            anzahl_uebersprungen=0,
+            fehler_meldungen=[str(exc)],
+        )
+
+    vereinsname = daten.get("verein", "")
+    mitglieder_liste = daten.get("mitglieder", [])
+    anzahl_neu = 0
+    anzahl_uebersprungen = 0
+
+    with transaction.atomic():
+        for sp in mitglieder_liste:
+            vorname = sp.get("vorname", "").strip()
+            nachname = sp.get("nachname", "").strip()
+            if not nachname:
+                continue
+
+            existing = Member.objects.filter(
+                zps_nummer=clean_vkz,
+                nachname__iexact=nachname,
+                vorname__iexact=vorname,
+            ).first()
+            if existing:
+                anzahl_uebersprungen += 1
+                continue
+
+            geburtsjahr = sp.get("geburtsjahr")
+            geburtsdatum = date(geburtsjahr, 1, 1) if geburtsjahr else None
+
+            fide_raw = sp.get("fide_id")
+            fide_id = None
+            if fide_raw:
+                try:
+                    fide_id = int(fide_raw)
+                except (ValueError, TypeError):
+                    fide_id = None
+
+            member = Member(
+                vorname=vorname,
+                nachname=nachname,
+                geburtsdatum=geburtsdatum,
+                eintrittsdatum=timezone.localdate(),
+                status="aktiv",
+                dwz=sp.get("dwz"),
+                dwz_index=sp.get("dwz_index"),
+                fide_id=fide_id,
+                pkz=sp.get("pkz") or "",
+                zps_nummer=clean_vkz,
+            )
+            member._changed_by = user
+            member.save()
+            anzahl_neu += 1
+
+        AuditLog.objects.create(
+            benutzer=user,
+            aktion="Mitglieder-Initialimport DSB",
+            text=f"{anzahl_neu} Mitglieder für VKZ {clean_vkz} ({vereinsname}) aus DSB-Portal importiert ({anzahl_uebersprungen} übersprungen).",
+        )
+
+    return DSBInitialImportResult(
+        erfolg=True,
+        vkz=clean_vkz,
+        vereinsname=vereinsname,
+        anzahl_neu=anzahl_neu,
+        anzahl_aktualisiert=0,
+        anzahl_uebersprungen=anzahl_uebersprungen,
+    )
+
