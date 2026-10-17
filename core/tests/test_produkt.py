@@ -5,48 +5,55 @@ from django.urls import reverse
 from core import produkt
 
 
-@override_settings(PRODUCT_NAME="Testprodukt", PRODUCT_CONTACT="kontakt@test.example")
+@override_settings(PRODUCT_NAME="Testprodukt", PRODUCT_CONTACT="kontakt@test.example", IS_MARKETING_SITE=True)
 class ProduktSeiteTests(TestCase):
-    def test_seite_ist_oeffentlich(self):
+    def test_produkt_url_leitet_per_301_nach_root_um(self):
+        """Negativ-/Redirect-Test: /produkt/ liefert einen permanenten 301-Redirect nach / (ADR-024)."""
         antwort = self.client.get("/produkt/")
+        self.assertEqual(antwort.status_code, 301)
+        self.assertEqual(antwort.url, "/")
+
+    def test_seite_ist_auf_root_erreichbar(self):
+        antwort = self.client.get("/")
         self.assertEqual(antwort.status_code, 200)
 
     def test_name_und_kontakt_aus_einstellungen(self):
-        inhalt = self.client.get(reverse("core:produkt")).content.decode()
+        inhalt = self.client.get("/").content.decode()
         self.assertIn("Testprodukt", inhalt)
         self.assertIn("mailto:kontakt@test.example", inhalt)
 
     def test_zeigt_alle_preisstufen_und_funktionen(self):
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         for stufe in produkt.PREISSTUFEN:
             self.assertIn(stufe["name"], inhalt)
         for funktion in produkt.FUNKTIONEN:
             self.assertIn(funktion["titel"], inhalt)
 
     def test_mobil_und_ohne_fremde_ressourcen(self):
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         self.assertIn("width=device-width", inhalt)
         self.assertNotRegex(inhalt, r'(?:href|src)="https?://')
 
     def test_keine_inline_skripte(self):
         # CSP erlaubt nur script-src 'self'.
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         self.assertNotIn("<script", inhalt)
 
     def test_rechtliche_seiten_erreichbar_und_verlinkt(self):
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         for pfad in ("/impressum/", "/datenschutz/"):
             self.assertIn(f'href="{pfad}"', inhalt)
             self.assertEqual(self.client.get(pfad).status_code, 200)
 
     def test_vereinsstartseite_bleibt_unveraendert(self):
-        """Standardmäßig („IS_MARKETING_SITE=False“) zeigt „/“ die Vereinsseite."""
-        vereinsseite = self.client.get("/").content.decode()
-        produktseite = self.client.get("/produkt/").content.decode()
-        verkaufssatz = "Vereinsverwaltung, die Ihr Vorstand gerne benutzt."
-        self.assertIn(settings.CLUB_SHORT, vereinsseite)
-        self.assertIn(verkaufssatz, produktseite)
-        self.assertNotIn(verkaufssatz, vereinsseite)
+        """Mit IS_MARKETING_SITE=False zeigt „/“ die Vereinsseite, während schachverwaltung.de das Produkt zeigt."""
+        with self.settings(IS_MARKETING_SITE=False):
+            vereinsseite = self.client.get("/").content.decode()
+            produktseite = self.client.get("/", HTTP_HOST="schachverwaltung.de").content.decode()
+            verkaufssatz = "Vereinsverwaltung, die Ihr Vorstand gerne benutzt."
+            self.assertIn(settings.CLUB_SHORT, vereinsseite)
+            self.assertIn(verkaufssatz, produktseite)
+            self.assertNotIn(verkaufssatz, vereinsseite)
 
     def test_marketing_site_auf_root_via_setting(self):
         """Mit IS_MARKETING_SITE=True zeigt „/“ die Produkt-Landingpage (ADR-024)."""
@@ -95,7 +102,7 @@ class ProduktSeiteTests(TestCase):
                 self.assertTrue(stufe["punkte"])
 
     def test_preise_und_einrichtung_sind_sichtbar(self):
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         for stufe in produkt.PREISSTUFEN:
             with self.subTest(stufe=stufe["name"]):
                 self.assertIn(f'{stufe["preis"]} €', inhalt)
@@ -105,7 +112,7 @@ class ProduktSeiteTests(TestCase):
 
     def test_endpreise_statt_umsatzsteuer_und_statt_monatlicher_kuendigung(self):
         """Negativtest: die überholten Aussagen aus ADR-014 dürfen nicht mehr auftauchen."""
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         self.assertIn("Endpreise", inhalt)
         self.assertIn("§ 19 UStG", inhalt)
         for ueberholt in ("zzgl. gesetzlicher Umsatzsteuer", "keine Mindestlaufzeit", "Monatlich kündbar"):
@@ -113,7 +120,7 @@ class ProduktSeiteTests(TestCase):
                 self.assertNotIn(ueberholt, inhalt)
 
     def test_preishinweis_nennt_laufzeit_und_aufschlag(self):
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         self.assertIn(produkt.PREISHINWEIS, inhalt)
         self.assertIn("zwölf Monaten", inhalt)
         self.assertIn("20 %", inhalt)
@@ -121,12 +128,12 @@ class ProduktSeiteTests(TestCase):
     def test_schritte_ueberschrift_passt_zur_anzahl(self):
         """Die Überschrift zählt die Schritte – sonst widerspricht sie der Liste darunter."""
         zahlen = {1: "einem", 2: "zwei", 3: "drei", 4: "vier", 5: "fünf"}
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         erwartet = f"In {zahlen[len(produkt.SCHRITTE)]} Schritten einsatzbereit"
         self.assertIn(erwartet, inhalt)
 
     def test_alle_faq_fragen_sind_sichtbar(self):
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/").content.decode()
         for frage, _ in produkt.FAQ:
             with self.subTest(frage=frage):
                 self.assertIn(frage, inhalt)
@@ -139,7 +146,7 @@ class ProduktStandardBrandingTests(TestCase):
         self.assertEqual(settings.PRODUCT_CONTACT, "kontakt@schachverwaltung.de")
 
     def test_standard_branding_wird_auf_produktseite_gerendert(self):
-        inhalt = self.client.get("/produkt/").content.decode()
+        inhalt = self.client.get("/", HTTP_HOST="schachverwaltung.de").content.decode()
         self.assertIn("Schachverwaltung.de", inhalt)
         self.assertIn("mailto:kontakt@schachverwaltung.de", inhalt)
         # Negativtest: alte Platzhaltermarken erscheinen nicht

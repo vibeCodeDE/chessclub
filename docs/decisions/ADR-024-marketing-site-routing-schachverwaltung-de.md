@@ -28,9 +28,10 @@ Bislang lag die Produkt-Landingpage fest unter `/produkt/`, während `/` immer d
      - **Einstellungs-Override:** Ist `IS_MARKETING_SITE=True` in den Django-Settings gesetzt (z. B. auf einer dedizierten Marketing-Instanz via `IS_MARKETING_SITE=1` in `.env`), wird `/` ebenfalls als Produkt-Landingpage gerendert.
      - **Vereins-Instanzen:** Bei Zugriff über Vereins-Subdomains (z. B. `musterstadt.schachverwaltung.de`) oder eigene Domains bleibt das reguläre Vereinsrouting aktiv (Vereinshomepage oder Dashboard/Login-Weiterleitung gemäß ADR-023).
 
-2. **Koexistenz der Routen:**
-   - Die Route `/produkt/` bleibt für alle Mandanten und zu Testzwecken weiterhin explizit erreichbar.
+2. **Kanonischer 301-Permanent-Redirect von `/produkt/` nach `/` (`core/views.py:produkt_redirect`):**
+   - Um Duplicate Content (SEO) zu vermeiden und eine einheitliche URL-Struktur zu gewährleisten, leitet `/produkt/` per HTTP 301 permanent auf die kanonische Startseite `/` um.
    - Der Anmelde-Link im Header der Marketing-Seite führt direkt zu `/anmelden/` (`core:login`).
+   - Links in Templates (`produkt.html`, `rechtliches.html`) verweisen direkt auf `core:home` (`/`).
 
 3. **Konfiguration in `config/settings.py`:**
    - `IS_MARKETING_SITE = os.environ.get("IS_MARKETING_SITE", "0") in ("1", "true", "True")`

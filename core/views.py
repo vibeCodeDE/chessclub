@@ -283,6 +283,11 @@ def produkt_seite(request):
     return render(request, "core/produkt.html", kontext)
 
 
+def produkt_redirect(request):
+    """Permanenter 301-Redirect von /produkt/ zur Startseite / (ADR-024)."""
+    return redirect("core:home", permanent=True)
+
+
 def rechtliches(request, seite):
     """Platzhalter für Impressum und Datenschutzerklärung der Produktseite."""
     titel = {"impressum": "Impressum", "datenschutz": "Datenschutzerklärung"}[seite]
