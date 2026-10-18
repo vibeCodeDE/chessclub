@@ -33,6 +33,8 @@ PUBLIC_TEMPLATES = [
     "tournaments/templates/tournaments/public_list.html",
     "tournaments/templates/tournaments/public_detail.html",
     "members/templates/members/join_info.html",
+    "core/templates/core/lockout.html",
+    "core/templates/core/ratelimited.html",
 ]
 
 

@@ -285,21 +285,30 @@ class DashboardErweiterungenTests(TestCase):
         self.assertContains(resp, "Beitragsjahr 2025")
 
     def test_kein_n_plus_eins_bei_vielen_posten(self):
+        from core.services import get_module_settings
+        from teams.models import Season
+
+        get_module_settings()
+        Season.objects.get_or_create(
+            name="2025/2026",
+            defaults={"startdatum": date(2025, 8, 1), "enddatum": date(2026, 7, 31), "ist_aktiv": True},
+        )
+
         # 15 Mitglieder anlegen, um sicherzustellen, dass Queries nicht linear wachsen
         for i in range(15):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        # Die View führt exakt 42 Queries aus (konstant, da kein N+1 pro Mitglied/Posten; inkl. ModuleSettings, ClubProfile und Onboarding-Checkliste)
-        with self.assertNumQueries(42):
+        # Die View führt eine feste Anzahl Queries aus (konstant, da kein N+1 pro Mitglied/Posten; inkl. ModuleSettings, ClubProfile, Saison und Onboarding-Checkliste)
+        with self.assertNumQueries(43):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)
 
-        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt bei 42 (kein N+1)
+        # 10 weitere Mitglieder anlegen: Query-Zahl bleibt exakt gleich (kein N+1)
         for i in range(15, 25):
             m = Member.objects.create(vorname=f"Vor{i}", nachname=f"Nach{i}", eintrittsdatum=date(2026, 1, 1), beitragskategorie=self.kategorie)
             MembershipFee.objects.create(member=m, jahr=2026, kategorie_name="Erwachsene", betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31))
 
-        with self.assertNumQueries(42):
+        with self.assertNumQueries(43):
             resp = self.client.get("/dashboard/")
             self.assertEqual(resp.status_code, 200)

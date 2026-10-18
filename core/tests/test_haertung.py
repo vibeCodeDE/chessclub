@@ -155,14 +155,45 @@ class SicherheitsHeaderTests(TestCase):
         self.assertIn("same-origin", response.headers["Referrer-Policy"])
         self.assertIn("geolocation=()", response.headers["Permissions-Policy"])
 
-    def test_csp_verbietet_fremdquellen(self):
-        """Im Produktivmodus (DEBUG=0) wird eine strikte CSP ausgeliefert."""
-        with self.settings(DEBUG=False):
-            response = self.client.get("/health/")
+    def test_csp_header_standardmaessig_gesetzt(self):
+        """django-csp setzt Content-Security-Policy mit restriktiven Direktiven (PRD N1.1, N1.6)."""
+        response = self.client.get("/health/")
+        self.assertIn("Content-Security-Policy", response.headers)
         csp = response.headers["Content-Security-Policy"]
         self.assertIn("default-src 'self'", csp)
+        self.assertIn("script-src 'self'", csp)
+        self.assertIn("style-src 'self' 'unsafe-inline'", csp)
+        self.assertIn("img-src 'self' data:", csp)
         self.assertIn("frame-ancestors 'none'", csp)
+        self.assertIn("base-uri 'self'", csp)
+        self.assertIn("form-action 'self'", csp)
+
+    def test_csp_verbietet_fremdquellen_und_unsafe_eval_negativtest(self):
+        """Negativtest: Strikte CSP verbietet unsafe-eval, Wildcards und Drittanbieter-CDNs (DSGVO N1.1)."""
+        response = self.client.get("/health/")
+        csp = response.headers["Content-Security-Policy"]
         self.assertNotIn("unsafe-eval", csp)
+        self.assertNotIn("*", csp)
+        self.assertNotIn("http:", csp)
+        self.assertNotIn("https:", csp)
+
+    def test_csp_exclude_url_prefixes_schliesst_debug_aus_negativtest(self):
+        """Negativtest: Pfade unter EXCLUDE_URL_PREFIXES (wie /__debug__/) erhalten keinen CSP-Header."""
+        response = self.client.get("/__debug__/")
+        self.assertNotIn("Content-Security-Policy", response.headers)
+
+    def test_csp_nonce_im_request_verfuegbar(self):
+        """CSPMiddleware erzeugt einen Nonce im Request für Skripte und Templates."""
+        from django.http import HttpResponse
+        from django.test import RequestFactory
+        from csp.middleware import CSPMiddleware
+
+        rf = RequestFactory()
+        req = rf.get("/")
+        middleware = CSPMiddleware(lambda r: HttpResponse("OK"))
+        resp = middleware(req)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(hasattr(req, "csp_nonce"))
 
 
 class FehlerseitenTests(TestCase):

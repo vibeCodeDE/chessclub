@@ -287,6 +287,11 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Design:* [ADR-024](../docs/decisions/ADR-024-marketing-site-routing-schachverwaltung-de.md). Reiner Fachservice `core.services.is_marketing_site`, Konfigurationsvariablen `IS_MARKETING_SITE` und `PRODUCT_HOSTS` in `config/settings.py` und `.env.prod.example`, Weiche in `core/views.py:home`, permanenter 301-Redirect in `core/views.py:produkt_redirect`.
   *Acceptance:* Zugriff auf `/` via `schachverwaltung.de` oder bei `IS_MARKETING_SITE=True` liefert die Produktseite (200); Zugriff via Vereins-Subdomain liefert die Vereinsseite (oder Login); `/produkt/` leitet mit HTTP 301 permanent auf `/` weiter.
   *Verify:* `pytest core/tests/test_produkt.py` — **Negativtest:** Vereins-Subdomain liefert keine Verkaufssätze auf der Startseite; Hostname-Erkennung greift isoliert; `/produkt/` leitet per 301 um. · *Files:* `config/settings.py`, `.env.prod.example`, `core/services.py`, `core/views.py`, `core/urls.py`, `core/tests/test_produkt.py` · *Größe:* S · *PRD:* S7.4 · *Release:* v1.1 · *Deps:* T30, T30b
+- [x] **T30d: Schmerzpunkte, Lösungen & Interaktive Vorschau auf `/produkt` (Feature 003)** *(v1.1)*
+  Interaktiver Schmerzpunkte- und Lösungskatalog für 5 zentrale Vereinsfunktionen (Vorstand, Kassenwart, Spielleiter, Mannschaftsführer, Mitglieder) auf der Produkt-Landingpage (`/produkt/` bzw. `/` auf Marketing-Domains). Gegenüberstellung von typischem Frust („Vorher“) und passgenauer Software-Lösung („Mit Schachverwaltung“), ergänzt durch einen interaktiven UI-Mockup-Simulator (SEPA-Lauf, Schweizer System, Aufstellungsprüfung, DSGVO/Audit) und Zeiteinsparungs-Badges.
+  *Design:* [`specs/003-produkt-schmerzpunkte-vorschau/plan.md`](../specs/003-produkt-schmerzpunkte-vorschau/plan.md). Modulare Datenstruktur `ROLLEN_SCHMERZPUNKTE` in `core/produkt.py`, reine CSS `:checked` Radio-Tab-Architektur ohne externe Skripte oder CDNs (100 % DSGVO- und CSP-konform), Progressive Enhancement ohne JS, responsive ab 360 px ohne horizontalen Overflow.
+  *Acceptance:* Besucher kann alle 5 Rollen wählen; Schmerzpunkte, Lösungen, Zeiteinsparung und rollenbezogene Mockups aktualisieren sich sofort; Demo-Anfrage-Links enthalten rollenspezifischen Betreff; ARIA-Semantik (`role="tablist"`, `role="tab"`, `role="tabpanel"`) ist vollständig; Layout bei 360 px und 1280 px ohne horizontalen Overflow; strikte CSP ohne `<script>`-Tags; alle Texte auch ohne JavaScript lesbar.
+  *Verify:* `pytest core/tests/test_produkt.py::ProduktSchmerzpunkteTests` — **Negativtests:** Ungültige oder unvollständige Rollendaten werden abgewiesen; keine Inline-Skripte oder Fremdressourcen; Prüfung bei 360 px und 1280 px. · *Files:* `core/produkt.py`, `core/views.py`, `core/templates/core/produkt.html`, `static/css/landing.css`, `core/tests/test_produkt.py` · *Größe:* M · *PRD:* S7.4 · *Release:* v1.1 · *Deps:* T30c
 - [x] **T31: Vereins-Setup & Onboarding-Tool (Web & CSV-Import)** *(v1.1)*
   Zentrales Onboarding- und Verwaltungstool für den Vorstand im Browser (`/verein/setup/`) und per CLI (`import_members`), um echte Vereinsdaten nach dem Deployment (z. B. auf Scalingo) in die Datenbank einzupflegen (ADR-020).
   *Design:* [ADR-020](../docs/decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md). Singleton-Modell `ClubProfile` in `core/models.py` mit Fallback auf Django-Settings; reiner Fachservice `members.services.import_service` für Parsing, Encoding-Erkennung (UTF-8, Latin-1), Validierung und verschlüsselte SEPA-Mandatsanlage (Fernet); dünne Function-Based Views mit `@role_required(ADMIN_GROUP)` für Profil, Beitragskategorien, Mannschaften und CSV-Import inklusive Muster-Download und Dry-Run-Vorschau; AuditLog-Erfassung.
@@ -313,12 +318,30 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Vorstand/Superadmin kann Demo-Daten mit einem Klick erzeugen und sicher wieder entfernen; Versuch des Löschens bei Vorhandensein echter Daten wird verweigert; unbefugte Rollen (Mitglied, Kapitän) werden mit 302/403 abgewiesen; jede Aktion wird im AuditLog protokolliert; Dark/Light Mode barrierefrei nach WCAG 2.1 AA.
   *Verify:* `pytest core/tests/test_admin_demodata.py` — **Negativtests:** Nicht-Staff abgewiesen, Löschen ohne Checkbox abgewiesen, Löschen bei echten Daten verweigert. · *Files:* `core/services.py`, `core/models.py`, `core/admin.py`, `templates/admin/core/demodata/change_list.html`, `core/tests/test_admin_demodata.py` · *Größe:* S · *Release:* v1.1 · *Deps:* T2, T5, T30
 
-**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30, T31, T32, T33.
+- [x] **T35: Automatische Dateisystem-Bereinigung mit django-cleanup (N1.1, ADR-026)** *(v1.1)*
+  Automatische Bereinigung physischer Dateien bei Aktualisierung oder Löschung von Django-Modellinstanzen zur Vermeidung von Speicherlecks und Einhaltung der DSGVO-Speicherbegrenzung.
+  *Design:* [ADR-026](../docs/decisions/ADR-026-dateibereinigung-mit-django-cleanup.md). Integration von `django-cleanup>=9.0` in `requirements.txt`, Registrierung von `django_cleanup.apps.CleanupConfig` in `INSTALLED_APPS`, Konfiguration von `MEDIA_URL` und `MEDIA_ROOT`, Ignorieren von `media/` in `.gitignore`, Einbindung in `config/urls.py` für `DEBUG=True`. Transaktionssichere Bereinigung via `transaction.on_commit()`.
+  *Acceptance:* Dateien werden beim Löschen des Datensatzes und beim Ersetzen durch neue Dateien vom Datenträger gelöscht; Rollbacks belassen Dateien auf der Platte; fehlende oder leere Dateien führen nicht zum Absturz; GoBD-Löschschutz für Finanzdaten bleibt vollständig intakt.
+  *Verify:* `pytest core/tests/test_cleanup.py` — **Negativtests:** Transaktions-Rollback verwirft Löschung, fehlende Dateien werfen keinen Fehler, Finanzmodelle bleiben unlöschbar. · *Files:* `requirements.txt`, `config/settings.py`, `config/urls.py`, `.gitignore`, `core/tests/test_cleanup.py`, `docs/decisions/ADR-026-dateibereinigung-mit-django-cleanup.md` · *Größe:* S · *Release:* v1.1 · *Deps:* T1
+
+- [x] **T36: Saisonverwaltung für den Vorstand (z. B. 2026/2027, S4.7, ADR-027)** *(v1.1)*
+  Zentrale Saisonverwaltung für den Vereinsvorstand mit atomarer Hauptsaison-Umschaltung, Bindung von Mannschaften (`Team.saison`) und Turnieren (`Tournament.saison`), Validierung von Spieldaten gegen das Saisonzeitfenster, 1-Klick-Mannschaftsübernahme (Rollover) und schreibgeschützter Archivierung.
+  *Design:* [spec.md](../specs/004-saison-verwaltung/spec.md), [plan.md](../specs/004-saison-verwaltung/plan.md) und [ADR-027](../docs/decisions/ADR-027-saisonverwaltung-fuer-den-vorstand.md). Datenmodell `Season`, automatischer Slug, reine Fachfunktionen in `teams/services.py`, dünne FBVs mit Rollenschutz `@role_required(ADMIN_GROUP)`, globaler Context-Processor `season_context`, Revisionssicherheit im `AuditLog`.
+  *Acceptance:* Vorstand kann Saisons verwalten und aktivieren; Spielbetrieb und Turniere filtern standardmäßig auf die aktive Spielzeit; historische Saisons sind im Lesemodus einsehbar; Spiele außerhalb des Saisonfensters werden abgewiesen; Rollover überträgt Teams mit frischem iCal-Token und unberührter Vorsaison; Archivierung schützt vor Änderungen; Löschen nicht-leerer Saisons wird blockiert.
+  *Verify:* `pytest teams/tests/test_season.py teams/tests/test_season_matches.py teams/tests/test_season_rollover.py teams/tests/test_season_archival.py tournaments/tests/test_season_tournaments.py` — **Negativtests:** 403 für unberechtigte Rollen, Datumsvalidierung wirft ValidationError, Schreibschutz in archivierter Saison wirft PermissionDenied, Löschsperre bei belegten Saisons. · *Files:* `teams/`, `tournaments/`, `specs/004-saison-verwaltung/` · *Größe:* M · *Release:* v1.1 · *Deps:* T16, T19
+
+- [x] **T37: Rate-Limiting für öffentliche Endpunkte (django-ratelimit, N1.1/N1.6, ADR-028)** *(v1.1)*
+  Serverseitiges Rate-Limiting sensibler öffentlicher POST-Endpunkte (Schnupper-Anfrage `/mitglied-werden/`, Gastturnieranmeldung `/turniere/<pk>/`, Passwort-Reset `/passwort/aendern/`, Einladungsannahme `/einladung/<token>/`) zum Schutz vor Spam, Bots und DDoS ohne datenschutzwidriges Google reCAPTCHA.
+  *Design:* [ADR-028](../docs/decisions/ADR-028-rate-limiting-mit-django-ratelimit.md). `django-ratelimit>=4.1.0`, `RatelimitMiddleware` in `MIDDLEWARE`, `RATELIMIT_VIEW = "core.views.ratelimited_view"`, `@ratelimit(key="ip", rate="5/m", method="POST", block=True)`. Bei Überschreiten HTTP 429 Too Many Requests mit `Retry-After: 60`, barrierefreies Template `core/ratelimited.html` sowie JSON-Fallback.
+  *Acceptance:* Mehr als 5 POSTs pro Minute von einer IP werden mit HTTP 429 blockiert; GET-Anfragen (Lesen von Turnieren/Seiten) bleiben unbegrenzt möglich; verschiedene IPs besitzen getrennte Budgets; AJAX/JSON liefert saubere Fehlermeldung; allgemeine Tests laufen ungedrosselt mit `RATELIMIT_ENABLE=False`.
+  *Verify:* `pytest core/tests/test_ratelimit.py` — **Negativtests:** 6. POST-Versuch liefert 429 auf allen geschützten Routen; GET liefert weiterhin 200; AJAX-Header liefert JSON-429. · *Files:* `requirements.txt`, `config/settings.py`, `config/settings_test.py`, `core/views.py`, `core/auth_views.py`, `members/views.py`, `tournaments/views.py`, `core/templates/core/ratelimited.html`, `templates/429.html`, `core/tests/test_ratelimit.py`, `docs/decisions/ADR-028-rate-limiting-mit-django-ratelimit.md` · *Größe:* S · *Release:* v1.1 · *Deps:* T19, T26b
+
+**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30, T31, T32, T33, T34, T35, T36, T37.
 
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design, T34 Demo-Daten-Steuerung (S7.6)
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design, T34 Demo-Daten-Steuerung (S7.6), T35 Dateibereinigung (django-cleanup), T36 Saisonverwaltung (S4.7), T37 Rate-Limiting (django-ratelimit)
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
 - **Out of scope (K):** nuLiga-Mutations-Export / TRF16 (ADR-016 Säule 3), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
@@ -332,15 +355,16 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | M3.1 / M3.2 / M3.3 | T19 / T19 / T20 |
 | M4.1 / M4.2 / M4.3 / M4.4 | T16 / T16 / T17 / T17 |
 | S4.6 | T16b *(v1.1)* |
+| S4.7 | T36 *(v1.1 / ADR-027)* |
 | M5.1 / M5.2 | T13 / T14 |
 | M7.1 / M7.2 / M7.3 | T6 + T11 / T1 + T2 / T5 |
 | S7.4 | T30 *(v1.1 / ADR-019)* |
 | S7.5 / S1.7 | T31 *(v1.1 / ADR-020)* |
 | S7.6 | T34 *(v1.1 / ADR-022)* |
-| N1.1 | T24 (Hoststandort + kein CDN/Tracker) |
+| N1.1 | T24 (Hoststandort + kein CDN/Tracker), T37 (kein reCAPTCHA) |
 | N1.2 / N1.3 / N1.4 | T23 |
 | N1.5 | T5 (Logins/Änderungen) + T12 (Detail-Zugriffe) |
-| N1.6 | T26 + T26b *(v1.1 — im PRD als S geführt)* |
+| N1.6 | T26 + T26b + T37 *(v1.1 — im PRD als S geführt)* |
 | N1.7 | T19 |
 | N2.1 / N2.4 | T24 |
 | N2.2 / N2.3 | T25b + T26b |

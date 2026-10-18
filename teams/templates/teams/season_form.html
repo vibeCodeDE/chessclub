@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titel|default:"Saison bearbeiten" }}{% endblock %}
+{% block page_title %}{{ titel|default:"Saison bearbeiten" }}{% endblock %}
+{% block crumbs %}<div class="crumbs"><a href="{% url 'teams:season_list' %}">Saisonverwaltung</a> › {% if saison %}{{ saison.name }}{% else %}neu{% endif %}</div>{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+  <div class="card-head">
+    <h2>{% if saison %}Saison „{{ saison.name }}“ bearbeiten{% else %}Neue Saison anlegen{% endif %}</h2>
+    <span class="sub">Definition des Spieljahres und Gültigkeitszeitraums</span>
+  </div>
+  <form class="card-body" method="post">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" with form=form columns="cols-2" %}
+    <div class="form-actions mt-2">
+      <button class="btn" type="submit">
+        <svg class="icon icon-sm"><use href="#i-check"></use></svg> Speichern
+      </button>
+      <a class="btn ghost" href="{% url 'teams:season_list' %}">Abbrechen</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

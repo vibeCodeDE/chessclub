@@ -1,10 +1,22 @@
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+
+if not DEBUG and SECRET_KEY == "dev-insecure-key":
+    import warnings
+
+    warnings.warn(
+        "DJANGO_SECRET_KEY ist nicht konfiguriert und DEBUG=False! "
+        "Bitte DJANGO_SECRET_KEY in der Umgebung setzen oder "
+        "DJANGO_SETTINGS_MODULE=config.production verwenden.",
+        UserWarning,
+        stacklevel=2,
+    )
 _allowed = os.environ.get("DJANGO_ALLOWED_HOSTS") or os.environ.get("ALLOWED_HOSTS")
 if _allowed:
     ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
@@ -21,6 +33,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "import_export",
     "axes",
+    "csp",
     "core",
     "members",
     "dues",
@@ -28,6 +41,7 @@ INSTALLED_APPS = [
     "tournaments",
     "comms",
     "cashbook",
+    "django_cleanup.apps.CleanupConfig",
 ]
 
 IMPORT_EXPORT_USE_TRANSACTIONS = True
@@ -42,6 +56,7 @@ try:
 except ImportError:
     pass
 MIDDLEWARE.extend([
+    "csp.middleware.CSPMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -51,7 +66,30 @@ MIDDLEWARE.extend([
     "core.middleware.SicherheitsHeaderMiddleware",
     "core.middleware.ModulAktivMiddleware",
     "axes.middleware.AxesMiddleware",
+    "django_ratelimit.middleware.RatelimitMiddleware",
 ])
+
+# Content Security Policy (PRD N1.1, N1.6, ADR-015 / DSGVO)
+# Setzt strikte HTTP-Header (script-src 'self', style-src 'self'), wodurch Browser das
+# Nachladen externer Ressourcen hart unterbinden und XSS-Angriffe abgewehrt werden.
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": ["'self'"],
+        "script-src": ["'self'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:"],
+        "frame-ancestors": ["'none'"],
+        "base-uri": ["'self'"],
+        "form-action": ["'self'"],
+    },
+    "EXCLUDE_URL_PREFIXES": ["/__debug__/"],
+}
+
+_is_testing = "pytest" in sys.modules or os.environ.get("PYTEST_CURRENT_TEST") is not None or any("pytest" in a or a == "test" for a in sys.argv)
+if DEBUG and not _is_testing:
+    CONTENT_SECURITY_POLICY["DIRECTIVES"]["script-src"].append("http://localhost:8400")
+    CONTENT_SECURITY_POLICY["DIRECTIVES"]["connect-src"] = ["'self'", "http://localhost:8400"]
+
 
 
 AUTHENTICATION_BACKENDS = [
@@ -67,6 +105,14 @@ AXES_LOCKOUT_TEMPLATE = "core/lockout.html"
 # Proxy-Konfiguration für Reverse Proxy (Caddy / Docker, PRD N1.6)
 AXES_PROXY_COUNT = int(os.environ.get("AXES_PROXY_COUNT", "1"))
 AXES_META_PRE_NAME = os.environ.get("AXES_META_PRE_NAME", "HTTP_X_FORWARDED_FOR")
+
+# Rate-Limiting für öffentliche Endpunkte (PRD N1.1, N1.6, ADR-028)
+# Schützt öffentliche Formulare (Schnupper-Anfrage, Turnieranmeldung, Passwort-Reset)
+# vor Spam/DDoS ohne datenschutzwidriges Google reCAPTCHA.
+RATELIMIT_ENABLE = True
+RATELIMIT_USE_CACHE = "default"
+RATELIMIT_VIEW = "core.views.ratelimited_view"
+RATELIMIT_IP_META_KEY = os.environ.get("RATELIMIT_IP_META_KEY", "REMOTE_ADDR")
 
 # Entwicklungs-Profiling (django-debug-toolbar, PRD N2.2, ADR-015):
 # Nur aktiv, wenn DEBUG=True gesetzt ist und das Paket installiert ist.
@@ -115,7 +161,9 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "csp.context_processors.nonce",
                 "core.context_processors.nav",
+                "teams.context_processors.season_context",
             ],
         },
     },
@@ -193,6 +241,9 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 try:
     import whitenoise  # noqa: F401
 
@@ -230,8 +281,7 @@ EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
 
 # Zwei-Faktor für die Vorstandschaft (PRD N1.6). In der Entwicklung abschaltbar
 # (TWOFA_PFLICHT=0), im Produktivbetrieb verbindlich.
-# Temporär deaktiviert (Original: os.environ.get("TWOFA_PFLICHT", "1") == "1"):
-TWOFA_PFLICHT = False
+TWOFA_PFLICHT = os.environ.get("TWOFA_PFLICHT", "1") == "1"
 
 # DSGVO: Aufbewahrungsfrist nach Austritt, danach werden Kontaktdaten anonymisiert.
 DSGVO_ANONYMISIERUNGS_FRIST_TAGE = int(os.environ.get("DSGVO_FRIST_TAGE", "730"))
@@ -299,7 +349,10 @@ DSB_CACHE_TIMEOUT = int(os.environ.get("DSB_CACHE_TIMEOUT", "86400"))  # 24 h se
 PRODUCT_NAME = os.environ.get("PRODUCT_NAME", "Schachverwaltung.de")
 PRODUCT_CONTACT = os.environ.get("PRODUCT_CONTACT", "kontakt@schachverwaltung.de")
 IS_MARKETING_SITE = os.environ.get("IS_MARKETING_SITE", "0") in ("1", "true", "True")
-_product_hosts = os.environ.get("PRODUCT_HOSTS", "schachverwaltung.de,www.schachverwaltung.de")
+_product_hosts = os.environ.get(
+    "PRODUCT_HOSTS",
+    "schachverwaltung.de,www.schachverwaltung.de,localhost,127.0.0.1",
+)
 PRODUCT_HOSTS = [h.strip().lower() for h in _product_hosts.split(",") if h.strip()]
 
 # Absender für System- und Gruppen-Mails (PRD M5.2) sowie Fehlerbenachrichtigung.

@@ -1,7 +1,7 @@
 # Specification Quality Checklist: Mannschaftskampf-Autopilot
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-10-16
+**Created**: 2026-10-16 (Updated: 2026-10-17)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,4 +31,8 @@
 
 ## Notes
 
-- 3 [NEEDS CLARIFICATION] markers present in FR-004, FR-006, and FR-007 awaiting user input.
+- Alle Klärungsfragen wurden beantwortet und verbindlich in die Spezifikation eingearbeitet:
+  1. **WhatsApp & E-Mail**: DSGVO-konforme Click-to-Chat-Aktionen (`wa.me` Vorlagen für MF) + automatisierter E-Mail-Versand ohne Datenübertragung an Meta-Server.
+  2. **Festspiel-Regel**: DSB-Standard (2 Einsätze frei, ab 3. Einsatz festgespielt) mit konfigurierbarem Schwellenwert auf Liga-/Mannschaftsebene.
+  3. **Ersatzanfrage-Workflow**: Vorauswahl aller berechtigten Kandidaten per Checkbox mit 1-Klick-Sammelversand (First-Come-First-Serve).
+- Die Spezifikation ist qualitätsgeprüft und bereit für `/speckit-plan`.

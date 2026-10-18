@@ -156,15 +156,120 @@
     $$("[data-dropdown-toggle]").forEach((toggle) => {
       const panel = toggle.parentElement.querySelector("[data-dropdown-panel]");
       if (!panel) return;
+
+      const openDropdown = () => {
+        panel.classList.add("is-open");
+        toggle.setAttribute("aria-expanded", "true");
+      };
+
+      const closeDropdown = () => {
+        panel.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+      };
+
       toggle.addEventListener("click", (event) => {
         event.stopPropagation();
-        const isOpen = panel.classList.toggle("is-open");
-        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        const isOpen = panel.classList.contains("is-open");
+        if (isOpen) {
+          closeDropdown();
+        } else {
+          $$("[data-dropdown-panel].is-open").forEach((p) => {
+            p.classList.remove("is-open");
+            const t = p.parentElement.querySelector("[data-dropdown-toggle]");
+            if (t) t.setAttribute("aria-expanded", "false");
+          });
+          openDropdown();
+        }
+      });
+
+      toggle.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+          if (!panel.classList.contains("is-open")) {
+            event.preventDefault();
+            openDropdown();
+            const firstItem = panel.querySelector("a, button, [tabindex='0']");
+            if (firstItem) firstItem.focus();
+          }
+        }
+      });
+
+      panel.addEventListener("keydown", (event) => {
+        const items = Array.from(panel.querySelectorAll("a, button:not([disabled])"));
+        const currentIndex = items.indexOf(document.activeElement);
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeDropdown();
+          toggle.focus();
+        } else if (event.key === "ArrowDown") {
+          event.preventDefault();
+          const nextIndex = (currentIndex + 1) % items.length;
+          if (items[nextIndex]) items[nextIndex].focus();
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          const prevIndex = (currentIndex - 1 + items.length) % items.length;
+          if (items[prevIndex]) items[prevIndex].focus();
+        } else if (event.key === "Tab") {
+          window.setTimeout(() => {
+            if (!panel.contains(document.activeElement) && document.activeElement !== toggle) {
+              closeDropdown();
+            }
+          }, 10);
+        }
       });
     });
+
     document.addEventListener("click", (event) => {
       if (event.target.closest("[data-dropdown-panel]")) return;
-      $$("[data-dropdown-panel].is-open").forEach((panel) => panel.classList.remove("is-open"));
+      $$("[data-dropdown-panel].is-open").forEach((panel) => {
+        panel.classList.remove("is-open");
+        const toggle = panel.parentElement.querySelector("[data-dropdown-toggle]");
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        $$("[data-dropdown-panel].is-open").forEach((panel) => {
+          panel.classList.remove("is-open");
+          const toggle = panel.parentElement.querySelector("[data-dropdown-toggle]");
+          if (toggle) {
+            toggle.setAttribute("aria-expanded", "false");
+            toggle.focus();
+          }
+        });
+      }
+    });
+  }
+
+  /* -------------------------------------------------------- Globale Suche (⌘K) */
+  function initGlobalSearch() {
+    const searchInput = $("#globale-suche");
+    const shortcutKbd = $("[data-search-shortcut]");
+    const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+
+    if (shortcutKbd) {
+      shortcutKbd.textContent = isMac ? "⌘K" : "Ctrl K";
+      shortcutKbd.title = isMac ? "Tastenkombination: ⌘ + K" : "Tastenkombination: Strg + K";
+    }
+
+    if (!searchInput) return;
+
+    window.addEventListener("keydown", (event) => {
+      const modifier = isMac ? event.metaKey : event.ctrlKey;
+      if (modifier && (event.key === "k" || event.key === "K")) {
+        event.preventDefault();
+        searchInput.focus();
+        if (searchInput.value) {
+          searchInput.select();
+        }
+      }
+    });
+
+    searchInput.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        searchInput.blur();
+      }
     });
   }
 
@@ -625,6 +730,7 @@
     adoptFlashMessages();
     initSidebar();
     initDropdowns();
+    initGlobalSearch();
     initConfirm();
     initAjaxForms();
     initToggles();

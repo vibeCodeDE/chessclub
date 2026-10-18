@@ -57,7 +57,7 @@ class MemberModelTests(TestCase):
         self.assertIsNotNone(change.zeitpunkt)
 
     def test_status_change_records_acting_user_when_provided(self):
-        user = User.objects.create_user("vorstand", password="x")
+        user = User.objects.filter(username="vorstand_model_test").first() or User.objects.create_user("vorstand_model_test", password="x")
         member = make_member()
         member._changed_by = user
         member.status = Member.Status.PASSIV

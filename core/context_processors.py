@@ -36,6 +36,7 @@ NAV_STRUKTUR = [
     (
         "Spielbetrieb",
         [
+            ("teams:season_list", "Saisonverwaltung", "calendar", {"admin"}, None),
             ("teams:team_list", "Mannschaften", "flag", {"kapitaen", "admin"}, None),
             ("teams:match_list", "Ligaspiele", "calendar", {"kapitaen", "admin"}, None),
             ("teams:tabelle_list", "Ligatabellen", "table", {"mitglied", "kapitaen", "admin"}, None),

@@ -35,7 +35,7 @@ Bislang lag die Produkt-Landingpage fest unter `/produkt/`, während `/` immer d
 
 3. **Konfiguration in `config/settings.py`:**
    - `IS_MARKETING_SITE = os.environ.get("IS_MARKETING_SITE", "0") in ("1", "true", "True")`
-   - `PRODUCT_HOSTS = [h.strip().lower() for h in os.environ.get("PRODUCT_HOSTS", "schachverwaltung.de,www.schachverwaltung.de").split(",") if h.strip()]`
+   - `PRODUCT_HOSTS = [h.strip().lower() for h in os.environ.get("PRODUCT_HOSTS", "schachverwaltung.de,www.schachverwaltung.de,localhost,127.0.0.1").split(",") if h.strip()]`
    - `ALLOWED_HOSTS` enthält standardmäßig `schachverwaltung.de` und `.schachverwaltung.de`.
 
 ## Consequences

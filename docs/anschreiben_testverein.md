@@ -17,7 +17,7 @@ Um genau das zu lösen, haben wir eine moderne, webbasierte Software entwickelt 
 * **Mitglieder & Beiträge:** Stammdaten, Änderungswünsche der Mitglieder und automatisierte Beitragsläufe mit Mahnbrief-Generierung auf Knopfdruck.
 * **Spielbetrieb & Mannschaften:** Kapitäne melden Aufstellungen und Ergebnisse direkt mobil am Spielabend auf dem Smartphone; Tabellen und iCal-Kalender aktualisieren sich automatisch.
 * **Turniere:** Vereinsmeisterschaft oder Monatsblitz mit automatischer Schweizer Auslosung (Buchholz) und ChessResults-Export.
-* **Echte DSGVO-Sicherheit:** 100 % Hosting in Deutschland, verschlüsselte Bankdaten, keine fremden Tracker und Selbstauskunft per Klick.
+* **Echte DSGVO-Sicherheit:** 100 % Hosting in der EU (DSGVO-konform, keine US-Cloud), verschlüsselte Bankdaten, keine fremden Tracker und Selbstauskunft per Klick.
 
 **Unser Angebot an [Name des Vereins]:**  
 Wir suchen für die neue Saison **einen ausgewählten Partner-Verein**, der die Software in einem begleiteten, 8-wöchigen Testbetrieb kostenfrei im echten Vereinsleben erproben möchte.
@@ -47,7 +47,7 @@ liebe Schachfreundinnen und Schachfreunde,
 
 das Ehrenamt im Schachverein erfordert viel Zeit – oft mehr für administrative Routine als für das eigentliche Vereinsleben am Brett. Standard-Vereinsprogramme sind meist teuer, komplex und bieten weder eine Schweizer Auslosung noch schachspezifische Aufstellungsmasken.
 
-Wir haben eine webbasierte Vereinssoftware entwickelt, die speziell auf Schachvereine bis 150 Mitglieder zugeschnitten ist. Sie vereint Mitgliederverwaltung, Beitragswesen, Mannschaftsspielbetrieb und Schachturniere in einer einzigen Anwendung – DSGVO-konform und vollständig auf deutschen Servern betrieben.
+Wir haben eine webbasierte Vereinssoftware entwickelt, die speziell auf Schachvereine bis 150 Mitglieder zugeschnitten ist. Sie vereint Mitgliederverwaltung, Beitragswesen, Mannschaftsspielbetrieb und Schachturniere in einer einzigen Anwendung – DSGVO-konform und vollständig auf europäischen Servern betrieben (EU-Hosting, keine Drittstaaten).
 
 Für die finale Praxisphase bieten wir dem **[Name des Schachvereins]** eine exklusive Pilot-Partnerschaft an:
 

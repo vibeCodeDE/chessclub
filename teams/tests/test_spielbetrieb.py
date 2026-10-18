@@ -456,6 +456,9 @@ class ICalFeedTests(TestCase):
         self.assertEqual(res3.status_code, 403)
 
     def test_assert_num_queries_fuer_feeds(self):
+        from core.services import get_module_settings
+
+        get_module_settings()
         # Genau 3 Queries für Team-Feed: 1 ModulAktivMiddleware (ModuleSettings) + 1 Team-Lookup + 1 Match-Abfrage mit select_related
         with self.assertNumQueries(3):
             res = self.client.get(f"/mannschaften/{self.team1.pk}/ical/{self.team1.ical_token}/")

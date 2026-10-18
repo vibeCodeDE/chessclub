@@ -1,0 +1,22 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Zu viele Anfragen · {{ club_short }}{% endblock %}
+
+{% block card %}
+<span class="brand-mark" aria-hidden="true">⏱</span>
+<h1>Zu viele Anfragen</h1>
+<p class="lede">{{ club_name }}</p>
+
+<div class="public-alert error" role="alert">
+  <svg aria-hidden="true"><use href="#i-alert"></use></svg>
+  <div>
+    <strong>Anfragelimit vorübergehend erreicht.</strong><br>
+    Aus Sicherheitsgründen und zum Schutz vor Spam wurde die Anzahl der Anfragen begrenzt. Bitte warte einen Moment und versuche es in wenigen Minuten erneut.
+  </div>
+</div>
+
+<div class="auth-foot">
+  <a href="javascript:history.back()">Zurück zum Formular</a><br>
+  Bei anhaltenden Problemen wende dich an den Vereinsvorstand unter <a href="mailto:{{ club_contact }}">{{ club_contact }}</a>.
+</div>
+{% endblock %}

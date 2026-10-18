@@ -43,14 +43,7 @@ urlpatterns = [
     path("anmelden/zwei-faktor/", auth_views.zwei_faktor, name="zwei_faktor"),
     path("anmelden/zwei-faktor/neu/", auth_views.zwei_faktor_neu, name="zwei_faktor_neu"),
     path("abmelden/", django_auth_views.LogoutView.as_view(), name="logout"),
-    path(
-        "passwort/aendern/",
-        django_auth_views.PasswordResetView.as_view(
-            template_name="registration/password_reset_form.html",
-            success_url="/passwort/aendern/fertig/",
-        ),
-        name="password_reset",
-    ),
+    path("passwort/aendern/", auth_views.password_reset, name="password_reset"),
     path(
         "passwort/aendern/fertig/",
         django_auth_views.PasswordResetDoneView.as_view(

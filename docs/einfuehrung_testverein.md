@@ -8,7 +8,7 @@ Dieses Dokument definiert die strategische und operative Roadmap zur Einführung
 
 Die Software ist technisch als eigenständige, hochgradig spezialisierte Lösung für Schachvereine konzipiert ([docs/prd.md](file:///C:/Users/xyxyx/Desktop/development/docs/prd.md)). Mit automatisierten Beitragsläufen, Schweizer Turniersystem, Liga-Aufstellungen, Kassenbuch, PWA-Fähigkeit und strengster DSGVO-Konformität (keine externen CDNs/Tracker, verschlüsselte IBANs) bietet sie signifikante Mehrwerte gegenüber generischer Vereinssoftware.
 
-* **Liefer- und Betriebsmodell:** Managed-Abo (pro Verein ein eigener Docker-Container mit PostgreSQL, gehostet in Deutschland, [ADR-009](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md), [ADR-014](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-014-preisgestaltung.md)).
+* **Liefer- und Betriebsmodell:** Managed-Abo (pro Verein eine eigene Instanz mit PostgreSQL, gehostet in der Europäischen Union (z. B. Scalingo oder Hetzner), [ADR-009](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md), [ADR-014](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-014-preisgestaltung.md), [ADR-025](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
 * **Preisstruktur (Endpreise gem. § 19 UStG):** Start (19 €/Monat, bis 60 Mitglieder), Verein (35 €/Monat, bis 150 Mitglieder), Verband (69 €/Monat).
 * **Ziel der Pilotphase:** Nachweis der Praxistauglichkeit im echten Vereinsalltag, Bereinigung von Usability-Hürden, Validierung der wirtschaftlichen Betreuungsannahme (≤ 0,2 h Support pro Verein/Monat) und Gewinnung eines belastbaren Referenzkunden (Case Study / Zitat für die Landingpage `/produkt/`).
 
@@ -28,7 +28,7 @@ flowchart LR
 Bevor echte Vereinsdaten verarbeitet oder Angebote unterbreitet werden, müssen die formalen Leitplanken stehen:
 
 1. **Rechtliche Dokumente erstellen & prüfen:**
-   * **Auftragsverarbeitungsvertrag (AVV gem. Art. 28 DSGVO):** Standardvorlage für Kundenvereine (Muster für Hosting in DE bei Hetzner, Datenkategorien, technisch-organisatorische Maßnahmen / TOMs; siehe [docs/avv_muster.md](file:///C:/Users/xyxyx/Desktop/development/docs/avv_muster.md)).
+   * **Auftragsverarbeitungsvertrag (AVV gem. Art. 28 DSGVO):** Standardvorlage für Kundenvereine (Muster für Hosting in der EU bei Scalingo/Hetzner, Datenkategorien, technisch-organisatorische Maßnahmen / TOMs; siehe [docs/avv_muster.md](file:///C:/Users/xyxyx/Desktop/development/docs/avv_muster.md)).
    * **AGB & Vertragsunterlagen:** Festlegung der 12-monatigen Mindestlaufzeit, Kündigungsfrist (1 Monat zum Laufzeitende), Klausel zur Kleinunternehmerregelung gem. § 19 UStG sowie Preisanpassungsklausel bei späterem Wechsel zur Regelbesteuerung ([ADR-014](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-014-preisgestaltung.md)).
    * **Rechtstexte der Website:** Platzhalter in `/impressum/` und `/datenschutz/` durch finale Pflichtangaben ersetzen.
 2. **Technisches Deployment-Template finalisieren:**
@@ -113,7 +113,7 @@ Vor dem Produktivsetzen muss eine schlanke schriftliche **Pilotvereinbarung** (1
 
 **Wesentliche Inhalte:**
 1. **Gegenstand:** Bereitstellung einer cloudbasierten Vereinsverwaltungs-Instanz zu Testzwecken für einen Zeitraum von 8–12 Wochen.
-2. **Datenschutz (AVV):** Abschluss des Standard-Auftragsverarbeitungsvertrags (AVV nach Art. 28 DSGVO, siehe [docs/avv_muster.md](file:///C:/Users/xyxyx/Desktop/development/docs/avv_muster.md)). Bestätigung, dass die Datenhaltung ausschließlich in Deutschland erfolgt und sensible Daten (IBANs) verschlüsselt gespeichert werden.
+2. **Datenschutz (AVV):** Abschluss des Standard-Auftragsverarbeitungsvertrags (AVV nach Art. 28 DSGVO, siehe [docs/avv_muster.md](file:///C:/Users/xyxyx/Desktop/development/docs/avv_muster.md)). Bestätigung, dass die Datenhaltung ausschließlich in der Europäischen Union (EU) erfolgt und sensible Daten (IBANs) verschlüsselt gespeichert werden.
 3. **Pflichten des Test-Vereins:**
    * Teilnahme an einem wöchentlichen 15-minütigen Feedbackgespräch während der ersten 4 Wochen.
    * Durchführung der definierten Praxistests (1 Spieltag, 1 Vereinsturnier, 1 Beitrags-Simulationslauf).

@@ -10,7 +10,7 @@ liegen ausschließlich auf vereinseigener Infrastruktur in **DE/EU** (PRD N1.1, 
 Die Anwendung und alle Datensicherungen werden ausschließlich in Rechenzentren innerhalb der
 Bundesrepublik Deutschland bzw. der Europäischen Union betrieben:
 
-* **App & Primärdatenbank:** Hetzner Cloud (Standort Falkenstein/Vogtland oder Nürnberg) bzw. Netcup (Nürnberg/Wien).
+* **App & Primärdatenbank:** Scalingo PaaS (Standort Europa / Paris `osc-fr1` bzw. Frankfurt `osc-cl1`), Hetzner Cloud (Standort Falkenstein/Vogtland oder Nürnberg) bzw. Netcup (Nürnberg/Wien).
 * **Offsite-Datensicherung (3-2-1-Regel):** Hetzner Storage Box (Standort Falkenstein/Nürnberg, verschlüsselt über SFTP/SSH) oder vereinseigenes NAS in den Vereinsräumlichkeiten.
 * **Keine Drittanbieter-Tracker oder externe CDNs:** Alle Stylesheets, Skripte, Icons und Schriftarten werden lokal ausgeliefert.
 

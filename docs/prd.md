@@ -80,6 +80,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M4.4 Ergebnisse je Liga-Match (Einzelbretter → Mannschaftsergebnis)
 - S4.5 automatische Tabellenberechnung je Liga
 - S4.6 iCal-Feed der Ligaspiele (abonnierbar im Handykalender, ohne Login nur mit geheimem Token-Link; keine Aufstellungs- oder Personendaten)
+- S4.7 Saisonverwaltung: Saisons definieren (z. B. 2026/2027), aktive Hauptsaison atomar festlegen, Mannschaften und Turniere pro Saison gliedern, Spieldaten-Validierung, geführter Rollover-Assistent und schreibgeschützte Archivierung (T36, ADR-027)
 
 ### 3.5 Kommunikation (M/S)
 
@@ -151,7 +152,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 - N1.3 Löschpflicht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Default 36 Monate); dabei Kontaktdaten + Stammdaten löschen/anonymisieren, Finanzhistorie (Beiträge, Zahlungen) anonymisiert erhalten (nur noch Mitglied-ID). Aufbewahrung der anonymisierten Finanzhistorie: **8 Jahre** nach § 147 AO; die GoBD verweist für die ordnungsgemäße Aufbewahrung darauf, ist aber nicht selbst die Fristquelle. Fristen vor Go-Live mit Steuerberater bestätigen
 - N1.4 Verzeichnis von Verarbeitungstätigkeiten: Maschinenlesbare Exportfunktion der Datenkategorien
 - N1.5 Protokollierung von Logins, Änderungen **und** Zugriffen auf Personendaten (mindestens 12 Monate). „Zugriff" = Aufruf einer Mitglieder-Detailansicht und Ausführung des Auskunfts-Exports; Listenansichten werden nicht einzeln protokolliert
-- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S), Brute-Force-Schutz für Logins (django-axes, ADR-015)
+- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S), Brute-Force-Schutz für Logins (django-axes, ADR-015), Rate-Limiting für öffentliche Endpunkte ohne reCAPTCHA (django-ratelimit, ADR-028)
 - N1.7 Gastdaten aus öffentlichen Turnieranmeldungen (Name + E-Mail) gelten als Personendaten Dritter: sichtbar nur in der Turnierverwaltung, **nicht** in Mitgliederlisten/-suchen, mit Zweckbindung (nur Teilnehmerliste dieses Turniers) und dokumentierter Löschfrist nach Turnierende. Einwilligung: Hinweis auf der Anmeldeseite (Art. 6 Abs. 1 lit. b DSGVO — Durchführung des Turniers)
 
 ### 4.2 Sonstige NFR
@@ -246,3 +247,7 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v2.3 | 2026-10-13 | django-import-export im Django-Admin für Mitglieder und Kassenbuch (M1.5, S1.7, S6.2) gemäß ADR-021 spezifiziert und integriert (T32) |
 | v2.4 | 2026-10-14 | Demo-Daten-Steuerung im Django Admin Panel (S7.6) gemäß ADR-022 spezifiziert (T34) |
 | v2.5 | 2026-10-17 | Klarstellung Produktarchitektur: Haupt-App ist die Schachverwaltung, Vereinshomepage ist ein modulares Add-on (`homepage_aktiv`, ADR-023) |
+| v2.6 | 2026-10-17 | Harmonisierung der Hosting- und DSGVO-Aussagen auf EU-Ebene für Scalingo Cloud PaaS (ADR-025) |
+| v2.7 | 2026-10-17 | Saisonverwaltung für den Vorstand (S4.7, ADR-027) mit Rollover, Schreibschutz und Historienfilter in Task T36 |
+| v2.8 | 2026-10-18 | Rate-Limiting für öffentliche Endpunkte (django-ratelimit, N1.1, N1.6) gemäß ADR-028 in Task T37 |
+

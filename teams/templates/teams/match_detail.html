@@ -27,6 +27,17 @@
 {% endblock %}
 
 {% block content %}
+{% if match.team.saison.ist_archiviert %}
+  <div class="banner warning mb-2" style="padding:1rem;background:var(--muted-bg);border-left:4px solid var(--accent);border-radius:var(--radius-sm, 4px)">
+    <div style="display:flex;align-items:center;gap:0.75rem">
+      <svg class="icon" style="width:20px;height:20px;color:var(--text)"><use href="#i-calendar"></use></svg>
+      <div>
+        <strong>Archivierte Spielzeit:</strong>
+        <span>Diese Begegnung gehört zur Saison <strong>{{ match.team.saison.name }}</strong>, die offiziell abgeschlossen und archiviert wurde. Alle Aufstellungen und Ergebnisse sind schreibgeschützt.</span>
+      </div>
+    </div>
+  </div>
+{% endif %}
 <div class="grid cols-4">
   <div class="stat accent-gold">
     <div class="stat-head"><span class="stat-label">Brettpunkte</span><span class="stat-icon"><svg class="icon"><use href="#i-swords"></use></svg></span></div>

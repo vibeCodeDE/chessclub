@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Mannschaften nach {{ target_season.name }} übernehmen{% endblock %}
+{% block page_title %}Mannschaftsübernahme (Rollover){% endblock %}
+{% block crumbs %}
+<div class="crumbs">
+  <a href="{% url 'teams:season_list' %}">Saisonverwaltung</a> ·
+  Ziel: <strong>{{ target_season.name }}</strong>
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <div>
+    <p class="lede">Bestehende Mannschaften aus der Vorsaison mit einem Klick in die neue Spielzeit übernehmen. Ligen und Besetzungen können direkt angepasst werden.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{% url 'teams:season_list' %}">Zurück zur Übersicht</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-2">
+  <div class="card-head">
+    <h2>1. Quell-Saison wählen</h2>
+    <span class="sub">Aus welcher Spielzeit sollen Mannschaften übernommen werden?</span>
+  </div>
+  <form method="get" class="filters" style="margin-top:0.5rem">
+    <label for="quelle_select" style="font-weight:600;font-size:0.875rem">Vorsaison:</label>
+    <select id="quelle_select" name="quelle" onchange="this.form.submit()">
+      {% for q in moegliche_quellen %}
+        <option value="{{ q.pk }}" {% if source_season and source_season.pk == q.pk %}selected{% endif %}>
+          {{ q.name }} ({{ q.startdatum|date:"d.m.Y" }} – {{ q.enddatum|date:"d.m.Y" }})
+        </option>
+      {% empty %}
+        <option value="">Keine weitere Saison vorhanden</option>
+      {% endfor %}
+    </select>
+    <noscript><button class="btn small" type="submit">Laden</button></noscript>
+  </form>
+</div>
+
+{% if source_season %}
+  <div class="card">
+    <div class="card-head">
+      <h2>2. Mannschaften auswählen und anpassen</h2>
+      <span class="sub">Vorschau aller Teams aus {{ source_season.name }} für die Übernahme nach {{ target_season.name }}</span>
+    </div>
+
+    {% if form.team_rows %}
+      <form method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="source_season_id" value="{{ source_season.pk }}">
+
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th style="width:48px;text-align:center">Übernehmen</th>
+                <th>Mannschaft</th>
+                <th>Liga / Staffel</th>
+                <th style="width:110px">Bretter</th>
+                <th>Mannschaftsführer:in</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in form.team_rows %}
+                <tr>
+                  <td style="text-align:center;vertical-align:middle">
+                    {{ row.uebernehmen }}
+                  </td>
+                  <td>
+                    <strong>{{ row.team.name }}</strong>
+                    <div class="cell-sub">{{ row.team.get_altersklasse_display }}</div>
+                  </td>
+                  <td>
+                    {{ row.liga }}
+                  </td>
+                  <td>
+                    {{ row.brettanzahl }}
+                  </td>
+                  <td>
+                    {{ row.kapitaen }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-actions mt-3" style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+          <button class="btn" type="submit">
+            <svg class="icon icon-sm"><use href="#i-check"></use></svg> Ausgewählte Teams nach {{ target_season.name }} übernehmen
+          </button>
+          <a class="btn ghost" href="{% url 'teams:season_list' %}">Abbrechen</a>
+        </div>
+      </form>
+    {% else %}
+      <div style="padding:1.5rem">
+        {% include "includes/empty_state.html" with icon="flag" titel="Keine Mannschaften in Vorsaison" text="In der gewählten Saison sind keine aktiven Mannschaften vorhanden, die übernommen werden könnten." action_url="/saison/" action_label="Zurück zur Saisonübersicht" %}
+      </div>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="card">
+    <div style="padding:1.5rem">
+      {% include "includes/empty_state.html" with icon="calendar" titel="Keine Quell-Saison verfügbar" text="Bitte legen Sie zuerst eine frühere Saison an, um Mannschaften per Rollover zu übernehmen." action_url="/saison/neu/" action_label="Saison anlegen" %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

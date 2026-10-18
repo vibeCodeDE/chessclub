@@ -2,7 +2,7 @@
 
 {% block title %}Ligaspiele{% endblock %}
 {% block page_title %}Ligaspiele{% endblock %}
-{% block crumbs %}<div class="crumbs">{{ matches.paginator.count }} Begegnungen · Ergebnisse werden aus den Brettern summiert</div>{% endblock %}
+{% block crumbs %}<div class="crumbs">Saison: {{ gewaehlte_saison.name|default:"Alle" }} · {{ matches.paginator.count }} Begegnungen · Ergebnisse werden aus den Brettern summiert</div>{% endblock %}
 
 {% block page_actions %}
 <div class="page-head">
@@ -26,6 +26,7 @@
 {% block content %}
 <div class="card">
   <form class="filters" method="get">
+    {% include "teams/includes/season_filter.html" %}
     <label class="visually-hidden" for="team">Mannschaft</label>
     <select id="team" name="team">
       <option value="">Alle Mannschaften</option>
@@ -41,9 +42,9 @@
       {% endfor %}
     </select>
     <div class="segmented">
-      <a class="{% if not zeitraum %}is-active{% endif %}" href="?{% if team_id %}team={{ team_id }}&{% endif %}{% if status %}status={{ status }}{% endif %}">Alle</a>
-      <a class="{% if zeitraum == 'kommend' %}is-active{% endif %}" href="?zeitraum=kommend">Kommend</a>
-      <a class="{% if zeitraum == 'vergangen' %}is-active{% endif %}" href="?zeitraum=vergangen">Vergangen</a>
+      <a class="{% if not zeitraum %}is-active{% endif %}" href="?{% if gewaehlte_saison %}saison={{ gewaehlte_saison.pk }}&{% endif %}{% if team_id %}team={{ team_id }}&{% endif %}{% if status %}status={{ status }}{% endif %}">Alle</a>
+      <a class="{% if zeitraum == 'kommend' %}is-active{% endif %}" href="?{% if gewaehlte_saison %}saison={{ gewaehlte_saison.pk }}&{% endif %}zeitraum=kommend">Kommend</a>
+      <a class="{% if zeitraum == 'vergangen' %}is-active{% endif %}" href="?{% if gewaehlte_saison %}saison={{ gewaehlte_saison.pk }}&{% endif %}zeitraum=vergangen">Vergangen</a>
     </div>
     <button class="btn small" type="submit">Filtern</button>
   </form>

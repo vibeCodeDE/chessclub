@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from core.models import TwoFactorDevice
 from core.roles import ADMIN_GROUP
@@ -182,6 +183,7 @@ def zwei_faktor_neu(request):
     return redirect("core:zwei_faktor")
 
 
+@ratelimit(key="ip", rate="5/m", method="POST", block=True)
 def accept_invitation(request, token):
     """Annahme einer Funktionärseinladung mit eigenem Passwort (PRD §3.8, US5)."""
     from core.models import StaffInvitation
@@ -230,4 +232,16 @@ def accept_invitation(request, token):
         "core/invitation_accept.html",
         {"invitation": invitation},
     )
+
+
+@ratelimit(key="ip", rate="5/m", method="POST", block=True)
+def password_reset(request):
+    """Passwort-Reset mit Rate-Limiting gegen E-Mail-Spam (PRD N1.6, ADR-028)."""
+    from django.contrib.auth import views as django_auth_views
+
+    return django_auth_views.PasswordResetView.as_view(
+        template_name="registration/password_reset_form.html",
+        success_url="/passwort/aendern/fertig/",
+    )(request)
+
 

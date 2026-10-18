@@ -21,6 +21,14 @@ class Tournament(models.Model):
         BEENDET = "beendet", "Beendet"
 
     name = models.CharField("Turniername", max_length=150)
+    saison = models.ForeignKey(
+        "teams.Season",
+        verbose_name="Saison",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="turniere",
+    )
     datum = models.DateField("Turnierdatum")
     anmeldeschluss = models.DateField("Anmeldeschluss", null=True, blank=True)
     ort = models.CharField("Spielort", max_length=150, blank=True)

@@ -3,6 +3,7 @@ __pycache__/
 *.sqlite3
 .env
 staticfiles/
+media/
 .pytest_cache/
 *.log
 node_modules/
@@ -19,4 +20,5 @@ backups/
 .codex/
 .cursor/
 .impeccable/
+.impeccable*
 .superpowers/

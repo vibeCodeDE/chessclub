@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import LeagueCalendarFeed, LeagueMatch, LineupEntry, Team
+from .models import LeagueCalendarFeed, LeagueMatch, LineupEntry, Season, Team
+
+
+@admin.register(Season)
+class SeasonAdmin(admin.ModelAdmin):
+    list_display = ("name", "startdatum", "enddatum", "status", "ist_aktiv", "anzahl_teams", "anzahl_spiele")
+    list_filter = ("status", "ist_aktiv")
+    search_fields = ("name", "notizen")
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ("erstellt_am", "aktualisiert_am")
 
 
 class LineupInline(admin.TabularInline):
@@ -11,8 +20,8 @@ class LineupInline(admin.TabularInline):
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
-    list_display = ("name", "liga", "altersklasse", "kapitaen", "aktiv", "ical_token")
-    list_filter = ("altersklasse", "aktiv")
+    list_display = ("name", "saison", "liga", "altersklasse", "kapitaen", "aktiv", "ical_token")
+    list_filter = ("saison", "altersklasse", "aktiv")
     search_fields = ("name", "liga")
     readonly_fields = ("ical_token",)
 

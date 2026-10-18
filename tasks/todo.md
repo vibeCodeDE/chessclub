@@ -229,6 +229,65 @@
 
 ---
 
+### T30d: Schmerzpunkte, Lösungen & Interaktive Vorschau auf `/produkt` (Feature 003)
+- **Problem & Kontext:** Interessierte Vereinsvorstände und Funktionäre möchten auf der Landingpage sofort verstehen, wie die Software ihre akuten Vereinsprobleme löst. Abstrakte Funktionslisten reichen nicht aus – gefragt ist eine zielgruppengenaue Ansprache je Vereinsrolle inklusive erlebbarer Vorschau.
+- **Umsetzung:**
+  - Modulare Inhaltsdatenstruktur `ROLLEN_SCHMERZPUNKTE` in `core/produkt.py` für 5 Rollen (`vorstand`, `kassenwart`, `spielleiter`, `kapitaen`, `mitglieder`) mit je 3 konkreten Vorher/Nachher-Paaren, Zeiteinsparung und Mockup-Konfiguration.
+  - View-Weitergabe in `core/views.py:produkt_seite` an `core/templates/core/produkt.html`.
+  - Interaktive CSS `:checked` Radio-Tab-Architektur (`.lp-pains-showcase`) mit Live-Umschaltung ohne JavaScript oder Fremdbibliotheken (0 Tracker, 0 Cookies, strikte CSP, Progressive Enhancement).
+  - Interaktiver UI-Mockup-Simulator (`.lp-mock-interactive`) im App-Fensterstil mit Status-Pills, Kennzahlen-Kacheln und schaltbaren Arbeitsabläufen.
+  - Zeiteinsparungs-Badges je Rolle und aggregierter Gesamtnutzen-Banner („Bis zu 80 Stunden weniger Büroarbeit pro Saison“).
+  - Rollenbezogene Demo-Anfrage-Schaltflächen mit vorbefülltem Betreff (`mailto:...?subject=Demo-Anfrage...`).
+- **Beleg:** `docker compose exec app pytest core/tests/test_produkt.py` (27 passed, 38 subtests passed) sowie Gesamtsuite `docker compose exec app pytest` (614 passed, 256 subtests passed); Negativtests auf ungültige Rollen und strikte CSP; Browser-Prüfung ohne horizontalen Overflow bei 360 px und 1280 px.
+
+---
+
+### T35: Automatische Dateisystem-Bereinigung mit django-cleanup (ADR-026)
+- **Problem & Kontext:** Beim Ersetzen oder Löschen von Django-Modellinstanzen mit Dateianhängen (`FileField`/`ImageField`) verbleiben physische Dateien standardmäßig auf der Festplatte. Das führt zu Speicherlecks und widerspricht dem DSGVO-Grundsatz der Datenminimierung und Speicherbegrenzung (Art. 5 DSGVO).
+- **Umsetzung:**
+  - Aufnahme von `django-cleanup>=9.0` in `requirements.txt`.
+  - Registrierung von `django_cleanup.apps.CleanupConfig` in `INSTALLED_APPS` ([config/settings.py](file:///C:/Users/xyxyx/Desktop/development/config/settings.py)).
+  - Definition von `MEDIA_URL = "media/"` und `MEDIA_ROOT = BASE_DIR / "media"` sowie Ausschluss von `media/` in [.gitignore](file:///C:/Users/xyxyx/Desktop/development/.gitignore).
+  - Einbindung der Media-Dateien-Auslieferung in [config/urls.py](file:///C:/Users/xyxyx/Desktop/development/config/urls.py) für `DEBUG=True`.
+  - Transaktionssicherheit via `transaction.on_commit()`: Dateien werden erst nach erfolgreichem DB-Commit gelöscht; Rollbacks belassen Dateien auf der Festplatte.
+  - Erstellung der Architekturentscheidung [ADR-026](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-026-dateibereinigung-mit-django-cleanup.md).
+---
+
+### T36: Saisonverwaltung für den Vorstand (z. B. 2026/2027, S4.7, ADR-027)
+- **Problem & Kontext:** Die sportliche Strukturierung in Spielzeiten (z. B. August bis Juli) war im System bisher nicht isoliert abgebildet. Beim Saisonübergang im Sommer mussten Mannschaften manuell neu angelegt werden, und alte Aufstellungen waren nicht vor versehentlicher Überschreibung geschützt.
+- **Umsetzung:**
+  - Datenmodell `Season` (`teams/models.py`) mit Status-Workflow (`vorbereitung`, `aktiv`, `archiviert`), Start- und Enddatum sowie automatischem Slug.
+  - Modellerweiterung: `Team.saison` (`models.PROTECT`, `UniqueConstraint(name, saison)`) und `Tournament.saison` (`models.SET_NULL`).
+  - Dreistufige Migration (`teams.0003`, `teams.0004`, `teams.0005`, `tournaments.0002`) mit automatischer Datenmigration aller Bestandsteams in eine initiale Standardsaison.
+  - Reines Fachfunktions-Servicemodul (`teams/services.py`): `create_season`, `set_active_season`, `archive_season`, `reopen_season`, `delete_season`, `rollover_teams`, `validate_match_season_bounds`, `check_match_edit_allowed`.
+  - Globaler Context-Processor `season_context` (`aktive_saison`, `alle_saisons`, `gewaehlte_saison`).
+  - Dünne FBVs mit Rollenschutz `@role_required(ADMIN_GROUP)` in `teams/views.py`.
+  - Wiederverwendbare barrierefreie Filterkomponente `teams/templates/teams/includes/season_filter.html` in `team_list.html`, `match_list.html` und `manage_list.html`.
+  - Geführter 1-Klick-Saisonwechsel-Assistent (`teams/season_rollover.html`) mit unberührter Vorsaison-Historie und frischen iCal-Tokens.
+  - Schreibschutz-Archivierung mit Warnung bei ungespielten Partien, PermissionDenied-Blockade bei Editierversuchen und Archiv-Hinweisbanner in `match_detail.html`.
+  - Revisionssichere Dokumentation aller statusändernden Aktionen im `AuditLog`.
+  - Architekturentscheidung [ADR-027](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-027-saisonverwaltung-fuer-den-vorstand.md).
+- **Beleg:** 41 dedizierte Tests in `teams/tests/test_season.py`, `test_season_matches.py`, `test_season_rollover.py`, `test_season_archival.py` und `tournaments/tests/test_season_tournaments.py`; Gesamtsuite `docker compose exec app pytest` (664 passed, 1 warning, 256 subtests passed); Negativtests für 403-Zugriffsverweigerung (Gast/Mitglied/Kapitän), Datumsvalidierungsfehler, PermissionDenied bei Schreibschutz, Löschblockade bei belegten Saisons; `assertNumQueries`-Budgets ohne N+1 verifiziert.
+
+---
+
+### T37: Rate-Limiting für öffentliche Endpunkte (django-ratelimit, N1.1/N1.6, ADR-028)
+- **Problem & Kontext:** Öffentlich zugängliche Formulare (Schnupper-Anfrage, Turnieranmeldungen für Gäste, Passwort-Reset, Einladungsannahme) waren bisher ungedrosselt und anfällig für Spam/DDoS. Proprietäre Captchas (Google reCAPTCHA, Cloudflare Turnstile) verstoßen gegen DSGVO N1.1 (Verbot von Drittanbieter-Trackern und externen CDNs).
+- **Umsetzung:**
+  - Aufnahme von `django-ratelimit>=4.1.0` in [requirements.txt](file:///C:/Users/xyxyx/Desktop/development/requirements.txt).
+  - Konfiguration in [config/settings.py](file:///C:/Users/xyxyx/Desktop/development/config/settings.py): `RATELIMIT_ENABLE = True`, `RATELIMIT_USE_CACHE = "default"`, `RATELIMIT_VIEW = "core.views.ratelimited_view"`, `RATELIMIT_IP_META_KEY = "REMOTE_ADDR"`, Registrierung von `django_ratelimit.middleware.RatelimitMiddleware` in `MIDDLEWARE`.
+  - In [config/settings_test.py](file:///C:/Users/xyxyx/Desktop/development/config/settings_test.py): `RATELIMIT_ENABLE = False` standardmäßig, um allgemeine Tests nicht zu verlangsamen; dedizierte Tests aktivieren das Limit gezielt per `@override_settings(RATELIMIT_ENABLE=True)`.
+  - Dekoration der sensiblen öffentlichen POST-Endpunkte mit `@ratelimit(key="ip", rate="5/m", method="POST", block=True)`:
+    - [members/views.py](file:///C:/Users/xyxyx/Desktop/development/members/views.py): `join_info` (Schnupper-Anfrage / Kontaktformular)
+    - [tournaments/views.py](file:///C:/Users/xyxyx/Desktop/development/tournaments/views.py): `public_detail` (öffentliche Turnieranmeldung für Gastspieler)
+    - [core/auth_views.py](file:///C:/Users/xyxyx/Desktop/development/core/auth_views.py): `password_reset` (Passwort-Reset-Formular)
+    - [core/auth_views.py](file:///C:/Users/xyxyx/Desktop/development/core/auth_views.py): `accept_invitation` (Funktionärs-Einladungsannahme)
+  - Fehleransicht `core.views.ratelimited_view` mit HTTP-Status 429 Too Many Requests, `Retry-After: 60`, barrierefreiem Template [core/templates/core/ratelimited.html](file:///C:/Users/xyxyx/Desktop/development/core/templates/core/ratelimited.html) (im Design von `auth_base.html` / `site.css`), [templates/429.html](file:///C:/Users/xyxyx/Desktop/development/templates/429.html) und JSON-Fallback für AJAX-Anfragen.
+  - Architekturentscheidung [ADR-028](file:///C:/Users/xyxyx/Desktop/development/docs/decisions/ADR-028-rate-limiting-mit-django-ratelimit.md).
+- **Beleg:** 8 Tests in `core/tests/test_ratelimit.py`; 32 Tests in `core/tests/test_oeffentliches_design.py`; vollständige Testsuite `docker compose exec app pytest` (675 passed, 256 subtests passed, 0 failures); Negativtests: 6. POST-Versuch liefert 429 auf allen geschützten Routen; GET-Anfragen (Lesen von Turnieren/Seiten) bleiben unbegrenzt möglich; verschiedene IP-Adressen besitzen isolierte Kontingente; AJAX-Header liefert sauberes JSON mit HTTP 429.
+
+---
+
 ## Nächste Schritte
 
 1. **Pilotbetrieb & Abnahme** durch den Testverein mit den erstellten Mustern (`docs/einfuehrung_testverein.md`, `docs/abnahme.md`)

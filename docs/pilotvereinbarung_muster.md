@@ -35,7 +35,7 @@ Vor diesem Hintergrund schließen die Parteien die folgende Vereinbarung:
 ---
 
 ### § 2 Pflichten und Leistungen des Anbieters
-1. **Bereitstellung & Hosting:** Der Anbieter betreibt die Instanz auf ISO-27001-zertifizierten Servern mit Standort in der Bundesrepublik Deutschland.
+1. **Bereitstellung & Hosting:** Der Anbieter betreibt die Instanz auf ISO-27001-zertifizierten Servern mit Standort in der Europäischen Union (EU).
 2. **Datensicherung:** Der Anbieter führt tägliche, verschlüsselte Backups der Vereinsdatenbank durch.
 3. **Kostenlose Datenübernahme:** Der Anbieter unterstützt den Verein einmalig kostenfrei bei der Bereinigung und dem Import der bestehenden Mitgliederdaten aus Excel- oder CSV-Dateien.
 4. **Schulung & Support:** Der Anbieter führt zu Beginn eine 60-minütige Einweisung für den Vorstand durch und stellt während des Pilotbetriebs einen bevorzugten Supportkanal (Reaktionszeit < 4 Stunden an Spieltagen und Turnierabenden) bereit.

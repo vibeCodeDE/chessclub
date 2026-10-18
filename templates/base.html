@@ -78,42 +78,100 @@
 
   <div class="main main-shell">
     <header class="topbar">
-      <button class="icon-btn mobile-menu" type="button" data-sidebar-toggle aria-label="Navigation öffnen" aria-expanded="false" aria-controls="sidebar">
-        <svg class="icon"><use href="#i-menu"></use></svg>
-      </button>
-      <div class="topbar-title breadcrumb">
-        <span>{% if user_role == 'admin' %}Vereinsverwaltung{% else %}Vereinsleben{% endif %}</span>
-        <svg class="icon icon-sm" style="width:13px;height:13px;color:var(--muted)" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
-        <strong>{% block page_title %}Dashboard{% endblock %}</strong>
-        {% block crumbs %}{% endblock %}
-      </div>
-      <form class="topbar-search global-search" action="{% url 'core:suche' %}" method="get" role="search">
-        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"></use></svg>
-        <label class="visually-hidden" for="globale-suche">Suche</label>
-        <input id="globale-suche" type="search" name="q" placeholder="Verein durchsuchen …" value="{{ request.GET.q|default:'' }}" aria-label="Verein durchsuchen">
-        <kbd>⌘ K</kbd>
-      </form>
-      <div class="dropdown">
-        <button class="user-chip topbar-avatar-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-controls="topbar-profile-dropdown">
-          <span class="avatar avatar-sand" aria-hidden="true">{{ user.get_short_name|default:user.get_username|slice:":2"|upper }}</span>
-          <span class="who">
-            <strong>{{ user.get_full_name|default:user.get_username }}</strong>
-            <span>{{ user_role }}</span>
-          </span>
-          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+      <div class="topbar-left">
+        <button class="icon-btn mobile-menu" type="button" data-sidebar-toggle aria-label="Navigation öffnen" aria-expanded="false" aria-controls="sidebar">
+          <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
         </button>
-        <div class="dropdown-panel" id="topbar-profile-dropdown" data-dropdown-panel>
-          <a href="{% url 'core:dashboard' %}"><svg class="icon icon-sm"><use href="#i-dashboard"></use></svg> Dashboard</a>
-          <a href="{% url 'members:profil' %}"><svg class="icon icon-sm"><use href="#i-user"></use></svg> Mein Profil</a>
-          <a href="{% url 'core:home' %}"><svg class="icon icon-sm"><use href="#i-globe"></use></svg> Vereinsseite</a>
-          {% if user.is_staff or user_role == 'admin' %}
-            <a href="{% url 'admin:index' %}"><svg class="icon icon-sm"><use href="#i-shield"></use></svg> Django Admin</a>
+        <nav class="topbar-breadcrumb breadcrumb" aria-label="Brotkrumennavigation">
+          <a href="{% url 'core:dashboard' %}" class="breadcrumb-root">{% if user_role == 'admin' %}Vereinsverwaltung{% else %}Vereinsleben{% endif %}</a>
+          <span class="breadcrumb-sep" aria-hidden="true">
+            <svg class="icon icon-xs"><use href="#i-arrow-right"></use></svg>
+          </span>
+          <span class="breadcrumb-current">
+            <strong>{% block page_title %}Dashboard{% endblock %}</strong>
+          </span>
+          {% block crumbs %}{% endblock %}
+        </nav>
+      </div>
+
+      <div class="topbar-right">
+        {% if module_settings.spielbetrieb_aktiv and aktive_saison %}
+          {% if user_role == 'admin' %}
+            <a href="{% url 'teams:season_list' %}" class="topbar-season-badge" title="Aktive Spielzeit: {{ aktive_saison.name }} (zur Saisonverwaltung)">
+              <svg class="icon icon-xs" aria-hidden="true"><use href="#i-calendar"></use></svg>
+              <span>{{ aktive_saison.name }}</span>
+            </a>
+          {% else %}
+            <span class="topbar-season-badge" title="Aktive Spielzeit: {{ aktive_saison.name }}">
+              <svg class="icon icon-xs" aria-hidden="true"><use href="#i-calendar"></use></svg>
+              <span>{{ aktive_saison.name }}</span>
+            </span>
           {% endif %}
-          <div class="dropdown-divider"></div>
-          <form method="post" action="{% url 'core:logout' %}">
-            {% csrf_token %}
-            <button type="submit"><svg class="icon icon-sm"><use href="#i-logout"></use></svg> Abmelden</button>
-          </form>
+        {% endif %}
+
+        {% if module_settings.homepage_aktiv %}
+          <a href="{% url 'core:home' %}" class="topbar-quick-link" title="Öffentliche Vereinsseite aufrufen" target="_blank" rel="noopener">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-globe"></use></svg>
+            <span class="quick-link-label">Vereinsseite</span>
+            <svg class="icon icon-xs external-mark" aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
+          </a>
+        {% endif %}
+
+        <form class="topbar-search global-search" action="{% url 'core:suche' %}" method="get" role="search">
+          <svg class="icon icon-sm search-icon" aria-hidden="true"><use href="#i-search"></use></svg>
+          <label class="visually-hidden" for="globale-suche">Suche</label>
+          <input id="globale-suche" type="search" name="q" placeholder="Verein durchsuchen …" value="{{ request.GET.q|default:'' }}" aria-label="Verein durchsuchen" autocomplete="off" spellcheck="false">
+          <kbd class="search-kbd" data-search-shortcut title="Tastenkombination zum Suchen">⌘K</kbd>
+        </form>
+
+        <div class="dropdown topbar-dropdown">
+          <button class="user-chip topbar-avatar-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-controls="topbar-profile-dropdown" aria-label="Benutzermenü für {{ user.get_full_name|default:user.get_username }}">
+            <span class="avatar avatar-sand" aria-hidden="true">{{ user.get_short_name|default:user.get_username|slice:":2"|upper }}</span>
+            <span class="who">
+              <strong>{{ user.get_full_name|default:user.get_username }}</strong>
+              <span class="user-role-label">{{ user_role }}</span>
+            </span>
+            <svg class="icon icon-sm chevron-icon" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="dropdown-panel topbar-dropdown-panel" id="topbar-profile-dropdown" data-dropdown-panel>
+            <div class="dropdown-header">
+              <span class="avatar avatar-sand avatar-lg" aria-hidden="true">{{ user.get_short_name|default:user.get_username|slice:":2"|upper }}</span>
+              <div class="dropdown-header-info">
+                <strong>{{ user.get_full_name|default:user.get_username }}</strong>
+                <span class="user-role-pill">{{ user_role|title }}</span>
+                {% if user.email %}<small class="user-email">{{ user.email }}</small>{% endif %}
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-section" role="group" aria-label="Persönlicher Bereich">
+              <a href="{% url 'core:dashboard' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"></use></svg> Dashboard</a>
+              <a href="{% url 'members:profil' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-user"></use></svg> Mein Profil</a>
+              <a href="{% url 'dues:mein_konto' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-wallet"></use></svg> Mein Beitragskonto</a>
+              {% if module_settings.spielbetrieb_aktiv %}
+                <a href="{% url 'teams:meine_aufstellungen' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-swords"></use></svg> Meine Einsätze</a>
+              {% endif %}
+            </div>
+            {% if module_settings.homepage_aktiv or user.is_staff or user_role == 'admin' %}
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-section" role="group" aria-label="Verein &amp; System">
+                {% if module_settings.homepage_aktiv %}
+                  <a href="{% url 'core:home' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-globe"></use></svg> Vereinsseite</a>
+                {% endif %}
+                {% if user.is_staff or user_role == 'admin' %}
+                  {% if module_settings.spielbetrieb_aktiv %}
+                    <a href="{% url 'teams:season_list' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"></use></svg> Saisonverwaltung</a>
+                  {% endif %}
+                  <a href="{% url 'core:club_setup_profile' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"></use></svg> Vereins-Setup &amp; Daten</a>
+                  <a href="{% url 'admin:index' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg> Django Admin</a>
+                {% endif %}
+              </div>
+            {% endif %}
+            <div class="dropdown-divider"></div>
+            <form method="post" action="{% url 'core:logout' %}" class="dropdown-logout-form">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-logout-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-logout"></use></svg> Abmelden</button>
+            </form>
+          </div>
         </div>
       </div>
     </header>

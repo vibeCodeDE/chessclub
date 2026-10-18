@@ -2,11 +2,16 @@
 
 {% block title %}Mannschaften{% endblock %}
 {% block page_title %}Mannschaften{% endblock %}
-{% block crumbs %}<div class="crumbs">{{ anzahl_aktiv }} aktive Mannschaften · {{ spiele_gesamt }} Ligaspiele erfasst</div>{% endblock %}
+{% block crumbs %}<div class="crumbs">Saison: {{ gewaehlte_saison.name|default:"Alle" }} · {{ anzahl_aktiv }} aktive Mannschaften · {{ spiele_gesamt }} Ligaspiele erfasst</div>{% endblock %}
 
 {% block page_actions %}
 <div class="page-head">
-  <p class="lede">Mannschaften, Aufstellungen und Ergebnisse für den Ligabetrieb pflegen.</p>
+  <div>
+    <p class="lede">Mannschaften, Aufstellungen und Ergebnisse für den Ligabetrieb pflegen.</p>
+    <form method="get" class="mt-1" style="display:inline-block">
+      {% include "teams/includes/season_filter.html" %}
+    </form>
+  </div>
   <div class="page-actions">
     <a class="btn secondary" href="{% url 'teams:tabelle_list' %}"><svg class="icon icon-sm"><use href="#i-table"></use></svg> Tabellen</a>
     {% if user_role == "admin" %}

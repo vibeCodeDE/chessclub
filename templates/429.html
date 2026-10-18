@@ -1,0 +1,32 @@
+{% load static %}<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Zu viele Anfragen (429) – {{ club_short|default:"Schachverein" }}</title>
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+  {% include "includes/sprite.html" %}
+  <div class="container">
+    <div class="not-found-page">
+      <div class="not-found-inner">
+        <span class="not-found-symbol" aria-hidden="true">⏱</span>
+        <h1>Zu viele <em>Anfragen.</em></h1>
+        <p>
+          Aus Sicherheitsgründen und zum Schutz vor Missbrauch wurde die Anzahl der Anfragen vorübergehend begrenzt.
+          Bitte warte einen Moment und versuche es in wenigen Minuten erneut.
+        </p>
+        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+          <a class="button button-dark" href="/">
+            <svg aria-hidden="true"><use href="#i-arrow-left"></use></svg> Zur Startseite
+          </a>
+          <button class="button button-lime" type="button" onclick="history.back()">
+            Zurück
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

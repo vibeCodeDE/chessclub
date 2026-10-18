@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from core.roles import ADMIN_GROUP, role_required
 from core.ui import fehler, ok
@@ -21,17 +22,29 @@ from .pairing import generate_round, turnier_abschliessen
 # ---------------------------------------------------------------- öffentlich
 def public_list(request):
     heute = timezone.localdate()
-    kommende = Tournament.objects.filter(oeffentlich=True, datum__gte=heute).order_by("datum")
-    vergangene = (
-        Tournament.objects.filter(oeffentlich=True, datum__lt=heute).order_by("-datum")[:6]
-    )
+    saison_id = request.GET.get("saison", "")
+    kommende = Tournament.objects.filter(oeffentlich=True, datum__gte=heute).select_related("saison").order_by("datum")
+    vergangene = Tournament.objects.filter(oeffentlich=True, datum__lt=heute).select_related("saison").order_by("-datum")
+    if saison_id:
+        if saison_id == "keine":
+            kommende = kommende.filter(saison__isnull=True)
+            vergangene = vergangene.filter(saison__isnull=True)
+        elif saison_id.isdigit():
+            kommende = kommende.filter(saison_id=int(saison_id))
+            vergangene = vergangene.filter(saison_id=int(saison_id))
+        else:
+            kommende = kommende.filter(saison__slug=saison_id)
+            vergangene = vergangene.filter(saison__slug=saison_id)
+    else:
+        vergangene = vergangene[:6]
     return render(
         request,
         "tournaments/public_list.html",
-        {"kommende": kommende, "vergangene": vergangene, "heute": heute},
+        {"kommende": kommende, "vergangene": vergangene, "heute": heute, "saison_id": saison_id},
     )
 
 
+@ratelimit(key="ip", rate="5/m", method="POST", block=True)
 def public_detail(request, pk):
     turnier = get_object_or_404(Tournament, pk=pk, oeffentlich=True)
     form = PublicRegistrationForm(tournament=turnier)
@@ -103,13 +116,22 @@ def public_ical(request, pk):
 # ------------------------------------------------------------------- Verwaltung
 @role_required(ADMIN_GROUP)
 def manage_list(request):
-    turniere = Tournament.objects.all()
+    turniere = Tournament.objects.select_related("saison")
     status = request.GET.get("status", "")
+    saison_id = request.GET.get("saison", "")
+    if saison_id:
+        if saison_id == "keine":
+            turniere = turniere.filter(saison__isnull=True)
+        elif saison_id.isdigit():
+            turniere = turniere.filter(saison_id=int(saison_id))
+        else:
+            turniere = turniere.filter(saison__slug=saison_id)
     if status in Tournament.Status.values:
         turniere = turniere.filter(status=status)
     kontext = {
         "turniere": turniere,
         "status": status,
+        "saison_id": saison_id,
         "status_choices": Tournament.Status.choices,
         "anzahl_teilnehmer": Participant.objects.count(),
         "laufend": Tournament.objects.filter(status=Tournament.Status.LAUFEND).count(),

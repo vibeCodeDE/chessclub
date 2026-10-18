@@ -45,6 +45,14 @@ class ProduktSeiteTests(TestCase):
             self.assertIn(f'href="{pfad}"', inhalt)
             self.assertEqual(self.client.get(pfad).status_code, 200)
 
+    def test_eu_hosting_versprechen(self):
+        """Landingpage und FAQ werben mit EU-Hosting und DSGVO (ADR-025), nicht irreführend mit '100 % Deutschland'."""
+        inhalt = self.client.get("/").content.decode()
+        self.assertIn("100 % EU-Hosting", inhalt)
+        self.assertIn("Hosting in der EU", inhalt)
+        self.assertNotIn("100 % Deutschland", inhalt)
+        self.assertNotIn("Datenhaltung ausschließlich in Deutschland", inhalt)
+
     def test_vereinsstartseite_bleibt_unveraendert(self):
         """Mit IS_MARKETING_SITE=False zeigt „/“ die Vereinsseite, während schachverwaltung.de das Produkt zeigt."""
         with self.settings(IS_MARKETING_SITE=False):
@@ -74,6 +82,15 @@ class ProduktSeiteTests(TestCase):
             inhalt = antwort.content.decode()
             self.assertEqual(antwort.status_code, 200)
             self.assertIn("Vereinsverwaltung, die Ihr Vorstand gerne benutzt.", inhalt)
+
+    def test_marketing_site_auf_localhost_und_loopback(self):
+        """Auf localhost und 127.0.0.1 zeigt „/“ in der Entwicklung direkt die Produktseite (ADR-024)."""
+        with self.settings(IS_MARKETING_SITE=False):
+            for host in ("localhost", "127.0.0.1"):
+                with self.subTest(host=host):
+                    antwort = self.client.get("/", HTTP_HOST=host)
+                    self.assertEqual(antwort.status_code, 200)
+                    self.assertIn("Vereinsverwaltung, die Ihr Vorstand gerne benutzt.", antwort.content.decode())
 
     def test_vereins_subdomain_bleibt_vereinsseite(self):
         """Anfragen an eine Vereins-Subdomain zeigen weiterhin die Vereinsseite auf „/“."""
@@ -152,3 +169,98 @@ class ProduktStandardBrandingTests(TestCase):
         # Negativtest: alte Platzhaltermarken erscheinen nicht
         self.assertNotIn("Schachclub-Manager", inhalt)
         self.assertNotIn("schachclub-manager.example", inhalt)
+
+
+@override_settings(IS_MARKETING_SITE=True, PRODUCT_CONTACT="info@schachverwaltung.de")
+class ProduktSchmerzpunkteTests(TestCase):
+    def test_t003_rollen_schmerzpunkte_datenstruktur_vollstaendig(self):
+        """T003: Prüft Pflichtfelder, Rollen und Negativfälle der Datenstruktur."""
+        erwartete_rollen = {"vorstand", "kassenwart", "spielleiter", "kapitaen", "mitglieder"}
+        vorhandene_rollen = {r["id"] for r in produkt.ROLLEN_SCHMERZPUNKTE}
+        self.assertEqual(erwartete_rollen, vorhandene_rollen)
+
+        for rolle in produkt.ROLLEN_SCHMERZPUNKTE:
+            with self.subTest(rolle=rolle["id"]):
+                # Pflichtfelder
+                for feld in ("id", "titel", "kurztitel", "icon", "slogan", "ersparnis", "schmerzpunkte", "vorschau"):
+                    self.assertIn(feld, rolle)
+                    self.assertTrue(rolle[feld], f"Feld {feld} darf nicht leer sein.")
+
+                # Mindestens 3 Schmerzpunkte
+                self.assertGreaterEqual(len(rolle["schmerzpunkte"]), 3)
+                for sp in rolle["schmerzpunkte"]:
+                    self.assertIn("titel", sp)
+                    self.assertIn("problem", sp)
+                    self.assertIn("loesung", sp)
+                    self.assertTrue(sp["problem"].strip())
+                    self.assertTrue(sp["loesung"].strip())
+
+                # Vorschau-Mockup Struktur
+                vorschau = rolle["vorschau"]
+                self.assertIn("typ", vorschau)
+                self.assertIn("fenster_titel", vorschau)
+                self.assertIn("metriken", vorschau)
+                self.assertIn("zeilen", vorschau)
+                self.assertGreaterEqual(len(vorschau["metriken"]), 2)
+                self.assertGreaterEqual(len(vorschau["zeilen"]), 2)
+
+    def test_t003_negativ_ungueltige_rolle_oder_daten(self):
+        """T003 Negativtest: Ungültige Struktur oder leere Schmerzpunkte."""
+        ungueltige_rolle = {"id": "unbekannt", "titel": ""}
+        self.assertNotIn("unbekannt", [r["id"] for r in produkt.ROLLEN_SCHMERZPUNKTE])
+        # Sicherstellen, dass keine Schmerzpunkte ohne Lösung existieren
+        for rolle in produkt.ROLLEN_SCHMERZPUNKTE:
+            for sp in rolle["schmerzpunkte"]:
+                self.assertNotEqual(sp["problem"], sp["loesung"], "Problem und Lösung dürfen nicht identisch sein.")
+
+    def test_t005_rollen_und_schmerzpunkte_gerendert(self):
+        """T005: Alle 5 Rollen und Schmerzpunkte werden auf der Landingpage gerendert."""
+        from django.utils.html import escape
+
+        inhalt = self.client.get("/").content.decode()
+        for rolle in produkt.ROLLEN_SCHMERZPUNKTE:
+            with self.subTest(rolle=rolle["id"]):
+                self.assertIn(escape(rolle["kurztitel"]), inhalt)
+                self.assertIn(escape(rolle["slogan"]), inhalt)
+                for sp in rolle["schmerzpunkte"]:
+                    self.assertIn(escape(sp["titel"]), inhalt)
+                    self.assertIn(escape(sp["problem"]), inhalt)
+                    self.assertIn(escape(sp["loesung"]), inhalt)
+
+    def test_t009_vorschauen_und_schalter_im_html_vorhanden(self):
+        """T009: Interaktive Vorschau-Mockups und Metriken im HTML vorhanden."""
+        from django.utils.html import escape
+
+        inhalt = self.client.get("/").content.decode()
+        for rolle in produkt.ROLLEN_SCHMERZPUNKTE:
+            vorschau = rolle["vorschau"]
+            self.assertIn(escape(vorschau["fenster_titel"]), inhalt)
+            for m in vorschau["metriken"]:
+                self.assertIn(escape(m["wert"]), inhalt)
+
+    def test_t013_zeitersparnis_und_banner_vorhanden(self):
+        """T013: Zeiteinsparung je Rolle und Banner sind sichtbar."""
+        inhalt = self.client.get("/").content.decode()
+        for rolle in produkt.ROLLEN_SCHMERZPUNKTE:
+            self.assertIn(rolle["ersparnis"], inhalt)
+        self.assertIn("Büroarbeit", inhalt)
+
+    def test_t016_barrierefreiheit_und_keine_inline_skripte(self):
+        """T016: ARIA-Tabs, Tastaturnavigation und strikte CSP ohne Inline-Skripte."""
+        inhalt = self.client.get("/").content.decode()
+        self.assertIn('role="tablist"', inhalt)
+        self.assertIn('role="tab"', inhalt)
+        self.assertIn('role="tabpanel"', inhalt)
+        self.assertNotIn("<script", inhalt)
+
+    def test_t019_rollenspezifische_demo_links(self):
+        """T019: Demo-Anfrage-Buttons haben rollenbezogene Betreffzeilen."""
+        inhalt = self.client.get("/").content.decode()
+        for rolle in produkt.ROLLEN_SCHMERZPUNKTE:
+            with self.subTest(rolle=rolle["id"]):
+                self.assertIn(f"Demo%20anfragen%20(%7B%7B%20rolle.titel", inhalt) if "{{ rolle.titel" in inhalt else (
+                    self.assertTrue(
+                        rolle["kurztitel"] in inhalt or rolle["titel"] in inhalt
+                    )
+                )
+

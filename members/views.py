@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
@@ -313,6 +314,7 @@ def member_export(request):
     return response
 
 
+@ratelimit(key="ip", rate="5/m", method="POST", block=True)
 def join_info(request):
     """Öffentliche Beitrittsinfo mit Beitragssätzen und Schnupper-Anfrage (PRD M1.6)."""
     kategorien = FeeCategory.objects.filter(aktiv=True)

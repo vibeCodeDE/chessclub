@@ -9,17 +9,17 @@
 {% endcomment %}
 
 {% block title %}Dashboard{% endblock %}
-{% block page_title %}Guten Tag, {{ user.first_name|default:user.get_username }}{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block crumbs %}
-<span class="crumbs-detail">{% if rolle == "admin" %}· Beitragsjahr {{ jahr }} · Stand {{ heute|date:"d.m.Y" }}{% else %}· Spielbetrieb · Stand {{ heute|date:"d.m.Y" }}{% endif %}</span>
+<span class="crumbs-detail">{% if rolle == "admin" %}Beitragsjahr {{ jahr }} · Stand {{ heute|date:"d.m.Y" }}{% else %}Spielbetrieb · Stand {{ heute|date:"d.m.Y" }}{% endif %}</span>
 {% endblock %}
 
 {% block page_actions %}
 <div class="page-heading">
   <div>
-    <h1>Guten Tag, {{ user.first_name|default:user.get_username }}.</h1>
-    <p>{% if rolle == "admin" %}Dein Verein im Überblick am {{ heute|date:"l, j. F Y" }}. Schön, dass du da bist.{% else %}Deine Mannschaften, die nächsten Begegnungen und deine offenen Aufgaben am {{ heute|date:"l, j. F Y" }}.{% endif %}</p>
+    <h1>Dashboard</h1>
+    <p>{% if rolle == "admin" %}Dein Verein im Überblick am {{ heute|date:"l, j. F Y" }}.{% else %}Deine Mannschaften, nächste Begegnungen und offene Aufgaben am {{ heute|date:"l, j. F Y" }}.{% endif %}</p>
   </div>
   <div class="page-heading-actions">
     {% if rolle == "admin" %}

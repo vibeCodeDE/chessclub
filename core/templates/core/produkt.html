@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ product_name }} – Vereinsverwaltung für Schachvereine</title>
-  <meta name="description" content="{{ product_name }}: Mitglieder, Beiträge, Turniere, Spielbetrieb und Kassenbuch in einer Software. Für Schachvereine, datenschutzkonform, Hosting in Deutschland.">
+  <meta name="description" content="{{ product_name }}: Mitglieder, Beiträge, Turniere, Spielbetrieb und Kassenbuch in einer Software. Für Schachvereine, datenschutzkonform, Hosting in der EU.">
   <meta property="og:title" content="{{ product_name }} – Vereinsverwaltung für Schachvereine">
-  <meta property="og:description" content="Schluss mit Excel-Listen: Mitglieder, Beiträge, Turniere und Kasse an einem Ort. Hosting in Deutschland.">
+  <meta property="og:description" content="Schluss mit Excel-Listen: Mitglieder, Beiträge, Turniere und Kasse an einem Ort. Hosting in der EU.">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#12281e">
   <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
@@ -26,6 +26,7 @@
       <span>{{ product_name }}</span>
     </a>
     <nav class="lp-nav" aria-label="Hauptnavigation">
+      <a href="#loesungen">Lösungen</a>
       <a href="#funktionen">Funktionen</a>
       <a href="#datenschutz">Datenschutz</a>
       <a href="#preise">Preise</a>
@@ -44,7 +45,7 @@
       <div>
         <span class="lp-eyebrow">Für Schachvereine in Deutschland</span>
         <h1>Vereinsverwaltung, die Ihr Vorstand gerne benutzt.</h1>
-        <p class="lp-lede">Mitglieder, Beiträge, Turniere, Mannschaften und Kassenbuch in einer Software. Ohne Excel-Listen, ohne Zettelwirtschaft und mit Datenhaltung in Deutschland.</p>
+        <p class="lp-lede">Mitglieder, Beiträge, Turniere, Mannschaften und Kassenbuch in einer Software. Ohne Excel-Listen, ohne Zettelwirtschaft und mit Datenhaltung in der EU (DSGVO-konform).</p>
         <div class="lp-actions">
           <a class="btn gold lp-btn-lg" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
             Kostenlose Demo anfragen {% include "includes/icon.html" with name="arrow-right" size="sm" %}
@@ -79,24 +80,196 @@
   <section class="lp-strip" aria-label="Kennzahlen">
     <div class="lp-wrap lp-strip-row">
       <div><strong>6 Bereiche</strong><span>in einer Anwendung</span></div>
-      <div><strong>100 % Deutschland</strong><span>Hosting und Datenhaltung</span></div>
+      <div><strong>100 % EU-Hosting</strong><span>DSGVO & Datenschutz</span></div>
       <div><strong>0 Tracker</strong><span>keine externen Dienste</span></div>
       <div><strong>Mobil</strong><span>auch als App installierbar</span></div>
     </div>
   </section>
 
-  <section class="lp-section" id="problem">
-    <div class="lp-wrap lp-two">
-      <div>
-        <h2 class="lp-h2">Vereinsarbeit ist Ehrenamt. Sie sollte sich nicht nach Buchhaltung anfühlen.</h2>
-        <p class="lp-muted">In vielen Vereinen liegen Mitgliederliste, Beitragsübersicht und Turnierergebnisse in drei verschiedenen Dateien, manchmal bei drei verschiedenen Personen. Jeder Wechsel im Vorstand wird dann zum Risiko.</p>
+  <section class="lp-section lp-pains-showcase" id="loesungen" aria-labelledby="pains-heading">
+    <div id="problem" style="position: absolute; margin-top: -5rem;"></div>
+    <div class="lp-wrap">
+      <div class="lp-head">
+        <span class="lp-eyebrow dark">♞ Schmerzpunkte &amp; Lösungen</span>
+        <h2 class="lp-h2" id="pains-heading">Vereinsarbeit ist Ehrenamt. Sie sollte sich nicht nach Zettelwirtschaft anfühlen.</h2>
+        <p class="lp-muted">Wählen Sie Ihre Rolle im Verein und sehen Sie sofort, wie Schachverwaltung Ihren Alltag erleichtert und typische Frustmomente löst.</p>
       </div>
-      <ul class="lp-pains">
-        <li><span>Vorher</span> Adressen in Excel, Zahlungen im Kopf der Kassenwartin</li>
-        <li><span>Vorher</span> Turnierergebnisse per Hand in Tabellen getippt und per Mail verschickt</li>
-        <li><span>Vorher</span> Datenschutz-Anfragen, bei denen niemand weiß, wo welche Daten liegen</li>
-        <li class="is-after"><span>Mit uns</span> Eine Software, klare Rollen, alles nachvollziehbar protokolliert</li>
-      </ul>
+
+      <!-- Aggregierter Ersparnis-Banner -->
+      <div class="lp-efficiency-banner" role="region" aria-label="Gesamtnutzen">
+        <div class="lp-efficiency-icon">{% include "includes/icon.html" with name="sparkle" %}</div>
+        <div class="lp-efficiency-text">
+          <div class="lp-efficiency-tag">Nachgewiesene Entlastung</div>
+          <strong>Bis zu 80 Stunden weniger Büroarbeit pro Saison</strong>
+          <span>Für Vorstand, Kassenwart und Spielbetrieb – mehr Zeit für das eigentliche Vereinsleben.</span>
+        </div>
+        <div class="lp-efficiency-badge">
+          {% include "includes/icon.html" with name="shield" size="sm" %}
+          <span>100 % DSGVO &amp; GoBD</span>
+        </div>
+      </div>
+
+      <!-- Radio Tab Navigation (CSS-gesteuert, 100 % ohne JS lauffähig, volle ARIA-Semantik) -->
+      <div class="lp-role-tab-container">
+        {% for rolle in rollen_schmerzpunkte %}
+          <input type="radio" name="lp_role" id="role-{{ rolle.id }}" class="lp-role-radio" {% if forloop.first %}checked{% endif %}>
+        {% endfor %}
+
+        <div class="lp-role-selector" role="tablist" aria-label="Vereinsrollen">
+          {% for rolle in rollen_schmerzpunkte %}
+            <label for="role-{{ rolle.id }}" id="tab-{{ rolle.id }}" class="lp-role-tab" role="tab" aria-controls="panel-{{ rolle.id }}" tabindex="0">
+              <span class="lp-role-tab-icon">{% include "includes/icon.html" with name=rolle.icon %}</span>
+              <span class="lp-role-tab-title">{{ rolle.kurztitel }}</span>
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="lp-role-panels">
+          {% for rolle in rollen_schmerzpunkte %}
+            <div id="panel-{{ rolle.id }}" class="lp-role-panel panel-{{ rolle.id }}" role="tabpanel" aria-labelledby="tab-{{ rolle.id }}">
+              <div class="lp-panel-grid">
+                <!-- Linke Spalte: Schmerzpunkte & Lösungen -->
+                <div class="lp-panel-content">
+                  <div class="lp-panel-header">
+                    <span class="lp-role-badge">{% include "includes/icon.html" with name=rolle.icon size="sm" %} {{ rolle.titel }}</span>
+                    <span class="lp-time-badge">{% include "includes/icon.html" with name="clock" size="sm" %} {{ rolle.ersparnis }}</span>
+                  </div>
+                  <h3 class="lp-panel-slogan">{{ rolle.slogan }}</h3>
+
+                  <!-- Split-Vergleichskarten -->
+                  <div class="lp-pains-list">
+                    {% for sp in rolle.schmerzpunkte %}
+                      <article class="lp-pain-card">
+                        <div class="lp-pain-card-head">
+                          <span class="lp-pain-number">0{{ forloop.counter }}</span>
+                          <h4 class="lp-pain-title">{{ sp.titel }}</h4>
+                        </div>
+                        <div class="lp-pain-split">
+                          <div class="lp-pain-col is-before">
+                            <div class="lp-pain-col-label">
+                              <span class="lp-pain-indicator is-before">{% include "includes/icon.html" with name="x" size="sm" %}</span>
+                              <span class="lp-pain-tag is-before">Vorher</span>
+                            </div>
+                            <p class="lp-pain-text">{{ sp.problem }}</p>
+                          </div>
+                          <div class="lp-pain-col is-after">
+                            <div class="lp-pain-col-label">
+                              <span class="lp-pain-indicator is-after">{% include "includes/icon.html" with name="check" size="sm" %}</span>
+                              <span class="lp-pain-tag is-after">Mit Schachverwaltung</span>
+                            </div>
+                            <p class="lp-pain-text"><strong>{{ sp.loesung }}</strong></p>
+                            {% if sp.detail %}
+                              <div class="lp-pain-feature-tag">
+                                {% include "includes/icon.html" with name="sparkle" size="sm" %}
+                                <small class="lp-pain-detail">{{ sp.detail }}</small>
+                              </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </article>
+                    {% endfor %}
+                  </div>
+
+                  <div class="lp-panel-cta">
+                    <a class="btn gold lp-btn-cta" href="mailto:{{ product_contact }}?subject=Demo-Anfrage%20Schwerpunkt%20{{ rolle.titel|urlencode }}">
+                      Kostenlose Demo für {{ rolle.kurztitel }} anfragen {% include "includes/icon.html" with name="arrow-right" size="sm" %}
+                    </a>
+                    <span class="lp-cta-reassurance">30 Tage unverbindlich testen · Datenübernahme inklusive</span>
+                  </div>
+                </div>
+
+                <!-- Rechte Spalte: Interaktives Mockup -->
+                <div class="lp-panel-preview">
+                  <div class="lp-mock lp-mock-interactive" role="region" aria-label="Interaktive Vorschau: {{ rolle.vorschau.fenster_titel }}">
+                    <div class="lp-mock-bar">
+                      <div class="lp-mock-dots" aria-hidden="true">
+                        <i class="dot-red"></i>
+                        <i class="dot-yellow"></i>
+                        <i class="dot-green"></i>
+                      </div>
+                      <span class="lp-mock-title">{{ rolle.vorschau.fenster_titel }}</span>
+                      <span class="lp-mock-status-pill">
+                        <span class="lp-mock-pulse"></span>
+                        {{ rolle.vorschau.status_badge }}
+                      </span>
+                    </div>
+
+                    <div class="lp-mock-body">
+                      <!-- KPI-Kacheln -->
+                      <div class="lp-mock-stats">
+                        {% for m in rolle.vorschau.metriken %}
+                          <div class="lp-stat-box is-{{ m.status }}">
+                            <small>{{ m.label }}</small>
+                            <strong>{{ m.wert }}</strong>
+                          </div>
+                        {% endfor %}
+                      </div>
+
+                      <!-- Interaktive Unter-Tabs im Mockup mit CSS-Schaltung -->
+                      {% if rolle.vorschau.sub_ansichten %}
+                        <div class="lp-mock-sub-container">
+                          {% for sub in rolle.vorschau.sub_ansichten %}
+                            <input type="radio" 
+                                   name="mock_sub_{{ rolle.id }}" 
+                                   id="sub-{{ rolle.id }}-{{ sub.id }}" 
+                                   class="lp-mock-sub-radio sub-{{ sub.id }}" 
+                                   {% if forloop.first %}checked{% endif %}>
+                          {% endfor %}
+
+                          <div class="lp-mock-subtabs" role="tablist" aria-label="Ansichten für {{ rolle.kurztitel }}">
+                            {% for sub in rolle.vorschau.sub_ansichten %}
+                              <label for="sub-{{ rolle.id }}-{{ sub.id }}" class="lp-mock-subtab label-{{ sub.id }}" role="tab" tabindex="0">
+                                {{ sub.label }}
+                              </label>
+                            {% endfor %}
+                          </div>
+
+                          <div class="lp-mock-views">
+                            {% for sub in rolle.vorschau.sub_ansichten %}
+                              <div class="lp-mock-view view-{{ sub.id }}">
+                                <div class="lp-mock-list">
+                                  {% for zeile in sub.zeilen %}
+                                    <div class="lp-mock-row">
+                                      <span class="lp-mock-icon-badge">{% include "includes/icon.html" with name=zeile.icon size="sm" %}</span>
+                                      <div class="lp-mock-row-content">
+                                        <b>{{ zeile.label }}</b>
+                                        <small>{{ zeile.status }}</small>
+                                      </div>
+                                      <span class="lp-badge-mini{% if 'Mahnung' in zeile.badge or 'warn' in zeile.badge %} warn{% elif 'Bereit' in zeile.badge or 'Geprüft' in zeile.badge or '1-Klick' in zeile.badge or 'Spitzenreiter' in zeile.badge %} gold{% elif 'Sicher' in zeile.badge or 'Valide' in zeile.badge or 'Aktiv' in zeile.badge %} ok{% endif %}">{{ zeile.badge }}</span>
+                                    </div>
+                                  {% endfor %}
+                                </div>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        </div>
+                      {% else %}
+                        <!-- Fallback falls keine sub_ansichten -->
+                        <div class="lp-mock-list">
+                          {% for zeile in rolle.vorschau.zeilen %}
+                            <div class="lp-mock-row">
+                              <span class="lp-dot{% if 'Mahnung' in zeile.badge or 'warn' in zeile.badge %} warn{% elif 'Bereit' in zeile.badge or 'Geprüft' in zeile.badge or '1-Klick' in zeile.badge or 'Autopilot' in zeile.badge %} gold{% endif %}"></span>
+                              <div class="lp-mock-row-content">
+                                <b>{{ zeile.label }}</b>
+                                <small>{{ zeile.status }}</small>
+                              </div>
+                              <span class="lp-badge-mini">{{ zeile.badge }}</span>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+
+                      <div class="lp-mock-footer">
+                        <small>{% include "includes/icon.html" with name="shield" size="sm" %} Revisionssichere Live-Simulation · Kein Datenbank-Zugriff</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </section>
 

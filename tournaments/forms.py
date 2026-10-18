@@ -10,6 +10,7 @@ class TournamentForm(StyledFormMixin, forms.ModelForm):
         model = Tournament
         fields = [
             "name",
+            "saison",
             "datum",
             "anmeldeschluss",
             "ort",
@@ -28,6 +29,14 @@ class TournamentForm(StyledFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from teams.models import Season
+        self.fields["saison"].queryset = Season.objects.all().order_by("-startdatum")
+        self.fields["saison"].required = False
+        self.fields["saison"].empty_label = "– Ohne Saison / Unabhängig –"
+        if not (self.instance and self.instance.pk):
+            aktive = Season.get_aktive_saison()
+            if aktive and not self.initial.get("saison"):
+                self.fields["saison"].initial = aktive
         self._style()
 
 

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Saisonverwaltung{% endblock %}
+{% block page_title %}Saisonverwaltung{% endblock %}
+{% block crumbs %}<div class="crumbs">{{ saisons|length }} Spielzeiten erfasst · Aktive Saison: {{ aktive_saison.name|default:"Keine" }}</div>{% endblock %}
+
+{% block page_actions %}
+<div class="page-head">
+  <p class="lede">Spielzeiten des Vereins strukturieren, aktive Hauptsaison steuern und Mannschaftsübernahmen durchführen.</p>
+  <div class="page-actions">
+    <a class="btn" href="{% url 'teams:season_create' %}">
+      <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Neue Saison anlegen
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-3 mb-2">
+  <div class="stat accent-success">
+    <div class="stat-head"><span class="stat-label">Aktive Hauptsaison</span><span class="stat-icon"><svg class="icon"><use href="#i-calendar"></use></svg></span></div>
+    <div class="stat-value">{{ aktive_saison.name|default:"–" }}</div>
+    <div class="stat-foot">{% if aktive_saison %}{{ aktive_saison.startdatum|date:"d.m.Y" }} bis {{ aktive_saison.enddatum|date:"d.m.Y" }}{% else %}Bitte aktivieren{% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-head"><span class="stat-label">Mannschaften (Aktuell)</span><span class="stat-icon"><svg class="icon"><use href="#i-flag"></use></svg></span></div>
+    <div class="stat-value">{{ aktive_saison.teams_count|default:0 }}</div>
+    <div class="stat-foot">in der aktiven Spielzeit</div>
+  </div>
+  <div class="stat accent-gold">
+    <div class="stat-head"><span class="stat-label">Spielzeiten gesamt</span><span class="stat-icon"><svg class="icon"><use href="#i-table"></use></svg></span></div>
+    <div class="stat-value">{{ saisons|length }}</div>
+    <div class="stat-foot">historisiert &amp; archiviert</div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head">
+    <h2>Erfasste Spielzeiten</h2>
+    <span class="sub">Verwaltung der Saisons und historischer Spielbetriebe</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Saison</th>
+          <th>Zeitraum</th>
+          <th>Status</th>
+          <th>Mannschaften</th>
+          <th>Spiele</th>
+          <th class="right">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in saisons %}
+          <tr data-row="season-{{ s.pk }}">
+            <td>
+              <div class="row-lead">
+                <span class="avatar-sm {% if s.ist_aktiv %}green{% elif s.ist_archiviert %}sage{% else %}gold{% endif %}">
+                  <svg class="icon" style="width:16px;height:16px"><use href="#i-calendar"></use></svg>
+                </span>
+                <span>
+                  <strong>{{ s.name }}</strong>
+                  {% if s.notizen %}
+                    <span class="cell-sub">{{ s.notizen|truncatechars:45 }}</span>
+                  {% endif %}
+                </span>
+              </div>
+            </td>
+            <td class="nowrap">{{ s.startdatum|date:"d.m.Y" }} – {{ s.enddatum|date:"d.m.Y" }}</td>
+            <td>
+              {% if s.ist_aktiv %}
+                <span class="badge badge-sieg">Aktiv (Hauptsaison)</span>
+              {% elif s.ist_archiviert %}
+                <span class="badge" style="background:var(--muted-bg);color:var(--muted)">Archiviert</span>
+              {% else %}
+                <span class="badge badge-remis">In Vorbereitung</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'teams:team_list' %}?saison={{ s.pk }}">{{ s.teams_count }} Teams</a>
+            </td>
+            <td>{{ s.matches_count }}</td>
+            <td class="right nowrap">
+              <div class="btn-group" style="display:inline-flex;gap:4px">
+                <a class="btn ghost small" href="{% url 'teams:season_edit' s.pk %}" title="Bearbeiten">
+                  <svg class="icon icon-sm"><use href="#i-edit"></use></svg> Bearbeiten
+                </a>
+
+                {% if not s.ist_aktiv and not s.ist_archiviert %}
+                  <form method="post" action="{% url 'teams:season_activate' s.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <button class="btn secondary small" type="submit" title="Als aktive Hauptsaison aktivieren">
+                      Aktivieren
+                    </button>
+                  </form>
+                {% endif %}
+
+                {% if not s.ist_archiviert %}
+                  <a class="btn ghost small" href="{% url 'teams:season_rollover' s.pk %}" title="Mannschaften aus Vorsaison übernehmen">
+                    Teams übernehmen
+                  </a>
+                  <form method="post" action="{% url 'teams:season_archive' s.pk %}" style="display:inline" onsubmit="return confirm('Möchten Sie die Saison „{{ s.name }}“ abschließen und archivieren? Spielberichte werden schreibgeschützt.');">
+                    {% csrf_token %}
+                    <button class="btn ghost small" type="submit" title="Saison abschließen">
+                      Abschließen
+                    </button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{% url 'teams:season_reopen' s.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <button class="btn ghost small" type="submit" title="Saison reaktivieren">
+                      Reaktivieren
+                    </button>
+                  </form>
+                {% endif %}
+
+                {% if s.teams_count == 0 and s.matches_count == 0 %}
+                  <form method="post" action="{% url 'teams:season_delete' s.pk %}" style="display:inline" onsubmit="return confirm('Leere Saison „{{ s.name }}“ wirklich löschen?');">
+                    {% csrf_token %}
+                    <button class="btn ghost small" type="submit" style="color:var(--danger)" title="Löschen">
+                      <svg class="icon icon-sm"><use href="#i-trash"></use></svg>
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">
+              {% include "includes/empty_state.html" with icon="calendar" titel="Noch keine Saisons erfasst" text="Legen Sie die erste Spielzeit (z. B. 2026/2027) an." action_url="/saison/neu/" action_label="Erste Saison anlegen" %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

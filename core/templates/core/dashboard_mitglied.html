@@ -2,13 +2,13 @@
 {% load static %}
 
 {% block title %}Mein Bereich{% endblock %}
-{% block page_title %}Hallo {{ user.first_name|default:user.get_username }}{% endblock %}
-{% block crumbs %}<span class="crumbs-detail">· Mein Bereich · Beitragskonto, Termine und Einsätze</span>{% endblock %}
+{% block page_title %}Mein Bereich{% endblock %}
+{% block crumbs %}<span class="crumbs-detail">Beitragskonto, Termine und Einsätze</span>{% endblock %}
 
 {% block page_actions %}
 <div class="page-heading">
   <div>
-    <h1>Hallo {{ user.first_name|default:user.get_username }}.</h1>
+    <h1>Mein Bereich</h1>
     <p>Hier findest du dein Beitragskonto, deine nächsten Partien und wichtige Termine.</p>
   </div>
   <div class="page-heading-actions">

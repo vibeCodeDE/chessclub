@@ -279,6 +279,7 @@ def produkt_seite(request):
         "datenschutz_punkte": produkt.DATENSCHUTZ_PUNKTE,
         "schritte": produkt.SCHRITTE,
         "faq": produkt.FAQ,
+        "rollen_schmerzpunkte": produkt.ROLLEN_SCHMERZPUNKTE,
     }
     return render(request, "core/produkt.html", kontext)
 
@@ -592,3 +593,28 @@ def suche(request):
         "core/suche.html",
         {"begriff": begriff, "ergebnisse": ergebnisse, "treffer": sum(len(v) for v in ergebnisse.values()), "user_role": rolle},
     )
+
+
+def ratelimited_view(request, exception=None):
+    """Fehleransicht bei Überschreitung des Rate-Limits (HTTP 429, PRD N1.1, N1.6, ADR-028)."""
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", ""):
+        from django.http import JsonResponse
+
+        response = JsonResponse(
+            {"detail": "Zu viele Anfragen. Bitte versuchen Sie es in wenigen Minuten erneut."},
+            status=429,
+        )
+    else:
+        response = render(
+            request,
+            "core/ratelimited.html",
+            {
+                "club_name": getattr(settings, "CLUB_NAME", "Schachverein"),
+                "club_short": getattr(settings, "CLUB_SHORT", "Schach"),
+                "club_contact": getattr(settings, "CLUB_CONTACT", "vorstand@example.org"),
+            },
+            status=429,
+        )
+    response["Retry-After"] = "60"
+    return response
+

@@ -17,7 +17,11 @@ def is_marketing_site(request: HttpRequest | None = None) -> bool:
             host = request.get_host().split(":")[0].strip().lower()
         except Exception:
             host = ""
-        product_hosts = getattr(settings, "PRODUCT_HOSTS", ["schachverwaltung.de", "www.schachverwaltung.de"])
+        product_hosts = getattr(
+            settings,
+            "PRODUCT_HOSTS",
+            ["schachverwaltung.de", "www.schachverwaltung.de", "localhost", "127.0.0.1"],
+        )
         if isinstance(product_hosts, str):
             product_hosts = [h.strip().lower() for h in product_hosts.split(",") if h.strip()]
         else:

@@ -61,15 +61,15 @@ Bereitstellung einer geschlossenen Software-Instanz zur Verwaltung der Vereinsmi
 Der Auftragnehmer setzt die folgenden technischen und organisatorischen Sicherheitsmaßnahmen gem. Art. 32 DSGVO um:
 
 * **Zutritts- und Zugangskontrolle:**
-  * Betrieb in nach ISO/IEC 27001 zertifizierten Hochsicherheitsrechenzentren (Hetzner Online GmbH, Standort Nürnberg/Falkenstein).
-  * SSH-Zugang zu Servern ausschließlich über kryptografische Schlüssel (keine Passwort-Authentifizierung).
+  * Betrieb in nach ISO/IEC 27001 zertifizierten europäischen Hochsicherheitsrechenzentren (Scalingo SAS / Hetzner Online GmbH, Standort in der Europäischen Union).
+  * SSH- bzw. Plattform-Zugang ausschließlich über kryptografische Schlüssel bzw. tokenbasierte Authentifizierung.
   * Verpflichtende Zwei-Faktor-Authentifizierung (2FA / TOTP) für Vorstands- und Administrator-Konten der Web-Anwendung.
 * **Zugriffskontrolle & Trennung:**
-  * Single-Tenant-Architektur: Jeder Verein verfügt über einen isolierten Docker-Container und eine eigene PostgreSQL-Datenbank. Keine Vermischung mit Daten Dritter.
+  * Single-Tenant-Architektur: Jeder Verein verfügt über einen isolierten Container bzw. Dyno und eine eigene PostgreSQL-Datenbank. Keine Vermischung mit Daten Dritter.
   * Rollenbasierte Zugriffskontrolle (RBAC): Funktionstrennung zwischen Vorstand, Mannschaftskapitän und Mitgliedern.
 * **Weitergabekontrolle & Transport:**
-  * Erzwungene TLS-Verschlüsselung (HTTPS mit HSTS und modernsten Cipher-Suites via Caddy-Webserver).
-  * Nächtliche Datenbank-Backups werden komprimiert und mit AES-256-CBC verschlüsselt abgelegt.
+  * Erzwungene TLS-Verschlüsselung (HTTPS mit HSTS und modernsten Cipher-Suites via Caddy-Webserver bzw. Scalingo TLS-Router).
+  * Nächtliche Datenbank-Backups werden komprimiert und verschlüsselt abgelegt.
 * **Eingabekontrolle & Revisionssicherheit:**
   * Integriertes `AuditLog`: Änderungen an personenbezogenen Daten und Lesezugriffe auf Mitgliederprofile werden mit Zeitstempel und Benutzerkennung protokolliert.
   * Finanzbuchungen sind unveränderlich und können nur per Gegenbuchung (Storno) korrigiert werden.
@@ -82,9 +82,10 @@ Der Auftraggeber stimmt der Einbindung folgender Unterauftragsverarbeiter für I
 
 | Unternehmen | Anschrift | Zweck | Standort |
 |---|---|---|---|
-| **Hetzner Online GmbH** | Industriestr. 25, 91710 Gunzenhausen | Bereitstellung Cloud-Server & Rechenzentrum | Deutschland (Nürnberg / Falkenstein) |
+| **Scalingo SAS** | 15 avenue du Rhin, 67100 Strasbourg, Frankreich | Bereitstellung Cloud-Plattform (PaaS) & Rechenzentrum | Europäische Union (Frankreich / Deutschland) |
+| **Hetzner Online GmbH** | Industriestr. 25, 91710 Gunzenhausen, Deutschland | Bereitstellung Cloud-Server & Rechenzentrum (Self-Hosting / Backup) | Europäische Union (Deutschland) |
 
-Der Auftragnehmer stellt sicher, dass mit dem Unterauftragnehmer Vereinbarungen bestehen, die den Anforderungen von Art. 28 DSGVO entsprechen.
+Der Auftragnehmer stellt sicher, dass mit den Unterauftragnehmern Vereinbarungen bestehen, die den Anforderungen von Art. 28 DSGVO entsprechen.
 
 ---
 

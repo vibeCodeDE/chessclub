@@ -33,10 +33,11 @@
 
 <div class="card mt-2">
   <form class="filters" method="get">
+    {% include "teams/includes/season_filter.html" %}
     <div class="segmented">
-      <a class="{% if not status %}is-active{% endif %}" href="{% url 'tournaments:manage_list' %}">Alle</a>
+      <a class="{% if not status %}is-active{% endif %}" href="?{% if saison_id %}saison={{ saison_id }}{% endif %}">Alle</a>
       {% for value, label in status_choices %}
-        <a class="{% if status == value %}is-active{% endif %}" href="?status={{ value }}">{{ label }}</a>
+        <a class="{% if status == value %}is-active{% endif %}" href="?{% if saison_id %}saison={{ saison_id }}&{% endif %}status={{ value }}">{{ label }}</a>
       {% endfor %}
     </div>
   </form>
