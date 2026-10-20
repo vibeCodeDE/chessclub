@@ -172,12 +172,17 @@ Vereinsdaten werden vorrangig in der Datenbank über das Singleton-Modell `ClubP
 | [`docs/pilotvereinbarung_muster.md`](docs/pilotvereinbarung_muster.md) | Vereinbarungsvorlage für Pilot- und Testvereine |
 | [`tasks/plan.md`](tasks/plan.md) | Vollständiger Implementierungsplan mit Task-Status und Traceability |
 | [`tasks/todo.md`](tasks/todo.md) | Fortschrittsprotokoll mit Verifikationsbelegen erledigter Aufgaben |
-| [`docs/decisions/`](docs/decisions/) | Architekturentscheidungen ([ADR-001](docs/decisions/ADR-001-django-stack.md) bis [ADR-028](docs/decisions/ADR-028-rate-limiting-mit-django-ratelimit.md)) |
+| [`docs/decisions/`](docs/decisions/) | Architekturentscheidungen ([ADR-001](docs/decisions/ADR-001-django-stack.md) bis [ADR-029](docs/decisions/ADR-029-lizenz-agplv3-und-open-source-strategie.md)) |
 | [`docs/superpowers/specs/`](docs/superpowers/specs/) | Detaillierte Spezifikationen zu den einzelnen Funktionsblöcken |
 
 ---
 
-## Lizenz
+## Lizenz & Support-Modell
 
-Dieses Projekt ist unter der [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0) lizenziert.
+Dieses Projekt ist freie Software unter der **[GNU Affero General Public License v3.0](LICENSE)** (AGPL-3.0) — siehe [ADR-029](docs/decisions/ADR-029-lizenz-agplv3-und-open-source-strategie.md).
+
+* **Community-Support (Self-Hosting):**
+  Fragen, Fehlerberichte und Austausch zum eigenständigen Betrieb erfolgen über die öffentlichen [GitHub Issues](https://github.com) und Discussions. Für selbst gehostete Instanzen gibt es keinen garantierten SLA- oder individuellen Einrichtungssupport.
+* **Managed Hosting & Vorstands-Support ([Schachverwaltung.de](https://schachverwaltung.de)):**
+  Für Vereine, die sich nicht um Server, Updates, PostgreSQL, TLS und DSGVO-konforme Backups kümmern möchten, bieten wir die schlüsselfertige Bereitstellung inklusive persönlichem Support und SLA im Monats-/Jahresabonnement an ([ADR-014](docs/decisions/ADR-014-preisgestaltung.md), [ADR-025](docs/decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
 

@@ -6,7 +6,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 
 ## Architecture Decisions
 
-> Begründungen einzelner Entscheidungen stehen als ADRs in `docs/decisions/` ([ADR-001](../docs/decisions/ADR-001-django-stack.md) bis [ADR-016](../docs/decisions/ADR-016-dsb-schnittstellen-architektur.md)).
+> Begründungen einzelner Entscheidungen stehen als ADRs in `docs/decisions/` ([ADR-001](../docs/decisions/ADR-001-django-stack.md) bis [ADR-029](../docs/decisions/ADR-029-lizenz-agplv3-und-open-source-strategie.md)).
 
 - **Django 5 + PostgreSQL + serverseitige Templates:** Nutzer kennt Django noch nicht — Djangos Admin-Oberfläche übernimmt einen großen Teil der Verwaltungs-UI; Views bleiben einfache Function-Based Views. Keine SPA.
 - **Design-System handgeschrieben in `static/css/app.css`:** kein Tailwind, kein CSS-Buildschritt, kein Node im Betrieb. Das eingebaute Stylesheet ist selbst die Quelle; ein Build würde nur einen zusätzlichen Fehlerpfad in den Betrieb bringen. (Der frühere Tailwind-CLI-Build ist mit dem Zusammenführen der Zweige entfallen.)
