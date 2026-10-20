@@ -1,28 +1,29 @@
 # Schachvereins-Verwaltung
 
-Vereinsverwaltung für den Schachclub Königsspringer Musterstadt e.V. – Mitglieder,
-Beiträge, Spielbetrieb, Turniere, Kommunikation und Kassenbuch in einer Anwendung.
-Servergerendert mit Django, Datenhaltung ausschließlich auf eigener Infrastruktur
-(keine Tracker, keine externen CDNs).
+Moderne Vereinsverwaltung für Schachvereine (z. B. Schachclub Königsspringer Musterstadt e.V.) – Mitglieder, Beiträge, Spielbetrieb, Turniere, Kommunikation und Kassenbuch in einer Anwendung.
+Servergerendert mit Django 5, responsive ab 360 px, DSGVO-konform und betreibbar auf eigener Infrastruktur oder europäischem PaaS (keine Tracker, keine externen CDNs, keine US-Hyperscaler).
+
+Das System dient gleichzeitig als Fundament für das Managed-Angebot [Schachverwaltung.de](https://schachverwaltung.de) ([ADR-014](docs/decisions/ADR-014-preisgestaltung.md), [ADR-018](docs/decisions/ADR-018-branding-schachverwaltung-de.md), [ADR-025](docs/decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
+
+---
 
 ## Schnellstart (Entwicklung)
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 .venv/bin/python manage.py migrate
-.venv/bin/python manage.py seed_demo          # realistische Demo-Daten
+.venv/bin/python manage.py seed_demo          # Realistische Demo-Daten
 .venv/bin/python manage.py runserver
 ```
 
-Für die lokale Vorführung ist Zwei-Faktor abgeschaltet; im Produktivbetrieb ist sie
-für die Vorstandsgruppe verpflichtend.
+Für die lokale Vorführung ist die Zwei-Faktor-Authentifizierung standardmäßig abgeschaltet; im Produktivbetrieb ist sie für die Vorstandsgruppe verpflichtend (`TWOFA_PFLICHT=1`).
 
 ```bash
 TWOFA_PFLICHT=0 .venv/bin/python manage.py runserver
 ```
 
-Alternativ über Docker Compose (App plus PostgreSQL, Migrationen laufen beim Start):
+Alternativ über **Docker Compose** (App plus PostgreSQL 16, automatische Migration beim Start):
 
 ```bash
 docker compose up -d --build
@@ -31,126 +32,152 @@ docker compose exec app pytest
 
 ### Anmeldung mit Demo-Daten
 
-| Benutzer | Rolle | Passwort |
-| --- | --- | --- |
-| `vorstand` | Vorstand (Rolle admin) | `schach2026` |
-| `kassenwart` | Vorstand (Rolle admin) | `schach2026` |
-| `kapitaen` | Mannschaftsführer | `schach2026` |
-| `mitglied` | Mitglied | `schach2026` |
-
-`manage.py seed_demo --reset` löscht die Demo-Daten und legt sie neu an.
-
-## Produkt-Landingpage
-
-Die Verkaufsseite für andere Vereine liegt unter `/produkt/` (in der bisherigen Gestaltung;
-`/` bleibt die Vereinsseite im neuen Design).
-Das Managed-Angebot firmiert unter **Schachverwaltung.de** (`PRODUCT_NAME=Schachverwaltung.de`,
-Kontakt über `PRODUCT_CONTACT=kontakt@schachverwaltung.de`). Preise, Funktionen und FAQ
-stehen in `core/produkt.py`. Die Preise sind festgelegt (19/35/69 € Endpreise, Jahreszahlung,
-zwölf Monate Laufzeit) und in [ADR-014](docs/decisions/ADR-014-preisgestaltung.md) begründet.
-Entscheidung zum Markenauftritt: [ADR-018](docs/decisions/ADR-018-branding-schachverwaltung-de.md).
-`/impressum/` und `/datenschutz/` enthalten nur Platzhaltertexte und müssen vor dem Livegang
-ersetzt werden.
-
-## Tests
-
-```bash
-.venv/bin/python -m pytest          # 349 Tests (1 Skip: nur mit PostgreSQL)
-.venv/bin/python -m ruff check .    # Lint
-.venv/bin/python manage.py check
-```
-
-Die GitHub-Actions-Pipeline (`.github/workflows/ci.yml`) fährt genau diese
-Schritte gegen PostgreSQL 16 plus `manage.py check --deploy` mit den
-Produktions-Settings.
-
-## Produktivbetrieb
-
-```bash
-cp .env.prod.example .env.prod      # Werte ausfüllen
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-Betrieb, Backup und Wiederherstellung: `docs/deployment.md`.
-Wartung für die Vorstandschaft: `docs/wartung.md`.
-
-## Aufbau
-
-| App | Inhalt |
-| --- | --- |
-| `core` | Rollen, Navigation, Dashboard, Audit-Protokoll, Suche, DSGVO, 2FA, PWA |
-| `members` | Mitgliederstammdaten, Statusverlauf, Änderungswunsch-Workflow |
-| `dues` | Beitragskategorien, Beitragslauf, Zahlungen, Mahnwesen, SEPA-Mandate |
-| `teams` | Mannschaften, Ligaspiele, Aufstellungen, Tabellenberechnung |
-| `tournaments` | Turnierverwaltung, öffentliche Anmeldung, Schweizer Paarung |
-| `comms` | Ankündigungen mit Entwurfs-Workflow, Gruppen-E-Mails mit Opt-in |
-| `cashbook` | Kassenbuch, Jahresabschluss, CSV-Export |
-
-Oberflächen: öffentliche Vereinsseite (`/`, `/aktuelles/`, `/turniere/`, `/verein/`,
-`/mitglied-werden/`), Verwaltungs-Shell (`/dashboard/`) und die Django-Administration
-(`/admin/`) als Rückfallebene für den Vorstand.
-
-**Zwei getrennte Design-Systeme** (kein CSS-Buildschritt, keine externen Assets, PRD N1.1):
-
-| Bereich | Stylesheet | Skript | Hülle |
+| Benutzer | Rolle | Passwort | Zuständigkeit |
 | --- | --- | --- | --- |
-| Öffentliche Vereinsseite (inkl. Anmeldung, 2FA, Passwort-Reset) | `static/css/site.css` | `static/js/public.js` | `templates/public_base.html`, `templates/auth_base.html` |
-| Verwaltung/Dashboard/Admin | `static/css/app.css` | `static/js/app.js` | `templates/base.html` |
+| `vorstand` | Vorstand (Gruppe `admin`) | `schach2026` | Volle Rechte, Vereins-Setup, Stammdaten, Saisons |
+| `kassenwart` | Vorstand (Gruppe `admin`) | `schach2026` | Beiträge, SEPA-Export/Verbuchung, Kassenbuch |
+| `kapitaen` | Mannschaftsführer (`kapitaen`) | `schach2026` | Aufstellungen, Ligaspiel-Ergebnisse (keine Finanzdaten) |
+| `mitglied` | Mitglied (`mitglied`) | `schach2026` | Profil-Selbstbedienung, Änderungswünsche, Spielbetrieb |
 
-Der öffentliche Teil folgt der Designsprache aus
-`schachclubmanager-modern-web-design (1).zip` – Entscheidung und Details in
-[ADR-013](docs/decisions/ADR-013-oeffentliche-designsprache.md) und der
-[Spec](docs/superpowers/specs/2026-09-30-oeffentliche-designsprache.md).
-Das interne Design wird separat gepflegt; die beiden Stylesheets überschreiben sich nicht.
-Beispielbilder liegen unter `static/img/` und sind für echte Vereinsfotos austauschbar.
+Beispieldaten können über die CLI zurückgesetzt werden:
+```bash
+python manage.py seed_demo --reset
+```
+Alternativ steht autorisierten Vorständen im Django-Admin unter `/admin/core/demodata/` eine **Web-Steuerung für Demo-Daten** (Ein/Aus mit Revisionsschutz und Prüfung auf echte Bestandsdaten, [ADR-022](docs/decisions/ADR-022-demo-daten-steuerung-im-admin-panel.md)) zur Verfügung.
 
-### Vereinsprofil der öffentlichen Seiten
+---
 
-Diese optionalen Umgebungsvariablen steuern den öffentlichen Auftritt; leere Werte
-blenden die betroffene Zeile aus, statt einen Platzhalter zu erfinden (ADR-012):
+## Marketing- & Vereinsrouting (Schachverwaltung.de)
 
-| Variable | Beispiel | Wirkung |
-| --- | --- | --- |
-| `CLUB_FOUNDED` | `1978` | „Schachverein seit …“, Vereinsjubiläum-Kachel |
-| `CLUB_LOCATION` | `Musterstadt` | Ort in Hero, Fußzeile, Seitentiteln |
-| `CLUB_ROOM` | `Vereinsheim Musterstadt, Musterstraße 1` | Treffpunkt auf Startseite, `/verein/` und Beitragsseite |
-| `CLUB_NIGHT_HOURS` | `Donnerstags ab 19:00 Uhr` | Klubabend, Wochenband, Mitmach-Abschnitt |
-| `CLUB_YOUTH_HOURS` | `Donnerstags 17:30 – 19:00 Uhr` | Jugendtraining |
-| `CLUB_DESCRIPTION` | `Schach für alle – vom ersten Bauernzug bis zur Ligapartie.` | Kurztext in der Fußzeile |
+Das Gesamtsystem unterstützt ein Zwei-Welten-Routing ([ADR-024](docs/decisions/ADR-024-marketing-site-routing-schachverwaltung-de.md)):
 
-`/verein/` ist die öffentliche Vereinsseite (Selbstverständnis, Zeiten, Ligaspielplan);
-alle Angaben dort kommen aus der Datenbank bzw. aus den obigen Variablen.
+1. **Vertriebs- & Marketing-Auftritt:** Auf `schachverwaltung.de` (oder bei `IS_MARKETING_SITE=1`) liefert die Einstiegsroute `/` die Produkt-Landingpage mit Nutzenversprechen, interaktiver Schmerzpunkte- und Feature-Vorschau für fünf Vereinsfunktionen (Vorstand, Kassenwart, Spielleiter, Mannschaftsführer, Mitglieder), Preisstufen und DSGVO/EU-Hosting-Garantie ([ADR-025](docs/decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
+2. **Kunden- & Vereinsinstanzen:** Auf Vereins-Domains oder Subdomains rendert `/` die öffentliche Vereinspräsenz (oder leitet bei deaktiviertem Homepage-Modul direkt zum Login bzw. Dashboard weiter, [ADR-023](docs/decisions/ADR-023-vereinshomepage-als-modul.md)).
+3. **Kanonische Weiterleitung:** Die frühere URL `/produkt/` leitet per HTTP 301 permanent auf `/` weiter.
 
-## Dokumentation
+---
 
-| Datei | Inhalt |
+## Tests & Qualitätssicherung
+
+```bash
+pytest                               # > 740 Tests (inkl. Negativ- und Rollentests)
+ruff check .                         # Linting
+python manage.py check               # Django-Systemprüfung
+python manage.py check --deploy      # Produktions-Sicherheitscheck
+```
+
+Die GitHub-Actions-Pipeline (`.github/workflows/ci.yml`) führt bei jedem Push und PR Tests gegen PostgreSQL 16, Linting mit Ruff, Migrationsprüfung (`makemigrations --check --dry-run`) sowie `manage.py check --deploy` mit den Produktions-Settings (`config.production`) aus.
+
+---
+
+## Produktivbetrieb & Hosting
+
+* **Docker Compose (Self-Hosting):**
+  ```bash
+  cp .env.prod.example .env.prod      # Konfigurationswerte ausfüllen
+  docker compose -f docker-compose.prod.yml up -d --build
+  ```
+* **TLS-Reverse-Proxy:** In `docker-compose.prod.yml` ist **Caddy** integriert, der Zertifikate (Let's Encrypt / ZeroSSL) vollautomatisch bezieht, Sicherheits-Header setzt und statische Assets komprimiert ausliefert ([ADR-009](docs/decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md)).
+* **Cloud & PaaS (Scalingo):** Bereitstellung in der Region Europa (Paris `osc-fr1` / Frankfurt `osc-cl1`) mit EU-Datensouveränität und AVV ([ADR-025](docs/decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
+* **Verschlüsselte Backups & Monitoring:** Nächtliche Dumps mit OpenSSL AES-256-CBC PBKDF2 (`tools/backup.sh`) und Push-Monitoring via Uptime Kuma ([docs/deployment.md](docs/deployment.md)).
+* **Wartung & Betrieb:** Detaillierte Arbeitsanweisungen für Vorstände und Admins in [`docs/wartung.md`](docs/wartung.md).
+
+---
+
+## Architektur & Modulaufbau
+
+### Django-Apps
+
+| App | Funktionsumfang |
 | --- | --- |
-| `docs/prd.md` | Anforderungen, Berechtigungsmatrix (§3.8), Release-Schnitt v1/v1.1 |
-| `docs/abnahme.md` | Abnahme-Checkliste: Erfolgskriterien, Meilensteine, DSGVO |
-| `docs/deployment.md` | Installation, TLS, Backup, Restore, Updates |
-| `docs/ersteinrichtung.md` | Leitfaden und Reihenfolge für die erstmalige Datenbefüllung |
-| `docs/wartung.md` | Kurzanleitung für wiederkehrende Aufgaben |
-| `tasks/plan.md` | Implementierungsplan mit Tasks, Acceptance, Traceability; **einzige Quelle für den Task-Status** |
-| `tasks/todo.md` | Fortschrittsprotokoll mit Verifikationsbelegen, nächste Schritte |
-| `docs/decisions/` | Architekturentscheidungen (ADRs) |
-| `docs/superpowers/specs/` | Detail-Design je Task |
-| `docs/superpowers/plans/` | Schritt-für-Schritt-Umsetzungspläne je Task |
-| `docs/einfuehrung_testverein.md` | Einführungsplan, Pilotkonzept, AVV- und Vertragsmuster |
-| `docs/abnahmen/` | Abnahmebelege je abgeschlossener Task |
+| `core` | Authentifizierung, Rollenmatrix, Dashboard, AuditLog, DSGVO-Auskunft & Anonymisierung, 2FA (TOTP), Brute-Force-Schutz (`axes`), serverseitiges Rate-Limiting (`django-ratelimit`), Onboarding-Assistent, Modul-Toggles (`ModuleSettings`), Demo-Daten-Verwaltung, PWA-Grundlage. |
+| `members` | Mitgliederstammdaten, Statusverlauf (aktiv/passiv/ausgetreten), Profil-Selbstbedienung & Änderungswünsche, DSB-Wertungsportal-Sync (DWZ-Drift-Detection), persönlicher iCal-Feed, CSV-Import mit Dry-Run. |
+| `dues` | Beitragskategorien, Jahresbeitragssätze, Beitragslauf, Zahlungen & Storno per Gegenbuchung, druckfähiges Mahnwesen (HTML), SEPA-Mandate (verschlüsselte IBAN), SEPA-XML-Export (pain.008), 1-Klick-Sammelverbuchung. |
+| `teams` | Saisonverwaltung (Hauptsaison, 1-Klick-Rollover, Archivierung), Mannschaften, Ligaspiele, Aufstellungen, Tabellenberechnung mit Buchholz-Tiebreak, A4-Spielberichtsbogen, WhatsApp-Ticker, iCal-Spielplansynchronisation. |
+| `tournaments` | Schweizer-System-Turniere, Saisonbindung, Rundenaushänge (A4-Druckansicht), öffentliche Online-Anmeldung, Touch-Pills am Brett (WCAG 2.5.5), Buchholz-Wertung, ChessResults-/Swiss-Manager-Export. |
+| `comms` | Vereinsankündigungen mit Entwurfs- und Freigabe-Workflow, SMTP-Gruppen-E-Mail-Verteiler mit Opt-in-Zustimmung. |
+| `cashbook` | Vereinskassenbuch, GoBD-konformes Stornieren per Gegenbuchung (kein Hard-Delete), Jahresabschluss, CSV-Export. |
 
-## Datenschutz
+### Besondere Merkmale & Funktionen (v1.1)
 
-Personenbezogene Daten bleiben in der eigenen Datenbank. Auskunft (PDF/JSON),
-Verzeichnis der Verarbeitungstätigkeiten (CSV) und die Anonymisierung nach
-Austritt sind eingebaut; Details und Restpunkte stehen in `docs/abnahme.md`.
-Es gibt keinen Bank-API-Zugriff und keinen automatisierten SEPA-Einzug
-([ADR-002](docs/decisions/ADR-002-kein-automatisierter-sepa-einzug.md)).
+* **Modul-Toggles im Admin (`ModuleSettings`, [ADR-019](docs/decisions/ADR-019-modul-toggles-im-admin-panel.md)):** Satellitenmodule (`teams`, `tournaments`, `cashbook`, `comms`) können im Django-Admin flexibel de- und aktiviert werden. Nicht genutzte Module verschwinden vollständig aus Menü, Dashboard und Suche; direkte Routenaufrufe liefern HTTP 404.
+* **Vereinshomepage als modulares Add-on ([ADR-023](docs/decisions/ADR-023-vereinshomepage-als-modul.md)):** Vereine mit bestehender Homepage können die integrierte Webpräsenz abschalten (`homepage_aktiv=False`). Die Einstiegsroute `/` leitet eingeloggte Mitglieder direkt ins Dashboard und Besucher zum Login weiter.
+* **Saisonverwaltung ([ADR-027](docs/decisions/ADR-027-saisonverwaltung-fuer-den-vorstand.md)):** Saubere Trennung von sportlichen Spielzeiten (z. B. `2026/2027`) und dem Beitrags-Kalenderjahr. Atomare Hauptsaison-Umschaltung, Spielplanvalidierung, Schreibschutz für archivierte Saisons und 1-Klick-Team-Rollover.
+* **Vereins-Setup & Stammdaten ([ADR-020](docs/decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md)):** Geführtes Browser-Tool unter `/verein/setup/` für Vereinsangaben (`ClubProfile`), Beitragssätze, Mannschaften und CSV-Mitgliederimport inklusive Muster-Download, Zeilen-Mapping und Dry-Run-Validierung.
+* **DSB- / DWZ-Synchronisation ([ADR-016](docs/decisions/ADR-016-dsb-schnittstellen-architektur.md)):** Direkte Anbindung an die DSB-Wertungsportal-API mit 24-Stunden-Cache, Drift-Erkennung (abweichende DWZ, fehlende Spieler) und selektiver Stammdatenaktualisierung.
+* **SEPA-XML-Download (pain.008) & Sammelverbuchung ([ADR-017](docs/decisions/ADR-017-sepa-xml-export-pain-008.md)):** Manuelle Abgabe von Lastschriften bei Banken/Sparkassen ohne unsichere Drittanbieter-Bank-APIs ([ADR-002](docs/decisions/ADR-002-kein-automatisierter-sepa-einzug.md)).
+* **Admin Import/Export ([ADR-021](docs/decisions/ADR-021-django-import-export-im-admin.md)):** Revisionssicherer CSV/TSV/JSON-Import und -Export für Mitglieder und Kassenbuch im Django-Admin ohne Löschberechtigung.
+* **Operative Spieltagsworkflows & Print-Engine:** Touch-Pills am Brett (≥ 44×44 px nach WCAG 2.5.5), A4-Spielberichtsbögen mit Unterschriftsfeldern, Rundenaushänge für den Spielabend und persönliche iCal-Kalenderabonnements für Spieler.
 
-## Arbeitsweise
+---
 
-- Tests zuerst (TDD); jede Task enthält mindestens einen Negativtest.
-- Rollen und Rechte folgen der Matrix in PRD §3.8; jede Zeile hat einen Negativtest.
-- Personenbezogene Änderungen und Zugriffe laufen über den `AuditLog` (PRD N1.5).
-- Keine Drittanbieter-Tracker, kein externes CDN (PRD N1.1).
-- Finanzdaten werden nie gelöscht, sondern per Gegenbuchung korrigiert
-  ([ADR-006](docs/decisions/ADR-006-storno-per-gegenbuchung.md)).
+## Design-Systeme
+
+Das System nutzt zwei vollständig voneinander isolierte handgeschriebene CSS-Architekturen ohne Node.js-Buildschritt oder externe CDN-Abhängigkeiten (PRD N1.1):
+
+| Bereich | Stylesheet | Skripte | Basis-Templates |
+| --- | --- | --- | --- |
+| **Öffentliche Vereinsseite & Auth** (inkl. Anmeldung, 2FA, Passwort-Reset) | `static/css/site.css` | `static/js/public.js` | `templates/public_base.html`, `templates/auth_base.html` |
+| **Interne Verwaltung & Dashboard** | `static/css/app.css` | `static/js/app.js` | `templates/base.html` |
+| **Marketing-Landingpage** | `static/css/landing.css` | *kein JS erforderlich* | `core/templates/core/produkt.html` |
+
+Das öffentliche Design folgt [ADR-013](docs/decisions/ADR-013-oeffentliche-designsprache.md); das interne Design bietet optimierte A4-Drucklayouts (`@media print`), klassische Schachserifen und WCAG-konforme AAA-Kontraste.
+
+### Vereinsprofil & Stammdaten
+
+Vereinsdaten werden vorrangig in der Datenbank über das Singleton-Modell `ClubProfile` verwaltet und können im Einrichtungs-Assistenten (`/verein/setup/`) oder im Django Admin angepasst werden ([ADR-020](docs/decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md)). Bei nicht konfigurierten Feldern greift das System transparent auf die optionalen Umgebungsvariablen zurück:
+
+| Variable | Beispiel | Bedeutung / Fallback |
+| --- | --- | --- |
+| `CLUB_NAME` | `Schachclub Königsspringer Musterstadt e.V.` | Offizieller Vereinsname |
+| `CLUB_SHORT` | `SC Königsspringer` | Kurzname für Navigation und Tabellen |
+| `CLUB_FOUNDED` | `1978` | Gründungsjahr für Vereinsjubiläum |
+| `CLUB_LOCATION` | `Musterstadt` | Stadt/Ort im Header und Footer |
+| `CLUB_ROOM` | `Vereinsheim Musterstadt, Musterstraße 1` | Spiellokal und Adresse |
+| `CLUB_NIGHT_HOURS` | `Donnerstags ab 19:00 Uhr` | Spielabend Erwachsene |
+| `CLUB_YOUTH_HOURS` | `Donnerstags 17:30 – 19:00 Uhr` | Trainingszeiten Jugend |
+| `CLUB_CONTACT` | `vorstand@schachverein-musterstadt.de` | Kontakt-E-Mail |
+
+---
+
+## Datenschutz & Sicherheitsarchitektur
+
+* **Hosting & Infrastruktur:** 100 % EU-Hosting (Scalingo SAS Frankreich/Deutschland bzw. Hetzner Online GmbH Deutschland). Keine externen CDNs, Fonts, Tracking-Pixel oder US-Hyperscaler (PRD N1.1, [ADR-025](docs/decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
+* **DSGVO-Selbstauskunft & Löschung:** 1-Klick-Datenauskunft je Mitglied als HTML, PDF und JSON. Automatische Anonymisierung nach Vereinsaustritt (`manage.py anonymize_former_members`) mit Erhalt der anonymisierten Finanzhistorie (§ 147 AO, PRD N1.2–N1.4).
+* **Audit-Trail (PRD N1.5):** Revisionssicheres `AuditLog` für alle personenbezogenen Datenänderungen, Logins, Detail-Zugriffe, Exporte und Konfigurationsänderungen.
+* **Finanzdaten-Integrität:** Finanz- und Beitragsdaten werden niemals physisch gelöscht; Korrekturen erfolgen ausschließlich durch Storno per Gegenbuchung ([ADR-005](docs/decisions/ADR-005-beitragsposten-idempotenz-und-momentaufnahme.md), [ADR-006](docs/decisions/ADR-006-storno-per-gegenbuchung.md)).
+* **Verschlüsselung sensibler Daten:** Bankverbindungen (IBAN) werden mit symmetrischem Fernet (AES-128-CBC / SHA256) verschlüsselt gespeichert ([ADR-010](docs/decisions/ADR-010-iban-verschluesselt-in-der-datenbank.md)). Kein Klartext in Logs, Dumps oder Listen.
+* **Brute-Force- & DoS-Schutz:**
+  - Login-Schutz mit `django-axes` ([ADR-015](docs/decisions/ADR-015-brute-force-schutz-und-dev-profiling.md)).
+  - Serverseitiges Rate-Limiting (`django-ratelimit`, 5 Requests/Min.) für öffentliche POST-Endpunkte (Schnupper-Formular, Gastturnieranmeldung, Passwort-Reset) mit verifizierter Proxy-IP-Ermittlung (SEC-05, [ADR-028](docs/decisions/ADR-028-rate-limiting-mit-django-ratelimit.md)).
+  - Dateigrößen-Begrenzung beim CSV-Upload (max. 2 MB) zum Schutz vor Memory Exhaustion (T31b).
+  - Bereinigung physischer Dateien bei Datensatzlöschung via `django-cleanup` ([ADR-026](docs/decisions/ADR-026-dateibereinigung-mit-django-cleanup.md)).
+* **Formula-Injection-Schutz (CWE-1236 / SEC-06):** Flächendeckende Maskierung potenzieller Tabellen-Kalkulationsbefehle (`=`, `+`, `-`, `@`) in allen CSV-Exporten (T25c).
+* **2FA & Step-Up-Schutz:** Zwei-Faktor-Authentifizierung (TOTP) für Vorstände verpflichtend; 2FA-Erzwingung bei Einladungsannahme (T26c) und Passwortbestätigung (Step-Up) beim Gerätewechsel (T26d).
+
+---
+
+## Dokumentation & Referenzen
+
+| Dokument | Beschreibung |
+| --- | --- |
+| [`docs/prd.md`](docs/prd.md) | Fachliches Lastenheft, Berechtigungsmatrix (§3.8), Release-Schnitt v1 / v1.1 |
+| [`docs/abnahme.md`](docs/abnahme.md) | Abnahmekriterien, DSGVO-Erfüllungsnachweis und Meilensteine |
+| [`docs/deployment.md`](docs/deployment.md) | Produktiv-Deployment, TLS-Setup mit Caddy, verschlüsselte Backups, Restore-Test & Uptime Kuma |
+| [`docs/ersteinrichtung.md`](docs/ersteinrichtung.md) | Leitfaden für die erstmalige Inbetriebnahme und Datenübernahme |
+| [`docs/wartung.md`](docs/wartung.md) | Django-Wartungsprimer und wiederkehrende Aufgaben für den Vorstand |
+| [`docs/nfr-pruefung.md`](docs/nfr-pruefung.md) | Messwerte zu Performance, Barrierefreiheit (WCAG 2.1 AA) und Responsive Design |
+| [`docs/einfuehrung_testverein.md`](docs/einfuehrung_testverein.md) | Pilotkonzept, Schulungsplan und Rollout-Strategie |
+| [`docs/avv_muster.md`](docs/avv_muster.md) | Muster-Auftragsverarbeitungsvertrag gem. Art. 28 DSGVO (inkl. Scalingo SAS / Hetzner) |
+| [`docs/pilotvereinbarung_muster.md`](docs/pilotvereinbarung_muster.md) | Vereinbarungsvorlage für Pilot- und Testvereine |
+| [`tasks/plan.md`](tasks/plan.md) | Vollständiger Implementierungsplan mit Task-Status und Traceability |
+| [`tasks/todo.md`](tasks/todo.md) | Fortschrittsprotokoll mit Verifikationsbelegen erledigter Aufgaben |
+| [`docs/decisions/`](docs/decisions/) | Architekturentscheidungen ([ADR-001](docs/decisions/ADR-001-django-stack.md) bis [ADR-028](docs/decisions/ADR-028-rate-limiting-mit-django-ratelimit.md)) |
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | Detaillierte Spezifikationen zu den einzelnen Funktionsblöcken |
+
+---
+
+## Lizenz
+
+Dieses Projekt ist unter der [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0) lizenziert.
+
