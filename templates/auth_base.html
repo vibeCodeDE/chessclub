@@ -4,14 +4,16 @@
 Passwort-Reset. Nutzt dieselbe Designsprache wie die Vereinsseite (site.css),
 damit der Weg in den internen Bereich durchgängig wirkt.
 {% endcomment %}
-<html lang="de">
+<html lang="de" data-pwa-aktiv="{% if pwa_aktiv %}1{% else %}0{% endif %}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ club_name }}{% endblock %}</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="stylesheet" href="{% static 'css/site.css' %}?v=20261003">
+  {% if pwa_aktiv %}
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  {% endif %}
   <meta name="theme-color" content="#192f27">
   <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">

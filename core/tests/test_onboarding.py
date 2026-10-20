@@ -165,6 +165,26 @@ class TestOnboardingWorkflow:
         progress = OnboardingProgress.get_solo()
         assert "beitraege" in progress.schritte_abgeschlossen
 
+    def test_step_4_rejects_oversized_csv_negative_test(self, client, admin_user):
+        """Negativtest: Onboarding Schritt 4 weist CSV-Dateien > 2 MB ab und lädt sie nicht in die Session."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from core.forms_setup import MAX_MEMBER_CSV_SIZE_BYTES, MAX_MEMBER_CSV_SIZE_MB
+
+        client.force_login(admin_user)
+        url = reverse("core:onboarding_step_4")
+        oversized_content = b"Vorname;Nachname\n" + (b"A" * (MAX_MEMBER_CSV_SIZE_BYTES + 1024))
+        uploaded_file = SimpleUploadedFile("big.csv", oversized_content, content_type="text/csv")
+
+        response = client.post(
+            url,
+            data={"action": "validate_csv", "csv_datei": uploaded_file},
+            follow=True,
+        )
+        assert response.status_code == 200
+        assert f"Erlaubt sind maximal {MAX_MEMBER_CSV_SIZE_MB} MB" in response.content.decode("utf-8")
+        assert "_onboarding_csv_content" not in client.session
+
     def test_step_6_finish(self, client, admin_user):
         client.force_login(admin_user)
         url = reverse("core:onboarding_step_6")

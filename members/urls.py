@@ -6,6 +6,7 @@ app_name = "members"
 
 urlpatterns = [
     path("profil/", views.profil, name="profil"),
+    path("profil/ical-token-erneuern/", views.renew_personal_calendar_token, name="renew_personal_calendar_token"),
     path("kalender/<str:token>.ics", views.personal_calendar_feed, name="personal_calendar"),
     path("mitglied-werden/", views.join_info, name="join_info"),
     path("mitglieder/", views.member_list, name="member_list"),

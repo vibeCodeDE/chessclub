@@ -98,6 +98,10 @@ class DeploymentConfigurationTests(SimpleTestCase):
         self.assertIn("/tools/backup.sh", compose_text)
         self.assertIn("KUMA_PUSH_URL", compose_text)
 
+        # SEC-01: SSL Redirect und HSTS dürfen nicht hart auf 0 stehen
+        self.assertIn('SECURE_SSL_REDIRECT: "${SECURE_SSL_REDIRECT:-1}"', compose_text)
+        self.assertIn('SECURE_HSTS_SECONDS: "${SECURE_HSTS_SECONDS:-31536000}"', compose_text)
+
     def test_caddyfile_configuration(self):
         """Caddyfile leitet auf app:8000 weiter, liefert statische Dateien aus und setzt Security-Header."""
         caddyfile = (WURZEL / "Caddyfile").read_text(encoding="utf-8")

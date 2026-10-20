@@ -63,3 +63,49 @@ class ProductionSettingsTests(SimpleTestCase):
     def test_secret_key_comes_from_environment(self):
         production = load_production(DJANGO_SECRET_KEY="aus-env")
         self.assertEqual(production.SECRET_KEY, "aus-env")
+
+    def test_ratelimit_ip_meta_key_defaults_to_extractor(self):
+        production = load_production()
+        self.assertEqual(production.RATELIMIT_IP_META_KEY, "core.middleware.get_ratelimit_ip")
+
+    def test_ratelimit_ip_meta_key_can_be_overridden(self):
+        production = load_production(RATELIMIT_IP_META_KEY="HTTP_X_REAL_IP")
+        self.assertEqual(production.RATELIMIT_IP_META_KEY, "HTTP_X_REAL_IP")
+
+
+def load_base_settings(**overrides):
+    """config.settings (neu) laden – nur mit den übergebenen Env-Werten."""
+    with patch.dict(os.environ, overrides, clear=True):
+        importlib.import_module("config.settings")
+        return importlib.reload(sys.modules["config.settings"])
+
+
+class BaseSettingsSecurityTests(SimpleTestCase):
+    """Sicherheits-Gegenprobe: config.settings darf im Nicht-Debug-Modus (DEBUG=False)
+    niemals mit Default- oder leerem Secret-Key starten."""
+
+    def tearDown(self):
+        with patch.dict(os.environ, {"DJANGO_DEBUG": "1", "DJANGO_SECRET_KEY": "dev-only-secret-key"}):
+            importlib.reload(sys.modules["config.settings"])
+
+    def test_settings_secret_key_required_when_debug_false(self):
+        """Negativtest: Bei DEBUG=False führt ein fehlender oder Standard-Schlüssel zum Abbruch."""
+        for val in ("", "dev-insecure-key"):
+            with self.subTest(secret=val):
+                with self.assertRaises(ImproperlyConfigured):
+                    load_base_settings(DJANGO_DEBUG="0", DJANGO_SECRET_KEY=val)
+
+    def test_settings_secret_key_required_when_debug_not_set(self):
+        """Negativtest: Ohne DJANGO_DEBUG (Default ist DEBUG=False) wird der Dev-Key verweigert."""
+        with self.assertRaises(ImproperlyConfigured):
+            load_base_settings(DJANGO_SECRET_KEY="dev-insecure-key")
+
+    def test_settings_secret_key_accepted_when_valid(self):
+        """Positivtest: Ein gültiger Secret Key wird auch bei DEBUG=False übernommen."""
+        settings = load_base_settings(DJANGO_DEBUG="0", DJANGO_SECRET_KEY="sicherer-schluessel-fuer-prod")
+        self.assertEqual(settings.SECRET_KEY, "sicherer-schluessel-fuer-prod")
+
+    def test_settings_dev_fallback_allowed_when_debug_true(self):
+        """Positivtest Dev: Bei DEBUG=True ist der Dev-Fallback-Schlüssel weiterhin erlaubt."""
+        settings = load_base_settings(DJANGO_DEBUG="1")
+        self.assertEqual(settings.SECRET_KEY, "dev-insecure-key")

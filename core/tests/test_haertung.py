@@ -4,13 +4,15 @@ from django.contrib.auth.models import Group, User
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from core.models import OnboardingProgress, TwoFactorDevice
+from core.models import AuditLog, OnboardingProgress, TwoFactorDevice
 from core.roles import ADMIN_GROUP
 from core.twofa import code_erzeugen, neues_secret, otpauth_uri
 
 
 def make_user(username, group_name=None):
-    user = User.objects.create_user(username, password="sicheres-passwort-1")
+    user = User.objects.filter(username=username).first()
+    if not user:
+        user = User.objects.create_user(username, password="sicheres-passwort-1")
     if group_name:
         group, _ = Group.objects.get_or_create(name=group_name)
         user.groups.add(group)
@@ -86,12 +88,50 @@ class ZweiFaktorTests(TestCase):
     def test_zwei_faktor_seite_ohne_session_fuehrt_zum_login(self):
         self.assertRedirects(self.client.get("/anmelden/zwei-faktor/"), "/anmelden/")
 
-    def test_geraetewechsel_loescht_alte_konfiguration(self):
+    def test_geraetewechsel_get_zeigt_passwortabfrage(self):
+        self.client.force_login(self.admin)
+        response = self.client.get("/anmelden/zwei-faktor/neu/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Passwort")
+        self.assertContains(response, "2FA-Gerät")
+
+    def test_geraetewechsel_mit_korrektem_passwort_loescht_alte_konfiguration(self):
         self.client.force_login(self.admin)
         TwoFactorDevice.objects.create(user=self.admin, secret=neues_secret(), bestaetigt=True)
-        response = self.client.post("/anmelden/zwei-faktor/neu/")
+        response = self.client.post(
+            "/anmelden/zwei-faktor/neu/",
+            {"password": "sicheres-passwort-1"},
+        )
         self.assertRedirects(response, "/anmelden/zwei-faktor/")
         self.assertFalse(TwoFactorDevice.objects.filter(user=self.admin).exists())
+        self.assertEqual(self.client.session.get("_2fa_user_id"), self.admin.pk)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                aktion="2FA-Gerät zurückgesetzt", benutzer=self.admin
+            ).exists()
+        )
+
+    def test_negativ_geraetewechsel_ohne_passwort_loescht_geraet_nicht(self):
+        self.client.force_login(self.admin)
+        TwoFactorDevice.objects.create(user=self.admin, secret=neues_secret(), bestaetigt=True)
+        response = self.client.post("/anmelden/zwei-faktor/neu/", {"password": ""})
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(TwoFactorDevice.objects.filter(user=self.admin).exists())
+        self.assertContains(response, "Passwort", status_code=400)
+
+    def test_negativ_geraetewechsel_mit_falschem_passwort_wird_abgelehnt(self):
+        self.client.force_login(self.admin)
+        TwoFactorDevice.objects.create(user=self.admin, secret=neues_secret(), bestaetigt=True)
+        response = self.client.post(
+            "/anmelden/zwei-faktor/neu/",
+            {"password": "falsches-passwort"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(TwoFactorDevice.objects.filter(user=self.admin).exists())
+        self.assertContains(response, "Passwort ist nicht korrekt", status_code=400)
+        self.assertTrue(
+            AuditLog.objects.filter(aktion="Anmeldung abgelehnt").exists()
+        )
 
     def test_negativ_fuenf_fehlversuche_sperren_den_zwei_faktor_zugang(self):
         secret = neues_secret()

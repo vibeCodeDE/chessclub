@@ -13,7 +13,7 @@ from tournaments.pairing import generate_round
 
 
 def make_admin(username="vorstand"):
-    user = User.objects.create_user(username, password="x")
+    user = User.objects.filter(username=username).first() or User.objects.create_user(username, password="x")
     group, _ = Group.objects.get_or_create(name="admin")
     user.groups.add(group)
     return user
@@ -182,6 +182,27 @@ class TurnierverwaltungsTests(TestCase):
         self.assertEqual(paarung.ergebnis, Pairing.Ergebnis.WEISS)
         self.assertIn(paarung.weiss.name, daten["html"]["[data-stand-body]"])
 
+    def test_ergebnis_escapes_xss_in_stand_tabelle(self):
+        p_xss = self.turnier.teilnehmer.first()
+        p_xss.name = "<b onmouseover=alert(1)>Schach-Meister</b>"
+        p_xss.verein = "<script>alert('xss')</script>"
+        p_xss.save()
+
+        runde, _ = generate_round(self.turnier)
+        paarung = runde.paarungen.filter(weiss=p_xss).first() or runde.paarungen.filter(schwarz=p_xss).first()
+        response = self.client.post(
+            f"/turniere/verwalten/paarung/{paarung.pk}/ergebnis/",
+            {"ergebnis": "1-0"},
+            HTTP_ACCEPT="application/json",
+        )
+        daten = json.loads(response.content)
+        self.assertTrue(daten["ok"])
+        stand_html = daten["html"]["[data-stand-body]"]
+        self.assertNotIn("<script>", stand_html)
+        self.assertNotIn("<b onmouseover=", stand_html)
+        self.assertIn("&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;", stand_html)
+        self.assertIn("&lt;b onmouseover=alert(1)&gt;Schach-Meister&lt;/b&gt;", stand_html)
+
     def test_letzte_runde_zuruecknehmen(self):
         generate_round(self.turnier)
         response = self.client.post(
@@ -249,6 +270,24 @@ class TurnierverwaltungsTests(TestCase):
         inhalt = response.content.decode("utf-8-sig")
         self.assertNotIn("geheim@privat.example", inhalt)
         self.assertNotIn("Geheime Anmerkung", inhalt)
+
+    def test_export_escapes_csv_formulas(self):
+        """Negativtest: Verhindert Formula Injection (CWE-1236) im Turnier-Export."""
+        Participant.objects.create(
+            tournament=self.turnier,
+            name="=cmd|' /C calc'!A0",
+            verein="@EvilClub",
+        )
+        self.turnier.ort = "+TurnierHalle"
+        self.turnier.save(update_fields=["ort"])
+
+        response = self.client.get(f"/turniere/verwalten/{self.turnier.pk}/export.csv")
+        self.assertEqual(response.status_code, 200)
+        inhalt = response.content.decode("utf-8-sig")
+        self.assertIn("'+TurnierHalle", inhalt)
+        self.assertIn("'=cmd|' /C calc'!A0", inhalt)
+        self.assertIn("'@EvilClub", inhalt)
+
 
     def test_export_deterministisch(self):
         generate_round(self.turnier)

@@ -1,12 +1,14 @@
 {% load static %}<!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-pwa-aktiv="{% if pwa_aktiv %}1{% else %}0{% endif %}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Vereinsverwaltung für den Schachverein: Mitglieder, Beiträge, Spielbetrieb und Turniere.">
   <title>{% block title %}Dashboard{% endblock %} · {{ club_short }}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261004">
+  {% if pwa_aktiv %}
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  {% endif %}
   <meta name="theme-color" content="#1b382b">
   <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">

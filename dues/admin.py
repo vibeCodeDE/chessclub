@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from core.models import AuditLog
+
 from .models import (
     DunningLetter,
     FeeAmount,
@@ -40,6 +42,18 @@ class SepaMandateAdmin(admin.ModelAdmin):
     list_display = ("member", "referenz", "iban_kurz", "status", "erteilt_am")
     list_filter = ("status",)
     search_fields = ("member__nachname", "member__vorname", "referenz")
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        if request.method == "GET" and request.user.is_authenticated:
+            mandat = self.get_object(request, object_id)
+            if mandat and mandat.member:
+                AuditLog.objects.create(
+                    benutzer=request.user,
+                    aktion="SEPA-Mandat eingesehen",
+                    text=f"SEPA-Mandat {mandat.referenz} von {mandat.member} im Admin aufgerufen.",
+                    member=mandat.member,
+                )
+        return super().change_view(request, object_id, form_url, extra_context)
 
 
 class PaymentInline(admin.TabularInline):

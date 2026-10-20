@@ -28,9 +28,11 @@ Personen (Abschnitt „Monitoring“ in `docs/deployment.md`).
    Beides in eine Authenticator-App übertragen (z. B. Aegis, FreeOTP, Google
    Authenticator) oder den Link am Handy öffnen.
 3. Den 6-stelligen Code der App eintragen → fertig.
-4. Bei Handywechsel: nach dem Passwort-Login auf „Abbrechen“ verzichten und
-   `/anmelden/zwei-faktor/neu/` aufrufen (oder in der Django-Administration das
-   Gerät löschen) – danach neu einrichten.
+4. Bei Handywechsel: Im Profil auf „2FA-Gerät wechseln“ klicken oder
+   `/anmelden/zwei-faktor/neu/` aufrufen, das aktuelle Kontopasswort zur
+   Sicherheitsbestätigung eingeben (Step-Up Authentication) und das neue Gerät einrichten.
+   (Alternativ kann eine zweite Vorstandsperson in der Django-Administration das
+   Gerät löschen).
 
 > Ohne Code kein Zugriff auf Vorstandsfunktionen. Geht das Handy verloren, kann
 > eine zweite Vorstandsperson das Gerät in `/admin/core/twofactordevice/` löschen.

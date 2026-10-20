@@ -23,3 +23,7 @@ TWOFA_PFLICHT = False
 # Dedizierte Tests aktivieren RATELIMIT_ENABLE gezielt per @override_settings(RATELIMIT_ENABLE=True).
 RATELIMIT_ENABLE = False
 
+# PWA standardmäßig in der allgemeinen Testsuite deaktivieren, analog zu TWOFA_PFLICHT.
+# Dedizierte PWA-Tests aktivieren PWA_AKTIV gezielt per @override_settings(PWA_AKTIV=True).
+PWA_AKTIV = False
+

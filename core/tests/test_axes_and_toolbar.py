@@ -158,11 +158,11 @@ class ReverseProxyAndIpTests(TestCase):
         self.factory = RequestFactory()
 
     def test_axes_proxy_einstellungen(self):
-        """Prüft, dass Axes für den Betrieb hinter einem Reverse-Proxy vorkonfiguriert ist."""
+        """Prüft, dass Axes für den Betrieb hinter einem Reverse-Proxy vorkonfiguriert ist (SEC-14)."""
         from django.conf import settings
 
-        self.assertEqual(settings.AXES_PROXY_COUNT, 1)
-        self.assertEqual(settings.AXES_META_PRE_NAME, "HTTP_X_FORWARDED_FOR")
+        self.assertEqual(settings.AXES_IPWARE_PROXY_COUNT, 1)
+        self.assertEqual(settings.AXES_IPWARE_META_PRECEDENCE_ORDER, ("HTTP_X_FORWARDED_FOR",))
 
     def test_ip_extraktion_mit_x_forwarded_for(self):
         """_ip extrahiert die echte Client-IP aus X-Forwarded-For auch bei Proxy-Ketten."""
@@ -207,4 +207,36 @@ class ReverseProxyAndIpTests(TestCase):
         )
         erfolg_log = AuditLog.objects.filter(aktion="Anmeldung").latest("zeitpunkt")
         self.assertIn("IP: 203.0.113.50", erfolg_log.text)
+
+    def test_remote_addr_middleware_setzt_remote_addr_aus_x_real_ip(self):
+        """RemoteAddrMiddleware setzt request.META['REMOTE_ADDR'] aus X-Real-IP."""
+        from core.middleware import RemoteAddrMiddleware
+        from django.http import HttpResponse
+
+        mw = RemoteAddrMiddleware(lambda req: HttpResponse("ok"))
+        request = self.factory.get("/", HTTP_X_REAL_IP="198.51.100.77", REMOTE_ADDR="172.18.0.2")
+        mw(request)
+        self.assertEqual(request.META["REMOTE_ADDR"], "198.51.100.77")
+
+    def test_remote_addr_middleware_ignoriert_spoofed_x_forwarded_for_negativtest(self):
+        """Negativtest: Manipulierte X-Forwarded-For-Header am Anfang der Kette werden ignoriert (SEC-05)."""
+        from core.middleware import RemoteAddrMiddleware
+        from django.http import HttpResponse
+
+        mw = RemoteAddrMiddleware(lambda req: HttpResponse("ok"))
+        # Angreifer schickt gefälschte IP 1.2.3.4, Proxy hängt echte Client-IP 203.0.113.88 an, Docker-Proxy 10.0.0.1
+        request = self.factory.get(
+            "/",
+            HTTP_X_FORWARDED_FOR="1.2.3.4, 203.0.113.88, 10.0.0.1",
+            REMOTE_ADDR="10.0.0.1",
+        )
+        mw(request)
+        self.assertEqual(request.META["REMOTE_ADDR"], "203.0.113.88")
+
+    def test_extract_client_ip_ungueltige_ip_negativtest(self):
+        """Negativtest: Ungültige Zeichen in Header-IPs führen nicht zum Absturz, sondern zu sicherem Fallback."""
+        from core.middleware import extract_client_ip
+
+        request = self.factory.get("/", HTTP_X_REAL_IP="keine-ip", REMOTE_ADDR="198.51.100.12")
+        self.assertEqual(extract_client_ip(request), "198.51.100.12")
 

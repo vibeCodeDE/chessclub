@@ -151,3 +151,33 @@ class KassenberichtTests(TestCase):
         )
         self.assertEqual(antwort.context["jahressumme"], neue_modell_summe)
         self.assertContains(antwort, f"-{ursprung_betrag:.2f} €".replace(".", ","))
+
+    def test_kassenbericht_export_escapes_csv_formulas(self):
+        """Negativtest: Verhindert Formula Injection (CWE-1236) im Kassenbericht-Zahlungs-Export."""
+        m = Member.objects.create(
+            vorname="+InjectedVorname",
+            nachname="=cmd|' /C calc'!A0",
+            eintrittsdatum=date(2020, 1, 1),
+            beitragskategorie=self.kategorie,
+        )
+        fee = MembershipFee.objects.create(
+            member=m,
+            jahr=2026,
+            kategorie_name="@EvilKategorie",
+            betrag=Decimal("90.00"),
+            faellig_am=date(2026, 1, 31),
+        )
+        Payment.objects.create(
+            fee=fee,
+            betrag=Decimal("90.00"),
+            datum=date(2026, 3, 1),
+            notiz="-DDE('calc')",
+        )
+        antwort = self.client.get("/beitraege/kassenbericht/export.csv?jahr=2026")
+        self.assertEqual(antwort.status_code, 200)
+        inhalt = antwort.content.decode("utf-8-sig")
+        self.assertIn("'=cmd|' /C calc'!A0", inhalt)
+        self.assertIn("'+InjectedVorname", inhalt)
+        self.assertIn("'@EvilKategorie", inhalt)
+        self.assertIn("'-DDE('calc')", inhalt)
+

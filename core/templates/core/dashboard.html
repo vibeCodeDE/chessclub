@@ -18,7 +18,7 @@
 {% block page_actions %}
 <div class="page-heading">
   <div>
-    <h1>Dashboard</h1>
+    <h1>Hallo {{ user.first_name|default:user.get_username }}.</h1>
     <p>{% if rolle == "admin" %}Dein Verein im Überblick am {{ heute|date:"l, j. F Y" }}.{% else %}Deine Mannschaften, nächste Begegnungen und offene Aufgaben am {{ heute|date:"l, j. F Y" }}.{% endif %}</p>
   </div>
   <div class="page-heading-actions">

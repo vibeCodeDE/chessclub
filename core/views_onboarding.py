@@ -182,6 +182,10 @@ def onboarding_step_4_members(request):
                 else:
                     messages.error(request, f"DSB-Abruf fehlgeschlagen: {'; '.join(res.fehler_meldungen)}")
         elif action in {"validate_csv", "execute_csv"}:
+            from core.forms_setup import (
+                MAX_MEMBER_CSV_SIZE_BYTES,
+                MAX_MEMBER_CSV_SIZE_MB,
+            )
             from members.services.import_service import (
                 execute_members_import,
                 parse_members_csv,
@@ -191,6 +195,12 @@ def onboarding_step_4_members(request):
             csv_file = request.FILES.get("csv_datei")
             if not csv_file and action == "validate_csv":
                 messages.error(request, "Bitte eine CSV-Datei auswählen.")
+            elif csv_file and hasattr(csv_file, "size") and csv_file.size > MAX_MEMBER_CSV_SIZE_BYTES:
+                messages.error(
+                    request,
+                    f"Die Datei ist zu groß ({csv_file.size / (1024 * 1024):.1f} MB). "
+                    f"Erlaubt sind maximal {MAX_MEMBER_CSV_SIZE_MB} MB.",
+                )
             else:
                 if csv_file:
                     request.session["_onboarding_csv_content"] = csv_file.read().decode("utf-8", errors="replace")

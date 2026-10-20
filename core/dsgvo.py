@@ -168,6 +168,8 @@ def anonymisiere_member(member, *, benutzer=None):
     # 2. SEPA-Mandat anonymisieren und widerrufen
     mandat = SepaMandate.objects.filter(member=member).first()
     if mandat:
+        mandat.iban = ""
+        mandat.iban_kurz = ""
         mandat.kontoinhaber = "Anonymisiert"
         mandat.status = SepaMandate.Status.WIDERRUFEN
         mandat.widerrufen_am = mandat.widerrufen_am or timezone.localdate()
@@ -196,7 +198,18 @@ def anonymisiere_member(member, *, benutzer=None):
     # 5. Historische personenbezogene Werte im AuditLog maskieren
     AuditLog.objects.filter(
         member=member,
-        feld__in=["vorname", "nachname", "geburtsdatum", "strasse", "plz", "ort", "email", "telefon"],
+        feld__in=[
+            "vorname",
+            "nachname",
+            "geburtsdatum",
+            "strasse",
+            "plz",
+            "ort",
+            "email",
+            "telefon",
+            "iban",
+            "kontoinhaber",
+        ],
     ).update(alt_wert="[anonymisiert]", neu_wert="[anonymisiert]")
 
     # 6. Abschluss-Protokoll ohne Klarnamen

@@ -8,7 +8,7 @@
 {% block page_actions %}
 <div class="page-heading">
   <div>
-    <h1>Mein Bereich</h1>
+    <h1>Hallo {{ user.first_name|default:user.get_username }}.</h1>
     <p>Hier findest du dein Beitragskonto, deine nächsten Partien und wichtige Termine.</p>
   </div>
   <div class="page-heading-actions">

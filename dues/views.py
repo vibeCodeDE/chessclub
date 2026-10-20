@@ -11,11 +11,12 @@ from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.html import escape
 from django.views.decorators.http import require_POST
 
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
-from core.ui import fehler, is_ajax, ok, paginate
+from core.ui import fehler, is_ajax, ok, paginate, sanitize_csv
 from members.models import Member
 
 from .forms import (
@@ -134,7 +135,7 @@ def payment_create(request, pk):
         return redirect("dues:fee_detail", pk=fee.pk)
     zeilen_html = "".join(
         f"<tr><td class='nowrap'>{z.datum:%d.%m.%Y}</td><td class='mono'>{z.betrag:.2f} €</td>"
-        f"<td>{z.get_art_display()}</td><td class='cell-sub'>{z.notiz or '–'}</td></tr>"
+        f"<td>{escape(z.get_art_display())}</td><td class='cell-sub'>{escape(z.notiz or '–')}</td></tr>"
         for z in fee.zahlungen.all()
     ) or "<tr><td colspan='4' class='muted'>Noch keine Zahlungen erfasst.</td></tr>"
     return ok(
@@ -179,7 +180,7 @@ def payment_storno(request, pk):
         return redirect("dues:fee_detail", pk=fee.pk)
     zeilen_html = "".join(
         f"<tr><td class='nowrap'>{z.datum:%d.%m.%Y}</td><td class='mono'>{z.betrag:.2f} €</td>"
-        f"<td>{z.get_art_display()}</td><td class='cell-sub'>{z.notiz or '–'}</td></tr>"
+        f"<td>{escape(z.get_art_display())}</td><td class='cell-sub'>{escape(z.notiz or '–')}</td></tr>"
         for z in fee.zahlungen.all()
     ) or "<tr><td colspan='4' class='muted'>Noch keine Zahlungen erfasst.</td></tr>"
     return ok(
@@ -435,14 +436,14 @@ def export(request):
         writer.writerow(
             [
                 fee.jahr,
-                fee.member.nachname,
-                fee.member.vorname,
-                fee.kategorie_name,
+                sanitize_csv(fee.member.nachname),
+                sanitize_csv(fee.member.vorname),
+                sanitize_csv(fee.kategorie_name),
                 f"{fee.betrag:.2f}".replace(".", ","),
                 f"{fee.bezahlter_betrag:.2f}".replace(".", ","),
                 f"{fee.offener_betrag:.2f}".replace(".", ","),
-                fee.get_status_display(),
-                fee.faellig_am.strftime("%d.%m.%Y"),
+                sanitize_csv(fee.get_status_display()),
+                fee.faellig_am.strftime("%d.%m.%Y") if fee.faellig_am else "",
                 fee.mahnstufe,
             ]
         )
@@ -589,12 +590,12 @@ def kassenbericht_export(request):
         writer.writerow(
             [
                 z.datum.strftime("%d.%m.%Y"),
-                z.fee.member.nachname,
-                z.fee.member.vorname,
-                z.fee.kategorie_name,
-                z.get_art_display(),
+                sanitize_csv(z.fee.member.nachname),
+                sanitize_csv(z.fee.member.vorname),
+                sanitize_csv(z.fee.kategorie_name),
+                sanitize_csv(z.get_art_display()),
                 f"{z.betrag:.2f}".replace(".", ","),
-                z.notiz,
+                sanitize_csv(z.notiz),
             ]
         )
     return response

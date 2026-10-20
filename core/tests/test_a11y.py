@@ -34,7 +34,7 @@ class AccessibilityBaseAndStylesTests(TestCase):
         ]
         for pfad in base_templates:
             inhalt = pfad.read_text(encoding="utf-8")
-            self.assertIn('<html lang="de">', inhalt, f"Fehlendes lang=\"de\" in {pfad.name}")
+            self.assertRegex(inhalt, r'<html[^>]*lang="de"', f"Fehlendes lang=\"de\" in {pfad.name}")
 
     def test_viewport_ist_voll_skalierbar_ohne_sperren(self):
         """Zoom bis 200% darf nicht durch user-scalable=no oder maximum-scale=1 blockiert werden."""

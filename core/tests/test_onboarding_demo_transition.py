@@ -16,15 +16,20 @@ User = get_user_model()
 
 @pytest.fixture
 def admin_user(db):
-    user = User.objects.create_user(username="admin_transition", password="password123")
+    user, _ = User.objects.get_or_create(username="admin_transition", defaults={"password": "password123"})
+    user.set_password("password123")
+    user.save()
     grp, _ = Group.objects.get_or_create(name=ADMIN_GROUP)
     user.groups.add(grp)
-    return user
+    yield user
+    User.objects.filter(username="admin_transition").delete()
 
 
 @pytest.fixture
 def demo_environment(db):
     """Erstellt eine typische Demo-Umgebung mit Demo-Usern und Demo-Mitgliedern."""
+    User.objects.filter(username="vorstand").delete()
+    Member.objects.filter(email__in=["demo@example.org", "echt@meinschachverein.de"]).delete()
     demo_user = User.objects.create_user(
         username="vorstand",
         password="password123",
@@ -37,8 +42,11 @@ def demo_environment(db):
         eintrittsdatum="2026-01-01",
         status="aktiv",
     )
-    FeeCategory.objects.create(name="Erwachsene", aktiv=True)
-    return demo_user
+    FeeCategory.objects.get_or_create(name="Erwachsene", defaults={"aktiv": True})
+    yield demo_user
+    Member.objects.filter(email__in=["demo@example.org", "echt@meinschachverein.de"]).delete()
+    FeeCategory.objects.filter(name="Erwachsene").delete()
+    User.objects.filter(username="vorstand").delete()
 
 
 @pytest.mark.django_db

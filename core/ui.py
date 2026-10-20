@@ -33,3 +33,18 @@ def is_ajax(request):
     return request.headers.get("x-requested-with") == "fetch" or "application/json" in request.headers.get(
         "accept", ""
     )
+
+
+def sanitize_csv(value):
+    """Verhindert CSV Formula Injection (CWE-1236 / SEC-06).
+
+    Wenn ein Textfeld mit =, +, -, @, Tab oder Return beginnt,
+    stellt ein vorangestelltes Hochkomma (') sicher, dass Tabellenprogramme
+    (Excel, Calc) den Inhalt als Text und nicht als Formel interpretieren.
+    """
+    if value is None:
+        return ""
+    text = str(value)
+    if text and text[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{text}"
+    return text

@@ -26,6 +26,7 @@ PUBLIC_TEMPLATES = [
     "core/templates/core/offline.html",
     "core/templates/registration/login.html",
     "core/templates/registration/zwei_faktor.html",
+    "core/templates/registration/zwei_faktor_neu.html",
     "core/templates/registration/password_reset_form.html",
     "core/templates/registration/password_reset_done.html",
     "core/templates/registration/password_reset_confirm.html",

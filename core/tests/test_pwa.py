@@ -4,7 +4,7 @@ import json
 import pathlib
 
 from django.contrib.staticfiles import finders
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 
 def static_datei(relativer_pfad):
@@ -33,6 +33,7 @@ class PwaTests(TestCase):
                 f"Icon {icon['src']} fehlt im static-Verzeichnis",
             )
 
+    @override_settings(PWA_AKTIV=True)
     def test_service_worker_wird_unter_wurzel_ausgeliefert(self):
         response = self.client.get("/sw.js")
         self.assertEqual(response.status_code, 200)
@@ -42,11 +43,23 @@ class PwaTests(TestCase):
         self.assertIn("OFFLINE_URL", inhalt)
         self.assertIn("/offline/", inhalt)
 
+    def test_service_worker_bei_deaktivierter_pwa_deregistriert_sich(self):
+        with self.settings(PWA_AKTIV=False):
+            response = self.client.get("/sw.js")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("javascript", response["Content-Type"])
+            self.assertEqual(response["Service-Worker-Allowed"], "/")
+            inhalt = response.content.decode()
+            self.assertIn("registration.unregister()", inhalt)
+            self.assertIn("caches.delete", inhalt)
+            self.assertNotIn("OFFLINE_URL", inhalt)
+
     def test_offline_seite_ladbar(self):
         response = self.client.get("/offline/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Zurzeit offline")
 
+    @override_settings(PWA_AKTIV=True)
     def test_layouts_binden_manifest_und_theme_color_ein(self):
         for url in ("/", "/anmelden/", "/turniere/"):
             with self.subTest(url=url):
@@ -54,12 +67,24 @@ class PwaTests(TestCase):
                 self.assertIn('rel="manifest"', inhalt)
                 self.assertIn('name="theme-color"', inhalt)
                 self.assertIn("apple-touch-icon", inhalt)
+                self.assertIn('data-pwa-aktiv="1"', inhalt)
+
+    def test_layouts_ohne_pwa_binden_kein_manifest_ein(self):
+        with self.settings(PWA_AKTIV=False):
+            for url in ("/", "/anmelden/", "/turniere/"):
+                with self.subTest(url=url):
+                    inhalt = self.client.get(url).content.decode()
+                    self.assertNotIn('rel="manifest"', inhalt)
+                    self.assertIn('name="theme-color"', inhalt)
+                    self.assertIn("apple-touch-icon", inhalt)
+                    self.assertIn('data-pwa-aktiv="0"', inhalt)
 
     def test_service_worker_wird_registriert(self):
         # Der interne Bereich lädt app.js, die öffentlichen Seiten public.js –
-        # beide registrieren den Service Worker (PRD N2.7).
+        # beide registrieren den Service Worker (PRD N2.7) bzw. deregistrieren ihn bei Deaktivierung.
         for datei in ("js/public.js", "js/app.js"):
             with self.subTest(datei=datei):
                 inhalt = static_datei(datei).read_text(encoding="utf-8")
                 self.assertIn("serviceWorker", inhalt)
                 self.assertIn('register("/sw.js"', inhalt)
+                self.assertIn("registration.unregister()", inhalt)

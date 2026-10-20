@@ -6,7 +6,7 @@ siehe docs/superpowers/specs/2026-09-30-oeffentliche-designsprache.md).
 Lädt bewusst nur `css/site.css`: der interne Bereich (Dashboard, Verwaltung)
 nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
 {% endcomment %}
-<html lang="de">
+<html lang="de" data-pwa-aktiv="{% if pwa_aktiv %}1{% else %}0{% endif %}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,7 +19,9 @@ nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
   <meta property="og:site_name" content="{{ club_name }}">
   <meta property="og:image" content="{% block og_image %}{% static 'img/klubabend.jpg' %}{% endblock %}">
   <link rel="stylesheet" href="{% static 'css/site.css' %}?v=20261003">
+  {% if pwa_aktiv %}
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  {% endif %}
   <meta name="theme-color" content="#192f27">
   <link rel="icon" type="image/png" href="{% static 'icons/favicon.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">

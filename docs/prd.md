@@ -152,7 +152,7 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 - N1.3 Löschpflicht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Default 36 Monate); dabei Kontaktdaten + Stammdaten löschen/anonymisieren, Finanzhistorie (Beiträge, Zahlungen) anonymisiert erhalten (nur noch Mitglied-ID). Aufbewahrung der anonymisierten Finanzhistorie: **8 Jahre** nach § 147 AO; die GoBD verweist für die ordnungsgemäße Aufbewahrung darauf, ist aber nicht selbst die Fristquelle. Fristen vor Go-Live mit Steuerberater bestätigen
 - N1.4 Verzeichnis von Verarbeitungstätigkeiten: Maschinenlesbare Exportfunktion der Datenkategorien
 - N1.5 Protokollierung von Logins, Änderungen **und** Zugriffen auf Personendaten (mindestens 12 Monate). „Zugriff" = Aufruf einer Mitglieder-Detailansicht und Ausführung des Auskunfts-Exports; Listenansichten werden nicht einzeln protokolliert
-- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S), Brute-Force-Schutz für Logins (django-axes, ADR-015), Rate-Limiting für öffentliche Endpunkte ohne reCAPTCHA (django-ratelimit, ADR-028)
+- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S) inkl. Step-Up Authentication bei Gerätewechsel, Open-Redirect-Schutz bei der Authentifizierung (CWE-601), Brute-Force-Schutz für Logins (django-axes, ADR-015), Rate-Limiting für öffentliche Endpunkte ohne reCAPTCHA (django-ratelimit, ADR-028)
 - N1.7 Gastdaten aus öffentlichen Turnieranmeldungen (Name + E-Mail) gelten als Personendaten Dritter: sichtbar nur in der Turnierverwaltung, **nicht** in Mitgliederlisten/-suchen, mit Zweckbindung (nur Teilnehmerliste dieses Turniers) und dokumentierter Löschfrist nach Turnierende. Einwilligung: Hinweis auf der Anmeldeseite (Art. 6 Abs. 1 lit. b DSGVO — Durchführung des Turniers)
 
 ### 4.2 Sonstige NFR
@@ -250,4 +250,7 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v2.6 | 2026-10-17 | Harmonisierung der Hosting- und DSGVO-Aussagen auf EU-Ebene für Scalingo Cloud PaaS (ADR-025) |
 | v2.7 | 2026-10-17 | Saisonverwaltung für den Vorstand (S4.7, ADR-027) mit Rollover, Schreibschutz und Historienfilter in Task T36 |
 | v2.8 | 2026-10-18 | Rate-Limiting für öffentliche Endpunkte (django-ratelimit, N1.1, N1.6) gemäß ADR-028 in Task T37 |
+| v2.9 | 2026-10-20 | Dateigrößen-Begrenzung beim Mitglieder-CSV-Upload (max. 2 MB) zum DoS-/OOM-Schutz (S1.7, N2.2) in Task T31b |
+| v3.0 | 2026-10-20 | Re-Authentication / Step-Up Authentication bei 2FA-Gerätewechsel (N1.6) in Task T26d |
+| v3.1 | 2026-10-20 | Open-Redirect-Schutz (CWE-601) bei Login und 2FA mit url_has_allowed_host_and_scheme (N1.6) in Task T26e |
 

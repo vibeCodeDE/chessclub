@@ -74,6 +74,23 @@ class KassenbuchTests(TestCase):
         self.assertNotIn("Alt", inhalt)
         self.assertIn("Saldo", inhalt)
 
+    def test_export_escapes_csv_formulas(self):
+        """Negativtest: Verhindert Formula Injection (CWE-1236) im Kassenbuch-Export."""
+        CashEntry.objects.create(
+            art="einnahme",
+            kategorie="sonstiges",
+            betrag="20.00",
+            datum=date(2026, 6, 1),
+            beschreibung="=cmd|' /C calc'!A0",
+            belegnummer="@BELEG-001",
+        )
+        response = self.client.get("/kasse/export.csv?jahr=2026")
+        self.assertEqual(response.status_code, 200)
+        inhalt = response.content.decode("utf-8-sig")
+        self.assertIn("'=cmd|' /C calc'!A0", inhalt)
+        self.assertIn("'@BELEG-001", inhalt)
+
+
     def test_loeschen_route_existiert_nicht_mehr_404(self):
         buchung = CashEntry.objects.create(
             art="einnahme", kategorie="sonstiges", betrag="5.00",

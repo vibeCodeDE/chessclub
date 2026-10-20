@@ -55,6 +55,16 @@ if SECURE_HSTS_SECONDS:
     SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "0") == "1"
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Rate-Limiting hinter Reverse Proxies (ADR-028 / SEC-05).
+# Verwendet get_ratelimit_ip zur verifizierten IP-Extraktion hinter Reverse Proxies
+# (Caddy überschreibt X-Forwarded-For und X-Real-IP hart mit {remote_host},
+# RemoteAddrMiddleware setzt zusätzlich request.META["REMOTE_ADDR"]).
+# Verhindert DoS-Risiken durch geteilte Zähler bei Proxy-Container-IPs (172.18.x.x / 127.0.0.1)
+# und schützt zuverlässig gegen IP-Spoofing.
+RATELIMIT_IP_META_KEY = os.environ.get(
+    "RATELIMIT_IP_META_KEY", "core.middleware.get_ratelimit_ip"
+)
+
 # ADR-010: Ohne IBAN-Schlüssel startet der Produktivbetrieb nicht. Sonst ginge
 # ein Mandat mit Klartext-IBAN verloren, sobald jemand den Schlüssel nachsetzt.
 if not os.environ.get("IBAN_FERNET_KEY", "").strip():

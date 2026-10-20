@@ -145,6 +145,7 @@ def nav(request):
     profil = get_club_profile(request)
 
     return {
+        "pwa_aktiv": getattr(settings, "PWA_AKTIV", False),
         "module_settings": get_module_settings(request),
         "user_role": role,
         "nav_sektionen": sektionen,

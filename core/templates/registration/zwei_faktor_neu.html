@@ -1,0 +1,36 @@
+{% extends "auth_base.html" %}
+
+{% block title %}2FA-Gerät wechseln · {{ club_short }}{% endblock %}
+
+{% block card %}
+<span class="brand-mark" aria-hidden="true">♞</span>
+<h1>2FA-Gerät wechseln</h1>
+<p class="lede">Konto: <strong>{{ konto }}</strong></p>
+
+{% if form_fehler %}
+  <div class="public-alert error spaced" role="alert">
+    <svg aria-hidden="true"><use href="#i-alert"></use></svg>
+    <div>{{ form_fehler }}</div>
+  </div>
+{% endif %}
+
+<p class="lede spaced">
+  Aus Sicherheitsgründen müssen Sie Ihr aktuelles Passwort bestätigen, um das 2FA-Gerät neu einzurichten.
+</p>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="form-field">
+    <label for="password">Aktuelles Passwort <span class="required-mark" aria-hidden="true">*</span></label>
+    <input class="input" type="password" id="password" name="password" autocomplete="current-password" autofocus required>
+  </div>
+  <button class="form-submit" type="submit">
+    Passwort bestätigen &amp; Gerät zurücksetzen
+    <svg aria-hidden="true"><use href="#i-check"></use></svg>
+  </button>
+</form>
+
+<div class="auth-foot">
+  <a href="{% url 'core:dashboard' %}">Abbrechen und zum Dashboard</a>
+</div>
+{% endblock %}

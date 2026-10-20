@@ -40,10 +40,11 @@ TMP_FILE="${BACKUP_FILE}.tmp"
 echo "Starte verschlüsseltes Backup für ${POSTGRES_DB}@${POSTGRES_HOST}:${POSTGRES_PORT}..."
 
 # 3. Dump -> Gzip -> OpenSSL AES-256-CBC (PBKDF2)
+export BACKUP_ENCRYPTION_KEY
 export PGPASSWORD="${POSTGRES_PASSWORD:-}"
 if pg_dump -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
     | gzip -c \
-    | openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt -pass "pass:${BACKUP_ENCRYPTION_KEY}" -out "$TMP_FILE"; then
+    | openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt -pass env:BACKUP_ENCRYPTION_KEY -out "$TMP_FILE"; then
     mv "$TMP_FILE" "$BACKUP_FILE"
     echo "Backup erfolgreich erstellt: ${BACKUP_FILE}"
 else

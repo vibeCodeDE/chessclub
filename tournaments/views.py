@@ -7,11 +7,12 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.html import escape
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from core.roles import ADMIN_GROUP, role_required
-from core.ui import fehler, ok
+from core.ui import fehler, ok, sanitize_csv
 from members.models import Member
 
 from .forms import ParticipantForm, PublicRegistrationForm, TournamentForm
@@ -299,10 +300,12 @@ def pairing_result(request, pk):
 def _stand_table_rows(stand):
     zeilen = []
     for teilnehmer in stand:
+        verein_text = escape(teilnehmer.verein or "–")
+        name_text = escape(teilnehmer.name)
         zeilen.append(
             f"<tr><td class='mono'>{teilnehmer.rang}</td>"
-            f"<td class='cell-main'>{teilnehmer.name}</td>"
-            f"<td class='cell-sub'>{teilnehmer.verein or '–'}</td>"
+            f"<td class='cell-main'>{name_text}</td>"
+            f"<td class='cell-sub'>{verein_text}</td>"
             f"<td class='num mono' data-stand-punkte='{teilnehmer.pk}'>{teilnehmer.aktuelle_punkte:.1f}</td>"
             f"<td class='num mono' data-stand-buchholz='{teilnehmer.pk}'>{teilnehmer.aktuelle_buchholz:.1f}</td></tr>"
         )
@@ -333,12 +336,12 @@ def export_csv(request, pk):
     writer.writerow(
         [
             "TRN",
-            turnier.name,
+            sanitize_csv(turnier.name),
             turnier.datum.strftime("%d.%m.%Y"),
-            turnier.ort or "Vereinsheim",
+            sanitize_csv(turnier.ort or "Vereinsheim"),
             turnier.runden_anzahl,
-            turnier.get_format_display(),
-            turnier.get_status_display(),
+            sanitize_csv(turnier.get_format_display()),
+            sanitize_csv(turnier.get_status_display()),
         ]
     )
     writer.writerow([])
@@ -349,8 +352,8 @@ def export_csv(request, pk):
     writer.writerow(
         [
             "ARB",
-            settings.CLUB_NAME,
-            getattr(settings, "CLUB_CONTACT", ""),
+            sanitize_csv(settings.CLUB_NAME),
+            sanitize_csv(getattr(settings, "CLUB_CONTACT", "")),
             timezone.localdate().strftime("%d.%m.%Y"),
         ]
     )
@@ -374,20 +377,21 @@ def export_csv(request, pk):
             if paarung is None:
                 ergebnisse.append("")
             elif paarung.ergebnis == Pairing.Ergebnis.BYE:
-                ergebnisse.append("+")
+                ergebnisse.append(sanitize_csv("+"))
             elif not paarung.ergebnis:
                 ergebnisse.append("")
             else:
                 eigene_punkte = paarung.punkte_fuer(teilnehmer)
                 gegner = paarung.gegner_von(teilnehmer)
                 farbe = "w" if paarung.weiss_id == teilnehmer.pk else "s"
-                ergebnisse.append(f"{eigene_punkte:g}{farbe} {gegner.name}" if gegner else f"{eigene_punkte:g}{farbe}")
+                text = f"{eigene_punkte:g}{farbe} {gegner.name}" if gegner else f"{eigene_punkte:g}{farbe}"
+                ergebnisse.append(sanitize_csv(text))
         writer.writerow(
             [
                 "RAN",
                 teilnehmer.rang,
-                teilnehmer.name,
-                teilnehmer.verein,
+                sanitize_csv(teilnehmer.name),
+                sanitize_csv(teilnehmer.verein),
                 teilnehmer.twz or "",
                 f"{teilnehmer.aktuelle_punkte:.1f}".replace(".", ","),
                 f"{teilnehmer.aktuelle_buchholz:.1f}".replace(".", ","),

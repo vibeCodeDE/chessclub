@@ -1,7 +1,13 @@
+import secrets
+
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
+
+
+def generate_ical_token():
+    return secrets.token_urlsafe(24)
 
 
 class Member(models.Model):
@@ -86,12 +92,23 @@ class Member(models.Model):
         blank=True,
         help_text="Gesetzt, wenn Kontaktdaten nach der Aufbewahrungsfrist entfernt wurden (PRD N1.3).",
     )
+    ical_token = models.CharField(
+        "iCal-Token",
+        max_length=64,
+        unique=True,
+        default=generate_ical_token,
+    )
 
     class Meta:
         ordering = ["nachname", "vorname"]
 
     def __str__(self):
         return f"{self.nachname}, {self.vorname}"
+
+    def renew_ical_token(self):
+        self.ical_token = generate_ical_token()
+        self.save(update_fields=["ical_token"])
+        return self.ical_token
 
     @property
     def dwz_formatiert(self):

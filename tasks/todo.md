@@ -181,7 +181,7 @@
   2. **F2 Spielbericht A4 & WhatsApp-Ticker:** Druckfertige Ansicht `match_print` (`/spiele/<pk>/drucken/`) in `teams/views.py` und Template `teams/templates/teams/match_print.html` mit Aufstellung, Brettpunkten und Unterschriftenfeldern. WhatsApp-Ticker-Kopierbutton in `teams/templates/teams/match_detail.html`.
   3. **D1 Touch-Pills am Brett:** Mobile Radio-Touch-Pills (≥ 44×44 px nach WCAG 2.5.5) mit automatischem Autosave per JavaScript in `teams/templates/teams/match_detail.html`.
   4. **F3 Rundenaushang A4:** Ansicht `round_print` (`/turniere/verwalten/<pk>/runden/<nr>/drucken/`) in `tournaments/views.py` und Template `tournaments/templates/tournaments/round_print.html` für das Schwarze Brett am Spielabend.
-  5. **F4 Persönlicher iCal-Feed:** Signiertes Token (`TimestampSigner`) und ICS-Feed `personal_calendar_feed` (`/mitglieder/kalender/<token>.ics`) in `members/views.py` und Einbindung im Mitgliederprofil (`members/templates/members/profil.html`).
+  5. **F4 Persönlicher iCal-Feed:** Widerrufbares Zufallstoken `ical_token` auf `Member` (`Member.renew_ical_token`), ICS-Feed `personal_calendar_feed` (`/mitglieder/kalender/<token>.ics`), 1-Klick-Erneuerung `/profil/ical-token-erneuern/` im Mitgliederprofil mit AuditLog-Protokollierung (`members/templates/members/profil.html`).
   6. **F5 Mitglieder-Schnellfilter & Smart Badges:** Filter-Typen (U18, Senioren, ohne Kategorie, ohne SEPA-Mandat) und Zähler-Pills in `members/views.py` und `members/templates/members/member_list.html`.
   7. **D2 & D4 Typografie & Kontraste:** Klassische Serif-Schrift (`--display`), `font-variant-numeric: tabular-nums` für Tabellen/DWZ/Ergebnisse und WCAG AAA-Kontrastverbesserung in `static/css/app.css`.
   8. **D3 Systemweite Print-Engine:** `@media print`-Optimierung für sauberen A4-Druck ohne Header/Sidebar/Buttons in `static/css/app.css`.
@@ -287,6 +287,70 @@
 - **Beleg:** 8 Tests in `core/tests/test_ratelimit.py`; 32 Tests in `core/tests/test_oeffentliches_design.py`; vollständige Testsuite `docker compose exec app pytest` (675 passed, 256 subtests passed, 0 failures); Negativtests: 6. POST-Versuch liefert 429 auf allen geschützten Routen; GET-Anfragen (Lesen von Turnieren/Seiten) bleiben unbegrenzt möglich; verschiedene IP-Adressen besitzen isolierte Kontingente; AJAX-Header liefert sauberes JSON mit HTTP 429.
 
 ---
+
+### T31b: Dateigrößen-Begrenzung beim Mitglieder-CSV-Upload (DoS-Schutz, S1.7/N2.2)
+- **Problem & Kontext:** `MemberCsvUploadForm` besaß keine Dateigrößenbegrenzung. Der Dateiinhalt wurde bei Uploads mit `read()` vollständig in den RAM geladen und in die Benutzersitzung (`request.session["pending_import_csv"]`) geschrieben. Sehr große Dateien (> hunderte MB) bargen ein DoS-Risiko durch OOM-Abstürze oder ein Aufblähen der Datenbanksitzungstabelle `django_session`.
+- **Umsetzung:**
+  - `MAX_MEMBER_CSV_SIZE_MB = 2` und `MAX_MEMBER_CSV_SIZE_BYTES = 2 * 1024 * 1024` in [core/forms_setup.py](file:///C:/Users/xyxyx/Desktop/development/core/forms_setup.py) definiert.
+  - Feldvalidierung `clean_csv_file()` in `MemberCsvUploadForm`, die Dateien über 2 MB mit ValidationError abweist.
+  - Hinweistext im Formularfeld und Helptext um Angabe der maximalen Dateigröße (2 MB) ergänzt.
+  - Fehlerbehandlung in [core/views_setup.py](file:///C:/Users/xyxyx/Desktop/development/core/views_setup.py) verfeinert: Spezifische Formularfehler werden in die Flash-Nachrichten übernommen; `pending_import_csv` in der Session wird bei Bestätigung zusätzlich vor Übergröße geschützt.
+  - Zusätzliche Absicherung in [core/views_onboarding.py](file:///C:/Users/xyxyx/Desktop/development/core/views_onboarding.py) (Schritt 4, CSV-Import) gegen Uploads über 2 MB.
+- **Beleg:** 12 Tests in `members/tests/test_member_import.py` (inkl. `MemberCsvUploadFormTests` und Negativtests `test_upload_file_exceeding_max_size_is_rejected_negative_test`, `test_confirmation_with_oversized_session_data_rejected_negative_test`); 13 Tests in `core/tests/test_onboarding.py` (inkl. `test_step_4_rejects_oversized_csv_negative_test`).
+
+---
+
+### T26c: 2FA-Erzwingung bei Annahme von Vorstands-Einladungen (N1.6)
+- **Problem & Kontext:** Beseitigung einer Sicherheitslücke / eines 2FA-Bypasses bei Annahme von Vorstands-Einladungen (`core/auth_views.py:accept_invitation`). Für Vorstände (`rolle="admin"`) ist die Zwei-Faktor-Authentifizierung laut PRD N1.6 und `core.auth_views.zwei_faktor_pflicht` verbindlich. Bisher rief die View nach Annahme der Einladung jedoch direkt `login(request, user)` auf und leitete auf `core:dashboard` weiter, wodurch ein neuer Administrator ohne 2FA-Einrichtung sofort vollen Vorstands-Zugriff erhielt.
+- **Umsetzung:**
+  - In [core/auth_views.py](file:///C:/Users/xyxyx/Desktop/development/core/auth_views.py) (`accept_invitation`): Prüfung via `_braucht_zwei_faktor(user)`.
+  - Bei erforderlicher 2FA: Vorherige Sessions werden sauber beendet (`logout(request)`), 2FA-Sessionvariablen (`SESSION_SCHLUESSEL = user.pk`, `_2fa_backend`, `_2fa_next = ""`, `SESSION_FEHLSCHLAEGE = 0`) gesetzt und zwingend auf `core:zwei_faktor` zur Ersteinrichtung umgeleitet. `login()` wird nicht direkt aufgerufen.
+  - Rollen ohne 2FA-Pflicht (z. B. Kapitän) oder Deaktivierung in der Entwicklung (`TWOFA_PFLICHT=False`) loggen weiterhin direkt ein und leiten auf `core:dashboard` weiter.
+- **Beleg:** 15 Tests in `core/tests/test_staff_invitation.py` (inkl. neuer Sicherheits- und Negativtests: `test_accept_invitation_view_admin_enforces_2fa_negativtest` prüft Umleitung auf 2FA, Unauthentifiziertheit vor 2FA-Bestätigung, 403/Login-Redirect auf geschützte Routen, Abweisung ungültiger TOTP-Tokens und erfolgreichen Abschluss mit Geräteregistrierung; `test_accept_invitation_view_kapitaen_no_2fa` prüft direkte Anmeldung für Rollen ohne 2FA; `test_accept_invitation_logs_out_existing_session_before_2fa` prüft die Abmeldung vorheriger Nutzersitzungen).
+
+---
+
+### T26d: Step-Up Authentication bei 2FA-Gerätewechsel (N1.6)
+- **Problem & Kontext:** In `core/auth_views.py:zwei_faktor_neu` konnte ein eingeloggter Benutzer sein `TwoFactorDevice` ohne erneute Passworteingabe löschen und neu initialisieren. Bei ungesperrten Bildschirmen oder kompromittierten Sitzungen ermöglichte dies eine dauerhafte Kontoübernahme durch Umregistrierung auf ein fremdes 2FA-Gerät.
+- **Umsetzung:**
+  - In [core/auth_views.py](file:///C:/Users/xyxyx/Desktop/development/core/auth_views.py) (`zwei_faktor_neu`): Abfrage des Kontopassworts (GET rendert Formular, POST validiert via `request.user.check_password(password)`).
+  - Fehlversuche senden das Signal `user_login_failed`, loggen eine Fehlermeldung und liefern HTTP 400 mit Formularfehler zurück; das bisherige 2FA-Gerät wird keinesfalls gelöscht.
+  - Erfolgreiche Bestätigung löscht das Gerät, initialisiert die 2FA-Session (`SESSION_SCHLUESSEL`), dokumentiert den Vorgang im [AuditLog](file:///C:/Users/xyxyx/Desktop/development/core/models.py) ("2FA-Gerät zurückgesetzt") und leitet zur Neueinrichtung auf `core:zwei_faktor` weiter.
+  - View durch `@ratelimit(key="ip", rate="5/m", method="POST", block=True)` gegen Brute-Force-Angriffe abgesichert.
+  - Template [core/templates/registration/zwei_faktor_neu.html](file:///C:/Users/xyxyx/Desktop/development/core/templates/registration/zwei_faktor_neu.html) im einheitlichen öffentlichen Design (`auth_base.html`).
+  - Menüpunkt / Aktionskarte für 2FA-Gerätewechsel im Benutzerprofil (`members/views.py:profil`, `members/templates/members/profil.html`) für Vorstände und Nutzer mit aktivem 2FA-Gerät integriert.
+  - Wartungsdokumentation in [docs/wartung.md](file:///C:/Users/xyxyx/Desktop/development/docs/wartung.md) aktualisiert.
+- **Beleg:** 10 Tests in `core/tests/test_haertung.py` (inkl. `test_geraetewechsel_get_zeigt_passwortabfrage`, `test_geraetewechsel_mit_korrektem_passwort_loescht_alte_konfiguration`, Negativtests `test_negativ_geraetewechsel_ohne_passwort_loescht_geraet_nicht`, `test_negativ_geraetewechsel_mit_falschem_passwort_wird_abgelehnt`); 44 Tests in `members/tests/test_selfservice.py` (inkl. `test_profil_zeigt_zwei_faktor_fuer_admin` und Negativtest `test_negativ_profil_ohne_admin_und_ohne_geraet_zeigt_kein_zwei_faktor`); Gesamttestsuite mit 725 Tests zu 100% grün (`docker compose exec app pytest`).
+
+---
+
+### T25c: Schutz gegen CSV Formula Injection in Export-Endpunkten (CWE-1236 / SEC-06, N1.6)
+- **Problem & Kontext:** In mehreren CSV-Export-Views (`dues`, `cashbook`, `tournaments`) wurden Benutzereingaben und Textfelder ungefiltert in die CSV-Dateien geschrieben. Wenn Felder mit `=`, `+`, `-`, `@`, Tab oder Return beginnen, führen Tabellenprogramme (Excel, LibreOffice Calc) beim Öffnen Formeln oder DDE-Befehle aus (z. B. `=cmd|' /C calc'!A0`).
+- **Umsetzung:**
+  - Zentrale Sanitizer-Funktion `sanitize_csv(...)` in [core/ui.py](file:///C:/Users/xyxyx/Desktop/development/core/ui.py): Stellt Textfeldern, die mit `=`, `+`, `-`, `@`, `\t` oder `\r` beginnen, ein einfaches Hochkomma (`'`) voran.
+  - Konsequenter Einsatz in sämtlichen CSV-Views:
+    - [dues/views.py](file:///C:/Users/xyxyx/Desktop/development/dues/views.py) (`export`): `nachname`, `vorname`, `kategorie_name`, `status`.
+    - [dues/views.py](file:///C:/Users/xyxyx/Desktop/development/dues/views.py) (`kassenbericht_export`): `nachname`, `vorname`, `kategorie_name`, `zahlungsart`, `notiz`.
+    - [cashbook/views.py](file:///C:/Users/xyxyx/Desktop/development/cashbook/views.py) (`export`): `art`, `kategorie`, `beschreibung`, `belegnummer`, `erfasst_von`.
+    - [tournaments/views.py](file:///C:/Users/xyxyx/Desktop/development/tournaments/views.py) (`export_csv`): `name`, `ort`, `format`, `status`, `CLUB_NAME`, `CLUB_CONTACT`, `teilnehmer.name`, `teilnehmer.verein`, Rundenergebnisse / Freilos-Marker.
+- **Beleg:** Negativtests in allen Fachmodulen:
+  - `dues/tests/test_beitraege.py`: `test_export_escapes_csv_formulas`
+  - `dues/tests/test_kassenbericht.py`: `test_kassenbericht_export_escapes_csv_formulas`
+  - `cashbook/tests/test_kasse.py`: `test_export_escapes_csv_formulas`
+  - `tournaments/tests/test_turniere.py`: `test_export_escapes_csv_formulas`
+  - `members/tests/test_views.py`: `test_export_escapes_csv_formulas`
+  - Gesamttestsuite mit 725 Tests zu 100% grün (`docker compose exec app pytest`).
+
+---
+
+### T26e: Open-Redirect-Schutz bei der Anmeldung (CWE-601 / SEC-15, N1.6)
+- **Problem & Kontext:** In `core/auth_views.py` (`anmelden`, `zwei_faktor`) wurde der Parameter `next` ungeprüft aus `request.POST` bzw. `request.GET` bzw. der Session (`_2fa_next`) übernommen (`redirect(ziel or "core:dashboard")`). Ein Angreifer konnte manipulierte Phishing-Links (z. B. `https://schachverein.de/anmelden/?next=https://evil-phishing.com/login`) versenden, woraufhin Benutzer nach erfolgreicher Authentifizierung und 2FA-Bestätigung nahtlos auf die externe Phishing-Seite weitergeleitet wurden (Open Redirect, CWE-601).
+- **Umsetzung:**
+  - Zentrale Hilfsfunktion `_sicheres_ziel(ziel, request)` in [core/auth_views.py](file:///C:/Users/xyxyx/Desktop/development/core/auth_views.py) unter Verwendung von Djangos Sicherheitsfunktion `url_has_allowed_host_and_scheme(ziel, allowed_hosts={request.get_host()}, require_https=request.is_secure())`.
+  - Strikte Validierung in `anmelden` vor Login-Weiterleitung und vor Session-Ablage in `_2fa_next`.
+  - Strikte Validierung in `zwei_faktor` nach erfolgreicher TOTP-Bestätigung (Defense-in-Depth auch gegen manipulierte Sessionwerte).
+  - Validierung bei bereits eingeloggten Benutzern sowie Sanitisierung vor Übergabe an den Template-Kontext (`login.html`), damit Phishing-Links nicht in `<input type="hidden" name="next">` gerendert werden.
+- **Beleg:** 13 Tests in `core/tests/test_auth.py` (inkl. neuer Positiv- und Negativtests: `test_login_redirect_with_safe_next_url`, `test_negativ_login_rejects_open_redirect_external_url`, `test_negativ_login_rejects_open_redirect_scheme_relative`, `test_negativ_login_page_sanitizes_external_next_parameter`, `test_login_page_renders_safe_next_hidden_input`, `test_authenticated_user_with_safe_next_url`, `test_negativ_authenticated_user_rejects_open_redirect`, `test_two_factor_preserves_safe_next_url`, `test_negativ_two_factor_rejects_open_redirect_url`, `test_negativ_two_factor_rejects_tampered_session_next`); Gesamttestsuite mit 735 Tests zu 100% grün (`docker compose exec app pytest`).
 
 ## Nächste Schritte
 

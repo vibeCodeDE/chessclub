@@ -90,23 +90,31 @@ class TopbarTests(TestCase):
         # Negativtest: Mitglied darf keine Saisonverwaltung im Dropdown haben
         self.assertNotIn(reverse("teams:season_list"), html)
 
-    def test_keine_redundante_begruessung_in_topbar_und_dashboard(self):
-        """Negativtest: Weder Topbar-Breadcrumbs noch Dashboard-Überschriften enthalten redundante Begrüßungen."""
+    def test_topbar_ohne_begruessung_aber_dashboard_mit_hallo(self):
+        """Topbar-Breadcrumbs bleiben sachlich; persönliche Begrüßung (Hallo firstname) ist im Dashboard-Inhalt."""
         # Admin Dashboard
         self.client.force_login(self.admin)
         res_admin = self.client.get(reverse("core:dashboard"))
         html_admin = res_admin.content.decode("utf-8")
-        self.assertIn('>Dashboard<', html_admin)
-        self.assertNotIn('Guten Tag', html_admin)
-        self.assertNotIn('Hallo ', html_admin)
+        breadcrumb_match = re.search(r'<nav[^>]*class="[^"]*topbar-breadcrumb[^"]*"[^>]*>(.*?)</nav>', html_admin, re.S)
+        self.assertTrue(breadcrumb_match)
+        breadcrumb_html = breadcrumb_match.group(1)
+        self.assertIn('>Dashboard<', breadcrumb_html)
+        self.assertNotIn('Hallo', breadcrumb_html)
+        self.assertNotIn('Guten Tag', breadcrumb_html)
+        self.assertIn('<h1>Hallo Max.</h1>', html_admin)
 
         # Mitglied Dashboard (Mein Bereich)
         self.client.force_login(self.mitglied)
         res_mitglied = self.client.get(reverse("core:dashboard"))
         html_mitglied = res_mitglied.content.decode("utf-8")
-        self.assertIn('>Mein Bereich<', html_mitglied)
-        self.assertNotIn('Hallo ', html_mitglied)
-        self.assertNotIn('Guten Tag', html_mitglied)
+        breadcrumb_match_m = re.search(r'<nav[^>]*class="[^"]*topbar-breadcrumb[^"]*"[^>]*>(.*?)</nav>', html_mitglied, re.S)
+        self.assertTrue(breadcrumb_match_m)
+        breadcrumb_html_m = breadcrumb_match_m.group(1)
+        self.assertIn('>Mein Bereich<', breadcrumb_html_m)
+        self.assertNotIn('Hallo', breadcrumb_html_m)
+        self.assertNotIn('Guten Tag', breadcrumb_html_m)
+        self.assertIn('<h1>Hallo Max.</h1>', html_mitglied)
 
     def test_negativ_kapitaen_ohne_admin_rechte_sieht_keinen_django_admin(self):
         """Negativtest: Mannschaftskapitän sieht keinen Django-Admin-Link im Dropdown."""

@@ -222,6 +222,11 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Für jede der 5 Kernflächen liegt ein Messwert auf der Zielhardware vor; Kontraste, Labels, Tastaturbedienung und Fokus geprüft — schwere Verstöße (A/AA) sind 0 oder als dokumentierte Ausnahme im PRD-§7-Erfolgskriterium vermerkt.
   *Verify:* `pytest core/` (automatisierbare Teilprüfungen) + manueller Audit-Durchgang mit Tastatur — **Negativtest:** Auf 360 px darf kein horizontaler Overflow entstehen. · *Files:* `core/tests/test_a11y.py`, `docs/nfr-pruefung.md`, `docs/abnahme.md` · *Größe:* M · *PRD:* N2.2, N2.3, N2.4 · *Release:* v1 · *Deps:* T25
 
+- [x] **T25c: Schutz gegen CSV Formula Injection in Export-Endpunkten (CWE-1236 / SEC-06)** *(v1.1 — umgesetzt)*
+  Flächendeckende Absicherung aller CSV-Export-Views gegen Formula/DDE Injection (CWE-1236) mittels `core.ui.sanitize_csv`: Betroffen und abgesichert wurden Beitrags-CSV (`dues/views.py:export`), Kassenbericht-Zahlungs-CSV (`dues/views.py:kassenbericht_export`), Kassenbuch-CSV (`cashbook/views.py:export`) sowie Turnier-CSV (`tournaments/views.py:export_csv`). Alle String-Spalten und Benutzereingaben (Namen, Kategorien, Notizen, Beschreibungen, Belegnummern, Vereine, Spielerergebnisse) werden durch Voranstellen eines einfachen Hochkommas (`'`) neutralisiert, wenn sie mit `=`, `+`, `-`, `@`, Tab oder Return beginnen.
+  *Acceptance:* Alle exportierten Textfelder mit führenden Formel- oder Befehlsoperatoren werden mit einem vorangestellten `'` maskiert; Tabellenkalkulationen (Excel, LibreOffice Calc) führen keine Formeln oder DDE-Befehle mehr aus; numerische und Datumsfelder bleiben standardkonform formatiert.
+  *Verify:* `pytest dues/tests/test_beitraege.py dues/tests/test_kassenbericht.py cashbook/tests/test_kasse.py tournaments/tests/test_turniere.py members/tests/test_views.py` — **Negativtests:** Exportierte Payloads (`=cmd|' /C calc'!A0`, `@Evil...`, `+Injected...`, `-DDE...`) werden in allen Modulen sicher mit führendem Hochkomma serialisiert. · *Files:* `core/ui.py`, `dues/views.py`, `cashbook/views.py`, `tournaments/views.py`, `dues/tests/test_beitraege.py`, `dues/tests/test_kassenbericht.py`, `cashbook/tests/test_kasse.py`, `tournaments/tests/test_turniere.py` · *Größe:* S · *PRD:* N1.6 · *Release:* v1.1 · *Deps:* T25
+
 - [x] **T26: 2FA für die Vorstandsgruppe** *(v1.1 — umgesetzt)*
   TOTP als eigene schlanke Implementierung in `core/twofa.py` (kein Fremdpaket), Gerät je Vorstandskonto (`TwoFactorDevice`), erzwungen für die Admin-Gruppe im Produktivbetrieb (`TWOFA_PFLICHT`), in der Entwicklung abschaltbar.
   *Acceptance:* Admin-Login erfordert 2FA; Gerät kann im Profil eingerichtet und gewechselt werden; Rollen „mitglied"/„kapitaen" bleiben ohne 2FA.
@@ -231,6 +236,16 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   Brute-Force-Schutz für Logins (`/anmelden/`, `/admin/`) nach 5 Fehlversuchen mit 1 Stunde Sperre und barrierefreier deutscher Sperrseite (`core/lockout.html`) gemäß [ADR-015](../docs/decisions/ADR-015-brute-force-schutz-und-dev-profiling.md). Entwicklungs-Profiling mit `django-debug-toolbar` (N+1-Query-Prüfung, SQL-Budgets) und Entwicklungs-Tools mit `django-extensions` (`shell_plus`, `show_urls`, `validate_templates`) aktiv bei `DEBUG=True`, vollkommen abgeschaltet in Produktion (`DEBUG=False`).
   *Acceptance:* 5 Fehlversuche sperren den Zugang mit HTTP 429 und Lockout-Template; erfolgreiche Anmeldung setzt den Zähler zurück; `/__debug__/` ist in Produktion 404 und nicht erreichbar; `validate_templates` meldet 0 Syntaxfehler; 2FA-Vervollständigung funktioniert mit mehreren Auth-Backends.
   *Verify:* `pytest core/tests/test_axes_and_toolbar.py` — **Negativtest:** 6. Versuch nach 5 Fehlern liefert 429; `/__debug__/` bei `DEBUG=False` liefert 404; Dev-Tools in Produktion nicht aktiv. · *Files:* `requirements.txt`, `config/settings.py`, `config/urls.py`, `config/settings_test.py`, `core/auth_views.py`, `core/templates/core/lockout.html`, `core/tests/test_axes_and_toolbar.py`, `docs/decisions/ADR-015-brute-force-schutz-und-dev-profiling.md` · *Größe:* S · *PRD:* N1.6, N2.2 · *Release:* v1.1 · *Deps:* T26
+
+- [x] **T26c: 2FA-Erzwingung bei Annahme von Vorstands-Einladungen** *(v1.1 — umgesetzt)*
+  Beseitigung des 2FA-Bypasses bei Annahme von Vorstands-Einladungen (`core/auth_views.py:accept_invitation`): Vorstands-Einladungen (`rolle="admin"` bzw. `_braucht_zwei_faktor(user)`) werden nach Kennwortvergabe nicht mehr direkt eingeloggt (`login()`), sondern setzen die 2FA-Sessionvariablen (`SESSION_SCHLUESSEL`, `_2fa_backend`, `_2fa_fehlschlaege`) und leiten zur Ersteinrichtung auf `core:zwei_faktor` um. Vorherige Sessions werden vorab invalidiert (`logout(request)`). Rollen ohne 2FA-Pflicht (z. B. Kapitän) loggen weiterhin direkt ein.
+  *Acceptance:* Annahme einer Vorstands-Einladung leitet bei aktiver 2FA-Pflicht zwingend auf `/anmelden/zwei-faktor/` um; Benutzer ist unauthentifiziert, bis ein gültiger TOTP-Code bestätigt wurde; ungültiger Code wird abgewiesen; Nicht-Admin-Einladungen loggen direkt ein.
+  *Verify:* `pytest core/tests/test_staff_invitation.py` — **Negativtests:** Unauthentifizierter Zustand nach Einladungsannahme ohne 2FA; abgewiesener Zugriff auf `/dashboard/`; Fehlversuch bei ungültigem TOTP; Abmeldung vorheriger aktiver Benutzersitzungen. · *Files:* `core/auth_views.py`, `core/tests/test_staff_invitation.py` · *Größe:* S · *PRD:* N1.6 · *Release:* v1.1 · *Deps:* T26
+
+- [x] **T26d: Step-Up Authentication bei 2FA-Gerätewechsel** *(v1.1 — umgesetzt)*
+  Beseitigung der Sicherheitslücke beim 2FA-Gerätewechsel (`core/auth_views.py:zwei_faktor_neu`): Vor dem Löschen und Neuregistrieren des `TwoFactorDevice` muss das aktuelle Passwort des Benutzers via `user.check_password(...)` bestätigt werden. Verhindert unbefugte Kontoübernahmen bei ungesperrten Arbeitsplätzen oder kurzzeitig kompromittierten Sitzungen. Rate-Limiting (5/m je IP), AuditLog-Protokollierung bei Rücksetzung und Fehlversuchsmeldung an das Authentifizierungssystem. Integration der Wechsel-Aktion im Mitgliederprofil.
+  *Acceptance:* `/anmelden/zwei-faktor/neu/` zeigt Passwortabfrage (GET); korrektes Passwort löscht das alte Gerät, setzt `_2fa_user_id` und leitet zur Neueinrichtung um; AuditLog erfasst den Wechsel.
+  *Verify:* `pytest core/tests/test_haertung.py members/tests/test_selfservice.py` — **Negativtests:** POST ohne Passwort oder mit falschem Passwort löscht das 2FA-Gerät keinesfalls, meldet Login-Fehlschlag und gibt HTTP 400 mit Formularfehler zurück; unauthentifizierter Aufruf leitet zum Login weiter. · *Files:* `core/auth_views.py`, `core/templates/registration/zwei_faktor_neu.html`, `members/views.py`, `members/templates/members/profil.html`, `core/tests/test_haertung.py`, `members/tests/test_selfservice.py`, `docs/wartung.md` · *Größe:* S · *PRD:* N1.6 · *Release:* v1.1 · *Deps:* T26
 
 - [x] **T15: Kassenbuch** *(v1.1 — umgesetzt)*
   `CashEntry` (Einnahme/Ausgabe, Kategorie, Betrag, Datum, Notiz, Belegnummer), Liste + Jahresfilter, Jahresabschluss, CSV-Export für den Steuerberater.
@@ -245,7 +260,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 - [x] **T27: PWA — installierbare App**
   `manifest.webmanifest` (Name, Icons, `display: standalone`, Farbschema), Service Worker (App-Shell + Statics aus Cache, Network-First für den Rest), iOS-Meta-Tags (apple-touch-icon, Statusbar), Registrierung im Basis-Template, Versions-/Cache-Invalidierung bei Deploy.
   *Acceptance:* „Zum Homescreen hinzufügen" auf Android + „Zum Bildschirm hinzufügen" auf iOS funktioniert; App öffnet sich ohne Browser-UI; Startseite lädt offline aus dem Cache; Update invalidiert den alten Cache.
-  *Verify:* `pytest core/tests/test_pwa.py` + manuell Chrome DevTools → Application → Add to home screen — **Negativtest:** offline erscheint nur die Offline-Seite, **keine** angeforderten Seiten werden mit veralteten Daten aus dem Cache bedient. · *Files:* `core/views.py`, `static/manifest.webmanifest`, `static/sw.js`, `tools/generate_icons.py` · *Größe:* M · *PRD:* N2.7 · *Release:* v1 · *Deps:* T25
+  *Verify:* `pytest core/tests/test_pwa.py` + manuell Chrome DevTools → Application → Add to home screen — **Negativtest:** offline erscheint nur die Offline-Seite, **keine** angeforderten Seiten werden mit veralteten Daten aus dem Cache bedient. · *Files:* `core/views.py`, `static/manifest.webmanifest`, `static/sw.js`, `tools/generate_icons.py` · *Größe:* M · *PRD:* N2.7 · *Release:* v1 · *Deps:* T25 · *Status:* PWA über `PWA_AKTIV` (Standard: `False`) temporär deaktiviert (Manifest ausgeblendet, Service Worker deregistriert und Caches geleert).
 
 - [x] **T28: Öffentliche Designsprache (Referenz-ZIP)**
   Der öffentliche Teil der App folgt der Designsprache aus `schachclubmanager-modern-web-design (1).zip`:
@@ -296,6 +311,12 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   Zentrales Onboarding- und Verwaltungstool für den Vorstand im Browser (`/verein/setup/`) und per CLI (`import_members`), um echte Vereinsdaten nach dem Deployment (z. B. auf Scalingo) in die Datenbank einzupflegen (ADR-020).
   *Design:* [ADR-020](../docs/decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md). Singleton-Modell `ClubProfile` in `core/models.py` mit Fallback auf Django-Settings; reiner Fachservice `members.services.import_service` für Parsing, Encoding-Erkennung (UTF-8, Latin-1), Validierung und verschlüsselte SEPA-Mandatsanlage (Fernet); dünne Function-Based Views mit `@role_required(ADMIN_GROUP)` für Profil, Beitragskategorien, Mannschaften und CSV-Import inklusive Muster-Download und Dry-Run-Vorschau; AuditLog-Erfassung.
   *Acceptance:* Vorstand kann über `/verein/setup/` Stammdaten (Name, Spielabendzeiten, SEPA-Gläubiger) in der DB speichern; Templates und Kontextprozessoren spiegeln DB-Werte sofort wider; Mitglieder-CSV lässt sich prüfen (Vorschau mit Fehleranzeige) und fehlerfrei importieren; SEPA-Mandate werden mit verschlüsselter IBAN erzeugt; Nicht-Admins erhalten 403.
+
+- [x] **T31b: Dateigrößen-Begrenzung beim Mitglieder-CSV-Upload (DoS-Schutz)** *(v1.1)*
+  Begrenzung der maximalen Dateigröße im `MemberCsvUploadForm` (max. 2 MB) und Schutz vor Memory Exhaustion (OOM) sowie Session-Bloat im Vereins-Setup (`core/views_setup.py`) und Onboarding (`core/views_onboarding.py`).
+  *Acceptance:* Dateien > 2 MB werden im Formular abgewiesen; Dateiinhalt wird bei Übergröße nicht in den Speicher oder die Session geladen; klare Fehlermeldung im UI; Negativtests für Upload und Session-Bestätigung.
+  *Verify:* `pytest members/tests/test_member_import.py core/tests/test_onboarding.py` — **Negativtests:** Upload > 2 MB wird mit Fehlermeldung abgewiesen, Session bleibt leer, kein Datensatz wird angelegt; manipulierte Session-Daten über 2 MB werden bei Bestätigung verworfen. · *Files:* `core/forms_setup.py`, `core/views_setup.py`, `core/views_onboarding.py`, `members/tests/test_member_import.py`, `core/tests/test_onboarding.py` · *Größe:* S · *PRD:* S1.7, N2.2 · *Release:* v1.1 · *Deps:* T31
+
 - [x] **T32: django-import-export im Django Admin (Mitglieder & Kassenbuch)** *(v1.1)*
   Standardisierter Import und Export für `Member` und `CashEntry` direkt im Django Admin Panel über `django-import-export` (ADR-021).
   *Design:* [ADR-021](../docs/decisions/ADR-021-django-import-export-im-admin.md). Ressourcen `MemberResource` (`members/resources.py`) und `CashEntryResource` (`cashbook/resources.py`), Foreign-Key-Widget für Beitragskategorien über den Namen, Vorbelegung von `erfasst_von` und `_changed_by`, `clean_model_instances = True` für strenge Modell-Validierung, Deaktivierung von Lösch-Rechten (`has_delete_permission = False`), automatische AuditLog-Protokollierung bei jedem Export und Import.
@@ -306,7 +327,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   2. *F2 & D3 (Mannschaften):* Druckfertiger A4-Spielberichtsbogen (`/spiele/<pk>/drucken/`) mit Aufstellung, Einzelergebnissen und Unterschriftsfeldern sowie 1-Klick-WhatsApp-Ticker-Kopierer.
   3. *D1 (Ergebniserfassung):* Touch-Pills am Brett (≥ 44×44 px nach WCAG 2.5.5) mit Sofort-Autosave statt fummeliger Dropdowns.
   4. *F3 & D3 (Turniere):* A4-Rundenaushang für das Schwarze Brett am Spielabend (`/turniere/verwalten/<pk>/runden/<nr>/drucken/`).
-  5. *F4 (Mitglieder):* Persönlicher iCal-Kalender-Abonnement-Feed (`/mitglieder/kalender/<token>.ics`) für individuelle Spielereinsätze mit manipulationssicherem Signatur-Token (`TimestampSigner`).
+  5. *F4 (Mitglieder):* Persönlicher iCal-Kalender-Abonnement-Feed (`/mitglieder/kalender/<token>.ics`) für individuelle Spielereinsätze mit widerrufbarem Zufallstoken auf `Member` (`Member.renew_ical_token`, PRD S4.6/DSGVO).
   6. *F5 (Mitglieder):* Smart-Filter & Schnellauswahl-Badges (U18, Senioren, ohne Kategorie, ohne SEPA-Mandat).
   7. *D2 & D4 (Design):* Klassisch-schachliche Serif-Typografie (`--display`), tabellarische Ziffern (`tabular-nums`) für Tabellen und DWZ, WCAG AAA-Kontraste.
   8. *D3 (Print-Engine):* Systemweite `@media print`-Optimierung für sauberen A4-Druck.
@@ -341,7 +362,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T26 2FA, T26b Brute-Force/Dev-Toolbar, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design, T34 Demo-Daten-Steuerung (S7.6), T35 Dateibereinigung (django-cleanup), T36 Saisonverwaltung (S4.7), T37 Rate-Limiting (django-ratelimit)
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T25c CSV-Formula-Schutz, T26 2FA, T26b Brute-Force/Dev-Toolbar, T26c 2FA-Einladung, T26d 2FA-Step-Up, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T31b CSV-Größenbegrenzung (S1.7/N2.2), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design, T34 Demo-Daten-Steuerung (S7.6), T35 Dateibereinigung (django-cleanup), T36 Saisonverwaltung (S4.7), T37 Rate-Limiting (django-ratelimit)
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
 - **Out of scope (K):** nuLiga-Mutations-Export / TRF16 (ADR-016 Säule 3), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
@@ -359,12 +380,12 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | M5.1 / M5.2 | T13 / T14 |
 | M7.1 / M7.2 / M7.3 | T6 + T11 / T1 + T2 / T5 |
 | S7.4 | T30 *(v1.1 / ADR-019)* |
-| S7.5 / S1.7 | T31 *(v1.1 / ADR-020)* |
+| S7.5 / S1.7 | T31 (+T31b) *(v1.1 / ADR-020)* |
 | S7.6 | T34 *(v1.1 / ADR-022)* |
 | N1.1 | T24 (Hoststandort + kein CDN/Tracker), T37 (kein reCAPTCHA) |
 | N1.2 / N1.3 / N1.4 | T23 |
 | N1.5 | T5 (Logins/Änderungen) + T12 (Detail-Zugriffe) |
-| N1.6 | T26 + T26b + T37 *(v1.1 — im PRD als S geführt)* |
+| N1.6 | T25c + T26 + T26b + T26c + T26d + T26e + T37 *(v1.1 — im PRD als S geführt)* |
 | N1.7 | T19 |
 | N2.1 / N2.4 | T24 |
 | N2.2 / N2.3 | T25b + T26b |

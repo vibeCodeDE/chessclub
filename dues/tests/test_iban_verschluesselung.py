@@ -131,6 +131,22 @@ class ChiffreTests(TestCase):
         self.assertEqual(maske, "DE89 •••• •••• 3000")
         self.assertEqual(self.member.sepa_mandat.iban, IBAN)
 
+    def test_admin_change_view_protokolliert_zugriff_im_audit_log(self):
+        from django.contrib.auth.models import User
+        from core.models import AuditLog
+
+        admin_user = User.objects.create_superuser("admin_root", password="x")
+        mandat = self.mandat()
+
+        self.client.force_login(admin_user)
+        response = self.client.get(f"/admin/dues/sepamandate/{mandat.pk}/change/")
+        self.assertEqual(response.status_code, 200)
+
+        eintrag = AuditLog.objects.filter(aktion="SEPA-Mandat eingesehen", member=self.member).first()
+        self.assertIsNotNone(eintrag)
+        self.assertEqual(eintrag.benutzer, admin_user)
+        self.assertIn(mandat.referenz, eintrag.text)
+
 
 def _admin():
     from django.contrib.auth.models import Group, User

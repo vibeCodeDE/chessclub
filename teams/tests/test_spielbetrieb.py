@@ -13,7 +13,7 @@ from teams.services import tabelle
 
 
 def make_user(username, gruppe):
-    user = User.objects.create_user(username, password="x")
+    user = User.objects.filter(username=username).first() or User.objects.create_user(username, password="x")
     group, _ = Group.objects.get_or_create(name=gruppe)
     user.groups.add(group)
     return user

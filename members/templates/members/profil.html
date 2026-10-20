@@ -99,6 +99,12 @@
               <button class="btn small secondary" type="button" onclick="navigator.clipboard.writeText('{{ calendar_url }}').then(() => { if (window.App && window.App.toast) window.App.toast('Kalender-Link kopiert!', 'success'); else alert('Kopiert!'); })">
                 Link kopieren
               </button>
+              <form method="post" action="{% url 'members:renew_personal_calendar_token' %}" style="display:inline">
+                {% csrf_token %}
+                <button class="btn small ghost text-danger" type="submit" onclick="return confirm('Persönlichen Kalender-Token wirklich erneuern? Bestehende Abonnements auf Ihren Geräten werden ungültig.');">
+                  Token erneuern
+                </button>
+              </form>
             </div>
             <p class="cell-sub mt-1">Dieser geheime Link synchronisiert deine Spieltage automatisch.</p>
           </div>
@@ -136,6 +142,25 @@
         {% endfor %}
       </ul>
     </div>
+
+    {% if has_2fa or is_admin %}
+      <div class="card">
+        <div class="card-head"><h2>Zwei-Faktor-Authentifizierung (2FA)</h2></div>
+        <div class="card-body">
+          {% if has_2fa %}
+            <p>Ihr Konto ist durch ein Zwei-Faktor-Gerät (Authenticator-App) geschützt.</p>
+            <a class="btn small secondary" href="{% url 'core:zwei_faktor_neu' %}">
+              <svg class="icon icon-sm"><use href="#i-shield"></use></svg> 2FA-Gerät wechseln
+            </a>
+          {% else %}
+            <p>Für Ihr Vorstandskonto ist ein Zwei-Faktor-Gerät vorgesehen.</p>
+            <a class="btn small" href="{% url 'core:zwei_faktor_neu' %}">
+              <svg class="icon icon-sm"><use href="#i-shield"></use></svg> 2FA einrichten
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

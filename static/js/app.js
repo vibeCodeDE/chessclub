@@ -743,11 +743,26 @@
 })();
 
 
-/* ---- PWA: Service Worker registrieren (PRD N2.7) ---- */
+/* ---- PWA: Service Worker Steuerung (PRD N2.7) ---- */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
-      /* Offline-Funktion ist optional – Fehler nicht in die Konsole der Vorstandschaft werfen */
-    });
+    const pwaAktiv = document.documentElement.getAttribute("data-pwa-aktiv") === "1";
+    if (pwaAktiv) {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
+        /* Offline-Funktion ist optional – Fehler nicht in die Konsole der Vorstandschaft werfen */
+      });
+    } else {
+      /* PWA temporär deaktiviert: Service Worker deregistrieren und Caches leeren */
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister();
+        }
+      });
+      if ("caches" in window) {
+        caches.keys().then((names) => {
+          names.forEach((name) => caches.delete(name));
+        });
+      }
+    }
   });
 }

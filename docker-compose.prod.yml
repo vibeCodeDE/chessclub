@@ -25,8 +25,9 @@ services:
       DJANGO_SETTINGS_MODULE: "config.production"   # erzwingt Secret-Key und echtes Mail-Backend
       DJANGO_DEBUG: "0"
       TWOFA_PFLICHT: "1"
-      SECURE_SSL_REDIRECT: "0"        # im Reverse Proxy auf 1 setzen, sobald TLS aktiv ist
-      SECURE_HSTS_SECONDS: "0"        # nach erfolgreichem TLS-Test z. B. auf 31536000 setzen
+      PWA_AKTIV: "${PWA_AKTIV:-0}"
+      SECURE_SSL_REDIRECT: "${SECURE_SSL_REDIRECT:-1}"        # im Reverse Proxy auf 1 setzen, sobald TLS aktiv ist
+      SECURE_HSTS_SECONDS: "${SECURE_HSTS_SECONDS:-31536000}" # nach erfolgreichem TLS-Test z. B. auf 31536000 setzen
     depends_on:
       db:
         condition: service_healthy

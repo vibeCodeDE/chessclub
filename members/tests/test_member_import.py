@@ -6,6 +6,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
+from core.forms_setup import (
+    MAX_MEMBER_CSV_SIZE_BYTES,
+    MAX_MEMBER_CSV_SIZE_MB,
+    MemberCsvUploadForm,
+)
 from core.roles import ADMIN_GROUP, MITGLIED_GROUP
 from dues.models import FeeAmount, FeeCategory, SepaMandate
 from members.models import Member
@@ -138,3 +143,60 @@ class MemberImportViewTests(TestCase):
         self.client.force_login(self.mitglied_user)
         response = self.client.get(reverse("core:club_setup_members_import"))
         self.assertEqual(response.status_code, 403)
+
+    def test_upload_file_exceeding_max_size_is_rejected_negative_test(self):
+        """Negativtest: Dateien über dem Limit (2 MB) werden abgewiesen und nicht in die Session geladen."""
+        self.client.force_login(self.admin_user)
+        oversized_content = b"Vorname;Nachname\n" + (b"A" * (MAX_MEMBER_CSV_SIZE_BYTES + 1024))
+        self.assertGreater(len(oversized_content), MAX_MEMBER_CSV_SIZE_BYTES)
+
+        uploaded_file = SimpleUploadedFile("riesig.csv", oversized_content, content_type="text/csv")
+        url = reverse("core:club_setup_members_import")
+        response = self.client.post(url, {"csv_file": uploaded_file, "aktion": "pruefen"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"Erlaubt sind maximal {MAX_MEMBER_CSV_SIZE_MB} MB")
+        session = self.client.session
+        self.assertNotIn("pending_import_csv", session)
+        self.assertFalse(Member.objects.filter(nachname="B").exists())
+
+    def test_confirmation_with_oversized_session_data_rejected_negative_test(self):
+        """Negativtest: Manipulierte Session mit Übergröße wird bei Bestätigung verworfen."""
+        self.client.force_login(self.admin_user)
+        session = self.client.session
+        session["pending_import_csv"] = "Vorname;Nachname\n" + ("A" * (MAX_MEMBER_CSV_SIZE_BYTES + 1024))
+        session.save()
+
+        url = reverse("core:club_setup_members_import")
+        response = self.client.post(url, {"aktion": "bestaetigen"}, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"Die Importdaten überschreiten das Limit von {MAX_MEMBER_CSV_SIZE_MB} MB")
+        self.assertNotIn("pending_import_csv", self.client.session)
+        self.assertFalse(Member.objects.filter(nachname="B").exists())
+
+
+class MemberCsvUploadFormTests(TestCase):
+    def test_form_accepts_file_within_size_limit(self):
+        """Gültige Datei unter 2 MB wird vom Formular akzeptiert."""
+        content = b"Vorname;Nachname;E-Mail\nMax;Mustermann;max@example.com\n"
+        file = SimpleUploadedFile("mitglieder.csv", content, content_type="text/csv")
+        form = MemberCsvUploadForm(data={"aktion": "pruefen"}, files={"csv_file": file})
+        self.assertTrue(form.is_valid())
+
+    def test_form_rejects_oversized_file_negative_test(self):
+        """Negativtest: Datei über 2 MB führt zu Validierungsfehler."""
+        content = b"x" * (MAX_MEMBER_CSV_SIZE_BYTES + 1024)
+        file = SimpleUploadedFile("zu_gross.csv", content, content_type="text/csv")
+        form = MemberCsvUploadForm(data={"aktion": "pruefen"}, files={"csv_file": file})
+        self.assertFalse(form.is_valid())
+        self.assertIn("csv_file", form.errors)
+        self.assertIn(f"Erlaubt sind maximal {MAX_MEMBER_CSV_SIZE_MB} MB", form.errors["csv_file"][0])
+
+    def test_form_rejects_missing_file_negative_test(self):
+        """Negativtest: Formular ohne Datei meldet saubere Fehlermeldung."""
+        form = MemberCsvUploadForm(data={"aktion": "pruefen"}, files={})
+        self.assertFalse(form.is_valid())
+        self.assertIn("csv_file", form.errors)
+        self.assertEqual(form.errors["csv_file"][0], "Bitte eine gültige CSV-Datei auswählen.")
+

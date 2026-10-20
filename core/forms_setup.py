@@ -9,10 +9,15 @@ from teams.models import Team
 
 __all__ = [
     "ClubProfileForm",
+    "MAX_MEMBER_CSV_SIZE_BYTES",
+    "MAX_MEMBER_CSV_SIZE_MB",
     "MemberCsvUploadForm",
     "QuickFeeCategoryForm",
     "QuickTeamForm",
 ]
+
+MAX_MEMBER_CSV_SIZE_MB = 2
+MAX_MEMBER_CSV_SIZE_BYTES = MAX_MEMBER_CSV_SIZE_MB * 1024 * 1024
 
 
 class ClubProfileForm(StyledFormMixin, forms.ModelForm):
@@ -50,7 +55,10 @@ class ClubProfileForm(StyledFormMixin, forms.ModelForm):
 class MemberCsvUploadForm(forms.Form):
     csv_file = forms.FileField(
         label="CSV-Datei mit Mitgliedsdaten",
-        help_text="Erlaubt sind UTF-8 oder Latin-1 kodierte Dateien mit Trennzeichen Semikolon (;) oder Komma (,).",
+        help_text="Erlaubt sind UTF-8 oder Latin-1 kodierte Dateien mit Trennzeichen Semikolon (;) oder Komma (,). Maximale Dateigröße: 2 MB.",
+        error_messages={
+            "required": "Bitte eine gültige CSV-Datei auswählen.",
+        },
     )
     aktion = forms.ChoiceField(
         choices=[("pruefen", "Prüfen & Vorschau"), ("importieren", "Jetzt verbindlich importieren")],
@@ -58,6 +66,15 @@ class MemberCsvUploadForm(forms.Form):
         widget=forms.HiddenInput(),
         required=False,
     )
+
+    def clean_csv_file(self):
+        csv_file = self.cleaned_data.get("csv_file")
+        if csv_file and hasattr(csv_file, "size") and csv_file.size > MAX_MEMBER_CSV_SIZE_BYTES:
+            raise forms.ValidationError(
+                f"Die Datei ist zu groß ({csv_file.size / (1024 * 1024):.1f} MB). "
+                f"Erlaubt sind maximal {MAX_MEMBER_CSV_SIZE_MB} MB."
+            )
+        return csv_file
 
 
 class QuickTeamForm(StyledFormMixin, forms.ModelForm):

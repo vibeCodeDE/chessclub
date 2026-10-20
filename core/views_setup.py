@@ -7,6 +7,8 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 
 from core.forms_setup import (
+    MAX_MEMBER_CSV_SIZE_BYTES,
+    MAX_MEMBER_CSV_SIZE_MB,
     ClubProfileForm,
     MemberCsvUploadForm,
     QuickFeeCategoryForm,
@@ -124,6 +126,11 @@ def club_setup_members_import(request):
                 messages.error(request, "Keine offenen Importdaten in der Sitzung gefunden. Bitte Datei erneut hochladen.")
                 return redirect("core:club_setup_members_import")
 
+            if len(csv_text.encode("utf-8")) > MAX_MEMBER_CSV_SIZE_BYTES:
+                request.session.pop("pending_import_csv", None)
+                messages.error(request, f"Die Importdaten überschreiten das Limit von {MAX_MEMBER_CSV_SIZE_MB} MB.")
+                return redirect("core:club_setup_members_import")
+
             rows = parse_members_csv(csv_text)
             validation = validate_members_import(rows)
             if validation["valid_count"] == 0:
@@ -175,7 +182,11 @@ def club_setup_members_import(request):
                         )
                         return redirect("members:member_list")
         else:
-            messages.error(request, "Bitte eine gültige CSV-Datei auswählen.")
+            first_err = form.errors.get("csv_file")
+            if first_err:
+                messages.error(request, first_err[0])
+            else:
+                messages.error(request, "Bitte eine gültige CSV-Datei auswählen.")
     else:
         form = MemberCsvUploadForm()
 

@@ -184,3 +184,136 @@ class RatelimitEndpointsTests(TestCase):
         # IP 2 hat frisches Kontingent und wird nicht blockiert
         ok_ip2 = self.client.post("/mitglied-werden/", form_data, REMOTE_ADDR="192.168.1.20")
         self.assertIn(ok_ip2.status_code, [200, 302])
+
+    def test_ip_spoofing_via_x_forwarded_for_umgeht_ratelimit_nicht_negativtest(self):
+        """Negativtest: Ein Angreifer kann das Rate-Limiting nicht durch rotierende
+        X-Forwarded-For-Header umgehen, wenn der Proxy die Client-IP vorgibt (SEC-05)."""
+        FeeCategory.objects.create(name="Erwachsene", aktiv=True)
+        form_data = {
+            "name": "Angreifer",
+            "email": "angreifer@example.org",
+            "interesse": "erwachsene",
+        }
+
+        # Angreifer sendet 5 Anfragen mit jeweils gefälschtem X-Forwarded-For,
+        # aber fester Proxy-Client-IP in X-Real-IP
+        for i in range(5):
+            res = self.client.post(
+                "/mitglied-werden/",
+                form_data,
+                HTTP_X_FORWARDED_FOR=f"10.99.1.{i}, 203.0.113.99",
+                HTTP_X_REAL_IP="203.0.113.99",
+                REMOTE_ADDR="172.18.0.2",
+            )
+            self.assertIn(res.status_code, [200, 302])
+
+        # 6. Anfrage mit erneut gefälschter IP im Forwarded-Header wird trotzdem mit 429 geblockt
+        blocked = self.client.post(
+            "/mitglied-werden/",
+            form_data,
+            HTTP_X_FORWARDED_FOR="10.99.1.99, 203.0.113.99",
+            HTTP_X_REAL_IP="203.0.113.99",
+            REMOTE_ADDR="172.18.0.2",
+        )
+        self.assertEqual(blocked.status_code, 429)
+        self.assertEqual(blocked["Retry-After"], "60")
+
+    def test_kommagetrenntes_x_forwarded_for_fuehrt_nicht_zu_value_error(self):
+        """Kommagetrennte Proxy-Ketten in X-Forwarded-For führen nicht zum Absturz
+        in django-ratelimit (ValueError: not an IPv4 network), sondern werden
+        sauber auf die verifizierte Client-IP aufgelöst."""
+        FeeCategory.objects.create(name="Erwachsene", aktiv=True)
+        form_data = {
+            "name": "ProxyNutzer",
+            "email": "proxynutzer@example.org",
+            "interesse": "erwachsene",
+        }
+
+        # 5 Versuche hinter einer Proxy-Kette (z. B. Scalingo/Cloudflare + Caddy)
+        for _ in range(5):
+            res = self.client.post(
+                "/mitglied-werden/",
+                form_data,
+                HTTP_X_FORWARDED_FOR="1.2.3.4, 203.0.113.55, 10.0.0.1",
+                REMOTE_ADDR="10.0.0.1",
+            )
+            self.assertIn(res.status_code, [200, 302])
+
+        # 6. Versuch wird mit 429 abgewiesen – ohne ValueError
+        blocked = self.client.post(
+            "/mitglied-werden/",
+            form_data,
+            HTTP_X_FORWARDED_FOR="1.2.3.4, 203.0.113.55, 10.0.0.1",
+            REMOTE_ADDR="10.0.0.1",
+        )
+        self.assertEqual(blocked.status_code, 429)
+
+
+
+    def test_dos_schutz_hinter_reverse_proxy_geteiltes_remote_addr_negativtest(self):
+        """Negativtest DoS-Schutz (SEC-05 / RATELIMIT_IP_META_KEY):
+        Zwei verschiedene externe Besucher hinter demselben Reverse Proxy
+        (identisches REMOTE_ADDR des Proxy-Containers) teilen sich NICHT
+        denselben Zähler. Ein Angreifer kann reguläre Nutzer nicht aussperren."""
+        FeeCategory.objects.create(name="Erwachsene", aktiv=True)
+        form_data = {
+            "name": "Besucher",
+            "email": "besucher@example.org",
+            "interesse": "erwachsene",
+        }
+
+        # Besucher A (IP: 198.51.100.10) hinter Caddy-Proxy (REMOTE_ADDR: 172.18.0.2)
+        # reizt sein Kontingent voll aus (5 erlaubte Anfragen)
+        for _ in range(5):
+            res = self.client.post(
+                "/mitglied-werden/",
+                form_data,
+                HTTP_X_REAL_IP="198.51.100.10",
+                REMOTE_ADDR="172.18.0.2",
+            )
+            self.assertIn(res.status_code, [200, 302])
+
+        # 6. Anfrage von Besucher A wird mit HTTP 429 geblockt
+        blocked_a = self.client.post(
+            "/mitglied-werden/",
+            form_data,
+            HTTP_X_REAL_IP="198.51.100.10",
+            REMOTE_ADDR="172.18.0.2",
+        )
+        self.assertEqual(blocked_a.status_code, 429)
+
+        # Besucher B (IP: 198.51.100.20) hinter DEMSELBEN Proxy (REMOTE_ADDR: 172.18.0.2)
+        # wird NICHT blockiert (kein DoS durch Shared-Counter)
+        ok_b = self.client.post(
+            "/mitglied-werden/",
+            form_data,
+            HTTP_X_REAL_IP="198.51.100.20",
+            REMOTE_ADDR="172.18.0.2",
+        )
+        self.assertIn(ok_b.status_code, [200, 302])
+
+    def test_get_ratelimit_ip_funktion(self):
+        """Prüft die verifizierte IP-Extraktion via get_ratelimit_ip."""
+        from django.test import RequestFactory
+        from core.middleware import get_ratelimit_ip
+
+        factory = RequestFactory()
+
+        # 1. Bevorzugt X-Real-IP
+        req = factory.get("/", HTTP_X_REAL_IP="203.0.113.1")
+        self.assertEqual(get_ratelimit_ip(req), "203.0.113.1")
+
+        # 2. X-Forwarded-For mit Proxy-Kette (überspringt interne Hops)
+        req = factory.get(
+            "/",
+            HTTP_X_FORWARDED_FOR="203.0.113.2, 172.18.0.2",
+            REMOTE_ADDR="172.18.0.2",
+        )
+        self.assertEqual(get_ratelimit_ip(req), "203.0.113.2")
+
+        # 3. Fallback auf REMOTE_ADDR
+        req = factory.get("/", REMOTE_ADDR="198.51.100.3")
+        self.assertEqual(get_ratelimit_ip(req), "198.51.100.3")
+
+        # 4. Fallback bei leerer/ungültiger IP
+        self.assertEqual(get_ratelimit_ip(None), "127.0.0.1")

@@ -12,6 +12,8 @@
     }
 
     # Alle weiteren Anfragen an Gunicorn (Django) weiterleiten
+    # Anti-IP-Spoofing (SEC-05): X-Forwarded-For und X-Real-IP werden strikt mit {remote_host}
+    # ueberschrieben (nicht erweitert), damit Angreifer keine manipulierten Header einschleusen.
     handle {
         reverse_proxy app:8000 {
             header_up Host {host}

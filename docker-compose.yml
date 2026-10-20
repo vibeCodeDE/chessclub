@@ -25,6 +25,8 @@ services:
       # Entwicklung ohne Zwei-Faktor, wie in der README beschrieben. Der
       # Produktivbetrieb setzt TWOFA_PFLICHT=1 (docker-compose.prod.yml).
       TWOFA_PFLICHT: "0"
+      # PWA temporär deaktiviert (1 = an, 0 = aus)
+      PWA_AKTIV: "0"
       # Nur Entwicklung: fester Schluessel, damit Mandatsdaten in der Dev-Datenbank
       # gelesen werden koennen. Im Betrieb gehoert der Schluessel nach .env.prod
       # (siehe .env.prod.example) – dieser Wert niemals produktiv verwenden.

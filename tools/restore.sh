@@ -43,9 +43,11 @@ if ! command -v openssl >/dev/null 2>&1; then
     fi
 fi
 
+export BACKUP_ENCRYPTION_KEY
+
 # 4. Vorprüfung / Entschlüsselungstest & Gzip-Integrität (ohne DB-Änderung)
 echo "Prüfe Schlüssel und Integrität von ${BACKUP_FILE}..."
-if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -pass "pass:${BACKUP_ENCRYPTION_KEY}" -in "$BACKUP_FILE" 2>/dev/null | gzip -t 2>/dev/null; then
+if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -pass env:BACKUP_ENCRYPTION_KEY -in "$BACKUP_FILE" 2>/dev/null | gzip -t 2>/dev/null; then
     echo "FEHLER: Entschlüsselung oder Integritätsprüfung fehlgeschlagen. Falscher Schlüssel oder korrupte Datei. Datenbank wurde NICHT verändert." >&2
     exit 2
 fi
@@ -59,7 +61,7 @@ echo "Entschlüsselung verifiziert. Starte Einspielen in ${POSTGRES_DB}@${POSTGR
 
 # 5. Einspielen in die Datenbank
 export PGPASSWORD="${POSTGRES_PASSWORD:-}"
-if openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -pass "pass:${BACKUP_ENCRYPTION_KEY}" -in "$BACKUP_FILE" \
+if openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -pass env:BACKUP_ENCRYPTION_KEY -in "$BACKUP_FILE" \
     | gunzip -c \
     | psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB"; then
     echo "Wiederherstellung von ${BACKUP_FILE} erfolgreich abgeschlossen."

@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.roles import ADMIN_GROUP, role_required
-from core.ui import fehler, is_ajax, ok, paginate
+from core.ui import fehler, is_ajax, ok, paginate, sanitize_csv
 
 from .forms import CashEntryForm
 from .models import CashEntry, jahresabschluss, storniere_kassenbuchung
@@ -136,12 +136,12 @@ def export(request):
         writer.writerow(
             [
                 buchung.datum.strftime("%d.%m.%Y"),
-                buchung.get_art_display(),
-                buchung.get_kategorie_display(),
+                sanitize_csv(buchung.get_art_display()),
+                sanitize_csv(buchung.get_kategorie_display()),
                 f"{buchung.betrag:.2f}".replace(".", ","),
-                buchung.beschreibung,
-                buchung.belegnummer,
-                buchung.erfasst_von.get_username() if buchung.erfasst_von else "",
+                sanitize_csv(buchung.beschreibung),
+                sanitize_csv(buchung.belegnummer),
+                sanitize_csv(buchung.erfasst_von.get_username() if buchung.erfasst_von else ""),
             ]
         )
     abschluss = jahresabschluss(jahr)

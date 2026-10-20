@@ -275,6 +275,14 @@ class AnonymisierungTests(TestCase):
             neu_wert="alt@example.org",
             member=self.alt,
         )
+        AuditLog.objects.create(
+            benutzer=self.admin,
+            aktion="Stammdaten geändert",
+            feld="iban",
+            alt_wert="DE89370400440532013000",
+            neu_wert="DE89370400440532013000",
+            member=self.alt,
+        )
 
         call_command("anonymize_former_members", verbosity=0)
         self.alt.refresh_from_db()
@@ -295,10 +303,12 @@ class AnonymisierungTests(TestCase):
         self.assertEqual(user.first_name, "")
         self.assertEqual(user.last_name, "")
 
-        # SEPA-Mandat wurde anonymisiert und widerrufen
+        # SEPA-Mandat wurde anonymisiert, IBAN gelöscht und widerrufen (Art. 17 DSGVO)
         mandat.refresh_from_db()
         self.assertEqual(mandat.kontoinhaber, "Anonymisiert")
         self.assertEqual(mandat.status, SepaMandate.Status.WIDERRUFEN)
+        self.assertEqual(mandat.iban, "")
+        self.assertEqual(mandat.iban_kurz, "")
 
         # AuditLog enthält keinen Klarnamen im Text und keine alten PII-Werte
         anonym_log = AuditLog.objects.get(aktion="Mitglied anonymisiert")
@@ -306,10 +316,13 @@ class AnonymisierungTests(TestCase):
         self.assertNotIn("Alt", anonym_log.text)
         self.assertIn(f"ID {self.alt.pk}", anonym_log.text)
 
-        # Alter Audit-Eintrag wurde maskiert
+        # Alter Audit-Eintrag wurde maskiert (inklusive IBAN)
         alter_log = AuditLog.objects.get(feld="email", member=self.alt)
         self.assertEqual(alter_log.alt_wert, "[anonymisiert]")
         self.assertEqual(alter_log.neu_wert, "[anonymisiert]")
+        iban_log = AuditLog.objects.get(feld="iban", member=self.alt)
+        self.assertEqual(iban_log.alt_wert, "[anonymisiert]")
+        self.assertEqual(iban_log.neu_wert, "[anonymisiert]")
 
         self.frisch.refresh_from_db()
         self.assertEqual(self.frisch.email, "neu@example.org", "Frist läuft noch")

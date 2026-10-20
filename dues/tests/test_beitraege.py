@@ -32,7 +32,9 @@ from members.models import Member
 
 
 def make_admin(username="vorstand"):
-    user = User.objects.create_user(username, password="x")
+    user, _ = User.objects.get_or_create(username=username, defaults={"password": "x"})
+    user.set_password("x")
+    user.save()
     group, _ = Group.objects.get_or_create(name="admin")
     user.groups.add(group)
     return user
@@ -122,6 +124,40 @@ class ZahlungTests(TestCase):
         self.assertTrue(daten["ok"])
         self.assertEqual(daten["patch"][f"[data-fee-open='{self.fee.pk}']"], "0.00 €")
         self.assertEqual(Payment.objects.count(), 1)
+
+    def test_ajax_zahlung_escapes_xss_in_notiz(self):
+        self.client.force_login(self.admin)
+        xss_payload = "<img src=x onerror=alert('xss')>"
+        response = self.client.post(
+            f"/beitraege/posten/{self.fee.pk}/zahlung/",
+            {"betrag": "45.00", "datum": "2026-03-01", "art": "ueberweisung", "notiz": xss_payload},
+            HTTP_ACCEPT="application/json",
+        )
+        daten = json.loads(response.content)
+        self.assertTrue(daten["ok"])
+        payments_html = daten["html"]["[data-payment-rows]"]
+        self.assertNotIn("<img src=x", payments_html)
+        self.assertIn("&lt;img src=x onerror=alert(&#x27;xss&#x27;)&gt;", payments_html)
+
+    def test_ajax_storno_escapes_xss_in_notiz(self):
+        self.client.force_login(self.admin)
+        zahlung = zahlung_erfassen(
+            self.fee,
+            betrag=Decimal("20.00"),
+            datum=date(2026, 3, 1),
+            notiz="<script>alert('storno')</script>",
+            benutzer=self.admin,
+        )
+        response = self.client.post(
+            f"/beitraege/zahlung/{zahlung.pk}/storno/",
+            {"grund": "Korrektur"},
+            HTTP_ACCEPT="application/json",
+        )
+        daten = json.loads(response.content)
+        self.assertTrue(daten["ok"])
+        payments_html = daten["html"]["[data-payment-rows]"]
+        self.assertNotIn("<script>", payments_html)
+        self.assertIn("&lt;script&gt;alert(&#x27;storno&#x27;)&lt;/script&gt;", payments_html)
 
     def test_zahlung_validiert_betrag(self):
         self.client.force_login(self.admin)
@@ -488,6 +524,24 @@ class BerechtigungsUndFehlerpfadTests(TestCase):
         with self.assertNumQueries(5):
             resp = self.client.get("/beitraege/export.csv?jahr=2026")
             self.assertEqual(resp.status_code, 200)
+
+    def test_export_escapes_csv_formulas(self):
+        """Negativtest: Verhindert Formula Injection (CWE-1236) im Beitrags-Export."""
+        self.client.force_login(self.admin)
+        m = Member.objects.create(
+            vorname="+EvilVorname", nachname="=cmd|' /C calc'!A0",
+            eintrittsdatum=date(2020, 1, 1), beitragskategorie=self.kategorie,
+        )
+        MembershipFee.objects.create(
+            member=m, jahr=2026, kategorie_name="@Sonderbeitrag",
+            betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31),
+        )
+        resp = self.client.get("/beitraege/export.csv?jahr=2026")
+        self.assertEqual(resp.status_code, 200)
+        csv_text = resp.content.decode("utf-8-sig")
+        self.assertIn("'=cmd|' /C calc'!A0", csv_text)
+        self.assertIn("'+EvilVorname", csv_text)
+        self.assertIn("'@Sonderbeitrag", csv_text)
 
 
 class BeitragEndToEndIntegrationTests(TestCase):

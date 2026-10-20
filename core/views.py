@@ -20,6 +20,7 @@ from core.dsgvo import datenauskunft, verarbeitungstaetigkeiten
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, role_of, role_required
 from core.services import is_marketing_site, is_module_active
+from core.ui import sanitize_csv
 from dues.models import MembershipFee, Payment, jahres_uebersicht
 from members.models import ChangeRequest, Member
 from teams.models import LeagueMatch, Team
@@ -107,13 +108,41 @@ def dsgvo_verzeichnis(request):
     writer.writerow(["Kategorie", "Zweck", "Datenfelder", "Rechtsgrundlage", "Speicherfrist"])
     for zeile in verarbeitungstaetigkeiten():
         writer.writerow(
-            [zeile["kategorie"], zeile["zweck"], zeile["felder"], zeile["rechtsgrundlage"], zeile["speicherfrist"]]
+            [
+                sanitize_csv(zeile["kategorie"]),
+                sanitize_csv(zeile["zweck"]),
+                sanitize_csv(zeile["felder"]),
+                sanitize_csv(zeile["rechtsgrundlage"]),
+                sanitize_csv(zeile["speicherfrist"]),
+            ]
         )
     return antwort
 
 
 def service_worker(request):
     """Liefert den Service Worker unter /sw.js aus (Wurzel-Scope für die PWA)."""
+    pwa_aktiv = getattr(settings, "PWA_AKTIV", False)
+    if not pwa_aktiv:
+        # PWA temporär deaktiviert: Service Worker deregistrieren und Caches leeren
+        inhalt = (
+            "/* PWA temporaer deaktiviert: Service Worker deregistrieren und Caches leeren */\n"
+            "self.addEventListener('install', (e) => self.skipWaiting());\n"
+            "self.addEventListener('activate', (e) => {\n"
+            "  e.waitUntil(\n"
+            "    caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))\n"
+            "      .then(() => self.registration.unregister())\n"
+            "      .then(() => self.clients.matchAll())\n"
+            "      .then((clients) => {\n"
+            "        clients.forEach((c) => c.navigate(c.url));\n"
+            "      })\n"
+            "  );\n"
+            "});\n"
+        )
+        antwort = HttpResponse(inhalt, content_type="application/javascript; charset=utf-8")
+        antwort["Service-Worker-Allowed"] = "/"
+        antwort["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return antwort
+
     datei = settings.BASE_DIR / "static" / "sw.js"
     antwort = HttpResponse(datei.read_text(encoding="utf-8"), content_type="application/javascript; charset=utf-8")
     antwort["Service-Worker-Allowed"] = "/"

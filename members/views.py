@@ -5,7 +5,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import Http404, HttpResponse
@@ -17,7 +16,7 @@ from django_ratelimit.decorators import ratelimit
 
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, role_required
-from core.ui import fehler, is_ajax, ok, paginate
+from core.ui import fehler, is_ajax, ok, paginate, sanitize_csv
 from dues.models import FeeCategory, MembershipFee, Payment
 from teams.models import LineupEntry
 from teams.services import escape_ical
@@ -26,12 +25,10 @@ from tournaments.models import Tournament
 from .forms import ChangeRequestForm, MemberForm, MemberStatusForm, TrialInquiryForm
 from .models import ChangeRequest, Member, clean_member_value
 
-PERSONAL_CALENDAR_SALT = "member-personal-calendar"
-
-
 def get_personal_calendar_token(member):
-    signer = TimestampSigner(salt=PERSONAL_CALENDAR_SALT)
-    return signer.sign(str(member.pk))
+    if not member.ical_token:
+        member.renew_ical_token()
+    return member.ical_token
 
 
 def _parse_filters(request):
@@ -297,16 +294,16 @@ def member_export(request):
     for member in members:
         writer.writerow(
             [
-                member.nachname,
-                member.vorname,
+                sanitize_csv(member.nachname),
+                sanitize_csv(member.vorname),
                 member.geburtsdatum.strftime("%d.%m.%Y") if member.geburtsdatum else "",
-                member.email,
-                member.telefon,
-                member.strasse,
-                member.plz,
-                member.ort,
-                member.get_status_display(),
-                member.beitragskategorie.name if member.beitragskategorie else "",
+                sanitize_csv(member.email),
+                sanitize_csv(member.telefon),
+                sanitize_csv(member.strasse),
+                sanitize_csv(member.plz),
+                sanitize_csv(member.ort),
+                sanitize_csv(member.get_status_display()),
+                sanitize_csv(member.beitragskategorie.name if member.beitragskategorie else ""),
                 member.eintrittsdatum.strftime("%d.%m.%Y"),
                 member.austrittsdatum.strftime("%d.%m.%Y") if member.austrittsdatum else "",
             ]
@@ -402,19 +399,38 @@ def profil(request):
         "calendar_url": request.build_absolute_uri(
             reverse("members:personal_calendar", kwargs={"token": get_personal_calendar_token(member)})
         ) if member else None,
+        "has_2fa": hasattr(request.user, "zwei_faktor"),
+        "is_admin": request.user.groups.filter(name=ADMIN_GROUP).exists(),
     }
     return render(request, "members/profil.html", kontext)
 
 
+@login_required
+@require_POST
+def renew_personal_calendar_token(request):
+    """Erneuert das persönliche Kalender-Token eines Mitglieds (DSGVO Access Revocation)."""
+    member = Member.objects.filter(user=request.user).first()
+    if not member:
+        messages.error(request, "Für dieses Konto ist kein Mitgliedsprofil hinterlegt.")
+        return redirect("members:profil")
+    member.renew_ical_token()
+    AuditLog.objects.create(
+        benutzer=request.user,
+        aktion="Kalender-Token erneuert",
+        text=f"Persönlicher Kalender-Token für Mitglied {member} wurde erneuert.",
+        member=member,
+    )
+    messages.success(
+        request, "Persönlicher Kalender-Token wurde erneuert. Alte Abonnements sind ungültig."
+    )
+    return redirect("members:profil")
+
+
 def personal_calendar_feed(request, token):
     """Abonnierbarer iCal-Feed für die persönlichen Einsätze eines Mitglieds (Hebel F4)."""
-    signer = TimestampSigner(salt=PERSONAL_CALENDAR_SALT)
-    try:
-        member_id = signer.unsign(token)
-    except (BadSignature, SignatureExpired) as err:
-        raise Http404("Ungültiger oder abgelaufener Kalender-Token.") from err
-
-    member = get_object_or_404(Member, pk=int(member_id))
+    member = get_object_or_404(Member, ical_token=token)
+    if member.status == Member.Status.AUSGETRETEN:
+        raise Http404("Kalender-Abonnement für ausgetretene Mitglieder nicht mehr aktiv.")
     heute = timezone.localdate()
     start_datum = heute - timedelta(days=60)
 

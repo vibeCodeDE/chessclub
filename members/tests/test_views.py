@@ -229,3 +229,13 @@ class MemberExportTests(TestCase):
         content = response.content.decode("utf-8")
         self.assertIn("Schmidt", content)
         self.assertNotIn("Meier", content)
+
+    def test_export_escapes_csv_formulas(self):
+        make_user("vorstand", "admin")
+        self.client.login(username="vorstand", password="x")
+        make_member("=1+1", "@Malicious", email="+dangerous@example.org")
+
+        response = self.client.get("/mitglieder/export.csv")
+        content = response.content.decode("utf-8")
+        # Ensure formula markers are prefixed with ' to prevent CWE-1236
+        self.assertIn("'@Malicious;'=1+1;;'+dangerous@example.org", content)

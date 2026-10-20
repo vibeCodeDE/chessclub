@@ -10,7 +10,7 @@ from members.models import Member
 
 from .models import AuditLog
 
-AUDIT_FELDER = [f for f in Member._meta.concrete_fields if f.name != "id"]
+AUDIT_FELDER = [f for f in Member._meta.concrete_fields if f.name not in ("id", "ical_token")]
 
 
 def _wert(value):
@@ -53,10 +53,9 @@ def stammdaten_anderungen_protokollieren(sender, instance, created, **kwargs):
 def _ip(request):
     if request is None:
         return "—"
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "—")
+    from core.middleware import extract_client_ip
+
+    return extract_client_ip(request)
 
 
 @receiver(user_logged_in)

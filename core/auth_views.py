@@ -2,10 +2,11 @@
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
@@ -35,15 +36,30 @@ def _braucht_zwei_faktor(user):
     return TwoFactorDevice.objects.filter(user=user).exists()
 
 
+def _sicheres_ziel(ziel, request):
+    """Prüft, ob die Ziel-URL ein sicheres internes Weiterleitungsziel ist (CWE-601)."""
+    if ziel and url_has_allowed_host_and_scheme(
+        ziel,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return ziel
+    return ""
+
+
 def anmelden(request):
     """LoginView-Ersatz: Passwort prüfen, danach ggf. TOTP abfragen."""
     if request.user.is_authenticated:
-        return redirect("core:dashboard")
+        ziel = _sicheres_ziel(request.GET.get("next", ""), request)
+        return redirect(ziel or "core:dashboard")
 
     form = AuthenticationForm(request, data=request.POST or None)
     if request.method == "POST" and form.is_valid():
         user = form.get_user()
-        ziel = request.POST.get("next") or request.GET.get("next") or ""
+        ziel = _sicheres_ziel(
+            request.POST.get("next") or request.GET.get("next") or "",
+            request,
+        )
         if _braucht_zwei_faktor(user):
             request.session[SESSION_SCHLUESSEL] = user.pk
             request.session["_2fa_backend"] = getattr(
@@ -59,7 +75,8 @@ def anmelden(request):
                 return redirect("core:onboarding_wizard")
         return redirect(ziel or "core:dashboard")
 
-    return render(request, "registration/login.html", {"form": form})
+    next_url = _sicheres_ziel(request.GET.get("next", ""), request)
+    return render(request, "registration/login.html", {"form": form, "next": next_url})
 
 
 def zwei_faktor(request):
@@ -145,7 +162,7 @@ def zwei_faktor(request):
             ) or "django.contrib.auth.backends.ModelBackend"
             login(request, user, backend=backend)
             request.session.pop(SESSION_SCHLUESSEL, None)
-            ziel = request.session.pop("_2fa_next", "")
+            ziel = _sicheres_ziel(request.session.pop("_2fa_next", ""), request)
             messages.success(request, "Anmeldung bestätigt.")
             if not ziel and _ist_vorstand(user):
                 from core.models import OnboardingProgress
@@ -172,15 +189,55 @@ def zwei_faktor(request):
     )
 
 
-@require_POST
+@ratelimit(key="ip", rate="5/m", method="POST", block=True)
 @login_required
 def zwei_faktor_neu(request):
-    """Gerätewechsel: altes Geheimnis verwerfen und neu einrichten."""
-    TwoFactorDevice.objects.filter(user=request.user).delete()
-    request.session[SESSION_SCHLUESSEL] = request.user.pk
-    request.session.pop(SESSION_SECRET, None)
-    messages.info(request, "Bitte richten Sie das neue Gerät ein.")
-    return redirect("core:zwei_faktor")
+    """Gerätewechsel mit Re-Authentication (Step-Up Authentication, PRD N1.6).
+
+    Vor dem Löschen/Neuregistrieren des 2FA-Geräts muss das aktuelle Passwort
+    des Benutzers verifiziert werden, um Kontoübernahmen bei ungesperrten Sitzungen
+    zu verhindern.
+    """
+    konto = request.user.get_username()
+    form_fehler = None
+
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        if not password or not request.user.check_password(password):
+            from django.contrib.auth.signals import user_login_failed
+            user_login_failed.send(
+                sender=request.user.__class__,
+                credentials={"username": konto},
+                request=request,
+            )
+            form_fehler = (
+                "Das Passwort ist nicht korrekt. Das 2FA-Gerät wurde nicht zurückgesetzt."
+            )
+            messages.error(request, form_fehler)
+            return render(
+                request,
+                "registration/zwei_faktor_neu.html",
+                {"konto": konto, "form_fehler": form_fehler},
+                status=400,
+            )
+
+        from core.models import AuditLog
+        TwoFactorDevice.objects.filter(user=request.user).delete()
+        request.session[SESSION_SCHLUESSEL] = request.user.pk
+        request.session.pop(SESSION_SECRET, None)
+        AuditLog.objects.create(
+            benutzer=request.user,
+            aktion="2FA-Gerät zurückgesetzt",
+            text=f"2FA-Gerät für Benutzer '{konto}' nach Passwortbestätigung zurückgesetzt.",
+        )
+        messages.info(request, "Bitte richten Sie das neue Gerät ein.")
+        return redirect("core:zwei_faktor")
+
+    return render(
+        request,
+        "registration/zwei_faktor_neu.html",
+        {"konto": konto, "form_fehler": form_fehler},
+    )
 
 
 @ratelimit(key="ip", rate="5/m", method="POST", block=True)
@@ -211,13 +268,26 @@ def accept_invitation(request, token):
             messages.error(request, "Bitte einen gewünschten Benutzernamen eingeben.")
         elif password != password_confirm:
             messages.error(request, "Die Passwörter stimmen nicht überein.")
-        elif len(password) < 8:
-            messages.error(request, "Das Passwort muss mindestens 8 Zeichen lang sein.")
         else:
             success, user, msg = accept_staff_invitation(
                 token=token, username=username, password=password
             )
             if success:
+                if request.user.is_authenticated:
+                    logout(request)
+
+                if _braucht_zwei_faktor(user):
+                    request.session[SESSION_SCHLUESSEL] = user.pk
+                    request.session["_2fa_backend"] = "django.contrib.auth.backends.ModelBackend"
+                    request.session["_2fa_next"] = ""
+                    request.session[SESSION_FEHLSCHLAEGE] = 0
+                    messages.success(
+                        request,
+                        f"Willkommen, {user.first_name}! Dein Benutzerkonto wurde aktiviert. "
+                        "Bitte richte nun die Zwei-Faktor-Authentifizierung ein.",
+                    )
+                    return redirect("core:zwei_faktor")
+
                 login(request, user, backend="django.contrib.auth.backends.ModelBackend")
                 messages.success(
                     request,
@@ -243,5 +313,3 @@ def password_reset(request):
         template_name="registration/password_reset_form.html",
         success_url="/passwort/aendern/fertig/",
     )(request)
-
-

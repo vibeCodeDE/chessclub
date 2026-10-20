@@ -53,7 +53,7 @@ class EmailSettingsTests(SimpleTestCase):
         self.assertEqual(settings.SERVER_EMAIL, "vorstand@verein.example")
 
     def test_ohne_env_herrschen_dev_defaults(self):
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {"DJANGO_DEBUG": "1"}, clear=True):
             settings = importlib.reload(sys.modules["config.settings"])
 
         self.assertEqual(

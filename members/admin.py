@@ -35,6 +35,7 @@ class MemberAdmin(ImportExportModelAdmin):
     list_filter = ("status", "beitragskategorie", "spielberechtigung")
     search_fields = ("vorname", "nachname", "email", "ort", "zps_nummer", "pkz")
     ordering = ("nachname", "vorname")
+    readonly_fields = ("ical_token",)
     inlines = [MemberStatusChangeInline]
 
     def has_delete_permission(self, request, obj=None):

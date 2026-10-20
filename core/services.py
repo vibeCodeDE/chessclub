@@ -469,6 +469,20 @@ def accept_staff_invitation(token: str, username: str, password: str):
     if User.objects.filter(username__iexact=username.strip()).exists():
         return False, None, "Dieser Benutzername ist bereits vergeben."
 
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError
+
+    temp_user = User(
+        username=username.strip(),
+        first_name=invitation.vorname,
+        last_name=invitation.nachname,
+        email=invitation.email,
+    )
+    try:
+        validate_password(password, user=temp_user)
+    except ValidationError as exc:
+        return False, None, " ".join(exc.messages)
+
     with transaction.atomic():
         user = User.objects.create_user(
             username=username.strip(),

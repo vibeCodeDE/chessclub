@@ -4,7 +4,8 @@ from unittest.mock import patch
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from core.models import AuditLog
+from core.models import AuditLog, TwoFactorDevice
+from core.roles import ADMIN_GROUP
 from members.models import ChangeRequest, Member
 
 
@@ -35,6 +36,7 @@ def submit_change(client, feld, wunschwert):
 
 class ProfilSelbstbedienungTests(TestCase):
     def setUp(self):
+        self.admin_group, _ = Group.objects.get_or_create(name=ADMIN_GROUP)
         self.user = make_user("p1", "mitglied")
         self.client.login(username="p1", password="x")
 
@@ -58,6 +60,19 @@ class ProfilSelbstbedienungTests(TestCase):
         response = self.client.get("/profil/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "kein Mitgliedsprofil")
+
+    def test_profil_zeigt_zwei_faktor_fuer_admin(self):
+        self.user.groups.add(self.admin_group)
+        response = self.client.get("/profil/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Zwei-Faktor-Authentifizierung (2FA)")
+        self.assertContains(response, "/anmelden/zwei-faktor/neu/")
+
+    def test_negativ_profil_ohne_admin_und_ohne_geraet_zeigt_kein_zwei_faktor(self):
+        # Reguläres Mitglied ohne Admin-Gruppe und ohne 2FA-Gerät
+        response = self.client.get("/profil/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Zwei-Faktor-Authentifizierung (2FA)")
 
     def test_submit_creates_request_without_changing_master_data(self):
         member = make_member(user=self.user)

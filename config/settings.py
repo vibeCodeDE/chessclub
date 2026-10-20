@@ -2,20 +2,18 @@ import os
 import sys
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key")
+_secret_key = os.environ.get("DJANGO_SECRET_KEY") or os.environ.get("SECRET_KEY", "")
+SECRET_KEY = _secret_key or "dev-insecure-key"
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 
-if not DEBUG and SECRET_KEY == "dev-insecure-key":
-    import warnings
-
-    warnings.warn(
-        "DJANGO_SECRET_KEY ist nicht konfiguriert und DEBUG=False! "
-        "Bitte DJANGO_SECRET_KEY in der Umgebung setzen oder "
-        "DJANGO_SETTINGS_MODULE=config.production verwenden.",
-        UserWarning,
-        stacklevel=2,
+if not DEBUG and (not _secret_key or _secret_key == "dev-insecure-key"):
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY muss konfiguriert sein, wenn DEBUG=False ist "
+        "(der Dev-Fallback-Schlüssel 'dev-insecure-key' ist im Produktionsmodus nicht erlaubt)."
     )
 _allowed = os.environ.get("DJANGO_ALLOWED_HOSTS") or os.environ.get("ALLOWED_HOSTS")
 if _allowed:
@@ -47,6 +45,7 @@ INSTALLED_APPS = [
 IMPORT_EXPORT_USE_TRANSACTIONS = True
 
 MIDDLEWARE = [
+    "core.middleware.RemoteAddrMiddleware",
     "django.middleware.security.SecurityMiddleware",
 ]
 try:
@@ -102,17 +101,22 @@ AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 1  # 1 Stunde Sperre nach 5 Fehlversuchen
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = "core/lockout.html"
-# Proxy-Konfiguration für Reverse Proxy (Caddy / Docker, PRD N1.6)
-AXES_PROXY_COUNT = int(os.environ.get("AXES_PROXY_COUNT", "1"))
-AXES_META_PRE_NAME = os.environ.get("AXES_META_PRE_NAME", "HTTP_X_FORWARDED_FOR")
+# Proxy-Konfiguration für Reverse Proxy (Caddy / Docker, PRD N1.6, SEC-14)
+AXES_IPWARE_PROXY_COUNT = int(os.environ.get("AXES_IPWARE_PROXY_COUNT", os.environ.get("AXES_PROXY_COUNT", "1")))
+AXES_IPWARE_META_PRECEDENCE_ORDER = (
+    os.environ.get("AXES_IPWARE_META_PRE_NAME", "HTTP_X_FORWARDED_FOR"),
+)
 
-# Rate-Limiting für öffentliche Endpunkte (PRD N1.1, N1.6, ADR-028)
+# Rate-Limiting für öffentliche Endpunkte (PRD N1.1, N1.6, ADR-028, SEC-05)
 # Schützt öffentliche Formulare (Schnupper-Anfrage, Turnieranmeldung, Passwort-Reset)
 # vor Spam/DDoS ohne datenschutzwidriges Google reCAPTCHA.
+# Nutzt get_ratelimit_ip zur verifizierten IP-Extraktion hinter Reverse Proxies (Caddy/Scalingo).
 RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = "default"
 RATELIMIT_VIEW = "core.views.ratelimited_view"
-RATELIMIT_IP_META_KEY = os.environ.get("RATELIMIT_IP_META_KEY", "REMOTE_ADDR")
+RATELIMIT_IP_META_KEY = os.environ.get(
+    "RATELIMIT_IP_META_KEY", "core.middleware.get_ratelimit_ip"
+)
 
 # Entwicklungs-Profiling (django-debug-toolbar, PRD N2.2, ADR-015):
 # Nur aktiv, wenn DEBUG=True gesetzt ist und das Paket installiert ist.
@@ -282,6 +286,10 @@ EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
 # Zwei-Faktor für die Vorstandschaft (PRD N1.6). In der Entwicklung abschaltbar
 # (TWOFA_PFLICHT=0), im Produktivbetrieb verbindlich.
 TWOFA_PFLICHT = os.environ.get("TWOFA_PFLICHT", "1") == "1"
+
+# PWA (Progressive Web App, PRD N2.7)
+# Temporär deaktiviert (Original: os.environ.get("PWA_AKTIV", "1") == "1"):
+PWA_AKTIV = os.environ.get("PWA_AKTIV", "0") == "1"
 
 # DSGVO: Aufbewahrungsfrist nach Austritt, danach werden Kontaktdaten anonymisiert.
 DSGVO_ANONYMISIERUNGS_FRIST_TAGE = int(os.environ.get("DSGVO_FRIST_TAGE", "730"))
