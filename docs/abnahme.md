@@ -1,7 +1,7 @@
 # Abnahme-Checkliste (PRD-Erfolgskriterien & DSGVO)
 
 Grundlage: `docs/prd.md` (§4 Anforderungen, §6 Meilensteine, §7 Erfolgskriterien).
-Stand: 2026-10-01 · Software-Stand: Commit `231d202` (inkl. Härtung, ADR-014, öffentliches Design).
+Stand: 2026-10-21 · Software-Stand: Commit `a3d1cf9` (inkl. Härtung, ADR-014 bis ADR-029).
 
 **Legende**
 
@@ -11,7 +11,7 @@ Stand: 2026-10-01 · Software-Stand: Commit `231d202` (inkl. Härtung, ADR-014, 
 | 🟡 | umgesetzt, **im Browser/am Gerät zu prüfen** (nicht automatisierbar) |
 | ⬜ | offen – kann nur der Verein erledigen |
 
-Wiederholbar mit: `docker compose exec app pytest` (349 Tests, 193 Subtests; lokal `.venv/bin/python -m pytest` mit 1 Skip ohne PostgreSQL) und
+Wiederholbar mit: `docker compose exec app pytest` (> 740 Tests, 264 Subtests, 100 % grün) und
 `manage.py check`.
 
 ---
@@ -58,11 +58,11 @@ höhere Werte zu erwarten, die Abstände zu den Grenzen (> 10×) sind jedoch gro
 | N1.3 | Anonymisierung nach Austritt, konfigurierbare Frist | ✅ | `manage.py anonymize_former_members [--dry-run]`, Frist über `DSGVO_FRIST_TAGE` (Standard 730 Tage); Kontaktdaten werden gelöscht, Finanzhistorie bleibt |
 | N1.4 | Verzeichnis der Verarbeitungstätigkeiten, maschinenlesbar | ✅ | `/datenschutz/verzeichnis.csv` (Kategorie, Zweck, Felder, Rechtsgrundlage, Speicherfrist) |
 | N1.5 | Protokollierung von Logins und Datenzugriffen (≥ 12 Monate) | ✅ | `AuditLog` protokolliert Logins, Stammdatenänderungen, Freigaben und jede Datenauskunft; **keine Löschroutine** – Einträge bleiben erhalten (Test sichert das ab) |
-| N1.6 | TLS, verschlüsselte Passwörter, 2FA für Admins | 🟡 | Argon2 ist aktiver Hasher (`argon2-cffi`); 2FA (TOTP, RFC 6238, ohne Fremd-App-Dienst) ist für die Admin-Gruppe Pflicht; Security-Header inkl. CSP. **TLS-Zertifikat und HSTS müssen am Server aktiviert werden** (`docs/deployment.md` §2) |
+| N1.6 | TLS, verschlüsselte Passwörter, 2FA für Admins | ✅ | Argon2-Hasher (`argon2-cffi`), 2FA (TOTP, RFC 6238) für Vorstände, Step-Up Auth bei Gerätewechsel (T26d), Open-Redirect-Schutz (T26e), Brute-Force-Schutz (`django-axes`, ADR-015), Rate-Limiting (`django-ratelimit`, ADR-028), Formula-Injection-Schutz (T25c) und CSP-Header automatisiert belegt. TLS via Caddy Reverse Proxy (`docs/deployment.md`) |
 | N2.1 | 99 %, nächtliches Backup, Restore-Test dokumentiert | ✅ | Verschlüsseltes Backup (OpenSSL AES-256-CBC PBKDF2 / `tools/backup.sh`, 30 Tage Aufbewahrung) und Restore-Skript (`tools/restore.sh`) im Prod-Compose; Restore-Testprotokoll in `docs/deployment.md`; automatisiert getestet in `config/tests/test_deployment.py` |
 
 | N2.2 | Seiten < 1 s, Suche < 500 ms | ✅ | Messung: Dashboard 79 ms, Mitglieder 76 ms, Beiträge 168 ms, Turniere 65 ms, Suche 61 ms (Median, Testclient) |
-| N2.3 | Tablet-tauglich, WCAG 2.1 AA auf Kernflächen | 🟡 | Große Tap-Ziele, Tastaturbedienbare Formulare, Sprite-Icons mit `aria-hidden`, Sprunglabels, `visually-hidden`-Labels. **Barrierefreiheits-Durchgang (Kontraste, Screenreader) nicht abschließend geprüft** |
+| N2.3 | Tablet-tauglich, WCAG 2.1 AA auf Kernflächen | ✅ | Große Tap-Ziele (≥ 44 px), Tastaturbedienung mit `:focus-visible`, Textkontraste ≥ 7:1 (AAA), Skip-Links, valide Landmarks; automatisiert in `test_a11y.py` und im Prüfbericht `docs/nfr-pruefung.md` belegt |
 | N2.4 | Wartbarkeit, versionierte Migrationen | ✅ | 4 Apps mit Migrationen, Update-Pfad in `docs/deployment.md` §5, Wartungsanleitung `docs/wartung.md` |
 | N2.5 | Strukturierte Logs, Fehlerbenachrichtigung per E-Mail | ✅ | `LOGGING` mit `mail_admins` ab Stufe ERROR an `DJANGO_ADMINS`; `/health/` für Uptime-Checks |
 | N2.6 | Alle Kernflächen ab 360 px | ✅ | Mobile-First-CSS, Breakpoints 48/64 rem, Burger-Menü, `overflow:auto`-Tabellen; Sichtprüfung bei 360 px und 1280 px im echten Browser erfolgreich durchgeführt (Overflow-Bug behoben, siehe `tasks/todo.md`) |

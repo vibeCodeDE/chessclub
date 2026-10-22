@@ -51,8 +51,9 @@ Die öffentliche Seite repräsentiert den Verein nach außen, funktioniert ohne 
   * Online-Anmeldung für Vereinsmitglieder und externe Gäste bis zum Anmeldeschluss.
 * **Nachrichtenarchiv (`/aktuelles/` & `/aktuelles/<id>/`)**:
   * Vollständiges Archiv aller freigegebenen Vereinsnachrichten mit Kategoriefilter.
-* **Produkt-Landingpage (`/produkt/`)**:
-  * Präsentationsseite für andere Schachvereine mit Tarifübersicht und Kontaktfunktion.
+* **Produkt-Auftritt & Marketing-Routing (Kanonisch `/`, Weiterleitung `/produkt/`)**:
+  * Auf Marketing-Domains (`IS_MARKETING_SITE=1`, [ADR-024](decisions/ADR-024-marketing-site-routing-schachverwaltung-de.md)) liefert die Startseite `/` die vollständige Produktpräsentation mit interaktiver Schmerzpunkte- und Feature-Vorschau, Tarifübersicht und DSGVO-/EU-Hosting-Garantie ([ADR-025](decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
+  * Die frühere URL `/produkt/` leitet per HTTP 301 permanent auf `/` weiter.
 * **Rechtliches (`/impressum/`, `/datenschutz/`)**:
   * DSGVO-konforme Datenschutzerklärung und Impressumsangaben.
 
@@ -74,6 +75,11 @@ Die öffentliche Seite repräsentiert den Verein nach außen, funktioniert ohne 
   * Warnanzeigen bei offenen Beiträgen, anstehenden Spielen und Genehmigungsanträgen.
 * **Globale Suche (`/suche/`)**:
   * Übergreifende Suchfunktion über Mitglieder, Turniere, Mannschaften und Ankündigungen.
+* **Erweiterte Sicherheits- und DoS-Härtung**:
+  * **2FA-Step-Up-Authentifizierung (`/anmelden/zwei-faktor/neu/`, T26d):** Passwortbestätigung vor 2FA-Gerätewechsel gegen unbefugte Sitzungsübernahmen.
+  * **Open-Redirect-Schutz (CWE-601, T26e):** Strikte Whitelist-Prüfung interner Weiterleitungsziele via `url_has_allowed_host_and_scheme`.
+  * **Brute-Force-Schutz (`django-axes`, [ADR-015](decisions/ADR-015-brute-force-schutz-und-dev-profiling.md)):** Automatische IP- und Benutzersperre bei wiederholten Login-Fehlversuchen.
+  * **Serverseitiges Rate-Limiting (`django-ratelimit`, [ADR-028](decisions/ADR-028-rate-limiting-mit-django-ratelimit.md), T37):** Drosselung öffentlicher POST-Endpunkte (max. 5/Min.) ohne datenschutzwidriges Google reCAPTCHA.
 
 ---
 
@@ -199,3 +205,9 @@ Die öffentliche Seite repräsentiert den Verein nach außen, funktioniert ohne 
   * Protokollierung aller sicherheitsrelevanten Aktionen: Logins, Stammdatenänderungen und Zugriffe auf personenbezogene Detaildaten.
 * **Datensparsamkeit bei Gastdaten**:
   * Daten externer Turnierteilnehmer sind zweckgebunden und werden nicht in Mitgliederlisten geführt.
+* **Formula-Injection-Schutz (CWE-1236 / SEC-06, T25c)**:
+  * Maskierung potenzieller Tabellen-Kalkulationsbefehle (`=`, `+`, `-`, `@`) in sämtlichen CSV-Exporten.
+* **Dateisystem-Bereinigung (`django-cleanup`, [ADR-026](decisions/ADR-026-dateibereinigung-mit-django-cleanup.md), T35)**:
+  * Automatisches physisches Löschen verwaister Dateien beim Löschen oder Ändern von Datensätzen.
+* **Lizenz & Open-Source-Strategie (GNU AGPLv3, [ADR-029](decisions/ADR-029-lizenz-agplv3-und-open-source-strategie.md))**:
+  * Vollständiger Quellcode als Freie Software unter der GNU AGPLv3 für selbst hostende Vereine bei gleichzeitigem Angebot für schlüsselfertiges Managed-Hosting ([Schachverwaltung.de](https://schachverwaltung.de)).

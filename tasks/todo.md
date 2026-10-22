@@ -352,6 +352,22 @@
   - Validierung bei bereits eingeloggten Benutzern sowie Sanitisierung vor Übergabe an den Template-Kontext (`login.html`), damit Phishing-Links nicht in `<input type="hidden" name="next">` gerendert werden.
 - **Beleg:** 13 Tests in `core/tests/test_auth.py` (inkl. neuer Positiv- und Negativtests: `test_login_redirect_with_safe_next_url`, `test_negativ_login_rejects_open_redirect_external_url`, `test_negativ_login_rejects_open_redirect_scheme_relative`, `test_negativ_login_page_sanitizes_external_next_parameter`, `test_login_page_renders_safe_next_hidden_input`, `test_authenticated_user_with_safe_next_url`, `test_negativ_authenticated_user_rejects_open_redirect`, `test_two_factor_preserves_safe_next_url`, `test_negativ_two_factor_rejects_open_redirect_url`, `test_negativ_two_factor_rejects_tampered_session_next`); Gesamttestsuite mit 735 Tests zu 100% grün (`docker compose exec app pytest`).
 
+---
+
+### T38: Sofortmaßnahme Release-Sicherheit (MultiFernet, 2FA-Reset CLI, Mail-Queue, N1.6/M5.2/ADR-010)
+- **Problem & Kontext:** Drei kritische Betriebsthemen vor dem Produktiv-Release:
+  1. *IBAN Key-Rotation:* Wenn der AES-Fernet-Schlüssel für SEPA-Mandate gewechselt wird, konnten bestehende Datensätze nicht ohne Datenverlust oder manuelle DB-Eingriffe entschlüsselt werden.
+  2. *2FA Aussperrschutz:* Verliert der einzige Admin sein TOTP-Gerät oder Smartphone, bestand Aussperrgefahr ohne CLI-Notfallzugriff.
+  3. *SMTP-Timeouts bei Massenmails:* Synchroner SMTP-Versand in `sende_gruppenmail` bei 100+ Mitgliedern führt im HTTP-Request zu Timeouts.
+- **Umsetzung:**
+  - *MultiFernet IBAN Key-Rotation:* In `dues/crypto.py` Unterstützung von `IBAN_FERNET_KEYS` (kommagetrennte Liste) mit Fallback auf `IBAN_FERNET_KEY` via `cryptography.fernet.MultiFernet`. Verschlüsselung erfolgt mit dem Primärschlüssel, Entschlüsselung mit allen Schlüsseln. Management-Command `python manage.py rotate_iban_keys [--dry-run]` schlüsselt Mandats-IBANs auf den Primärschlüssel um und schreibt `AuditLog`-Einträge ohne Klartext-IBAN.
+  - *2FA Notfall-Aussperrschutz:* Management-Command `python manage.py reset_2fa <username>` in `core/management/commands/reset_2fa.py`. Löscht das `TwoFactorDevice`, schreibt Revisions-Eintrag in `AuditLog` und gibt Erfolgsmeldung aus. Dokumentation in `docs/wartung.md`.
+  - *Asynchrone E-Mail-Queue & Batching:* Schlankes Datenbankmodell `QueuedMail` in `comms/models.py`. Migration `comms/0003_alter_maillog_status_queuedmail.py`. Reiner Fachservice `process_mail_queue_batch` in `comms/services.py` mit `limit`, `max_retries` und `dry_run`. Management-Command `python manage.py process_mail_queue`. Entkopplung in `sende_gruppenmail` (`async_send=True` setzt `MailLog.Status.QUEUED`, synchroner Fallback weiterhin nahtlos unterstützt).
+- **Beleg:**
+  - `dues/tests/test_iban_verschluesselung.py`: 14 Tests (inkl. `test_multi_key_entschluesselung_alter_und_neuer_daten`, `test_rotate_iban_keys_dry_run_aendert_nichts`, `test_rotate_iban_keys_erfolgreiche_rotation_und_audit_log`, Negativtests: `test_ungueltige_schluessel_in_keys_werfen_improperly_configured_negativtest`, `test_fehlerhafte_mandats_chiffre_wird_als_fehler_gezaehlt`).
+  - `core/tests/test_reset_2fa.py`: 4 Tests (inkl. `test_erfolgreicher_reset_loescht_geraet_und_schreibt_audit_log`, `test_reset_unbestaetigtes_geraet`, Negativtests: `test_nicht_existierender_benutzer_wirft_command_error_negativtest`, `test_benutzer_ohne_2fa_wirft_command_error_negativtest`).
+  - `comms/tests/test_mail.py`: 15 Tests (inkl. `test_async_queue_stellt_in_warteschlange_ohne_sofortigen_versand`, `test_process_mail_queue_dry_run_aendert_keine_zustaende`, `test_process_mail_queue_batch_limit_und_vollstaendige_abarbeitung`, Negativtest: `test_smtp_fehler_und_max_retries_negativtest`).
+
 ## Nächste Schritte
 
 1. **Pilotbetrieb & Abnahme** durch den Testverein mit den erstellten Mustern (`docs/einfuehrung_testverein.md`, `docs/abnahme.md`)

@@ -153,7 +153,7 @@ Vereinsdaten werden vorrangig in der Datenbank über das Singleton-Modell `ClubP
   - Dateigrößen-Begrenzung beim CSV-Upload (max. 2 MB) zum Schutz vor Memory Exhaustion (T31b).
   - Bereinigung physischer Dateien bei Datensatzlöschung via `django-cleanup` ([ADR-026](docs/decisions/ADR-026-dateibereinigung-mit-django-cleanup.md)).
 * **Formula-Injection-Schutz (CWE-1236 / SEC-06):** Flächendeckende Maskierung potenzieller Tabellen-Kalkulationsbefehle (`=`, `+`, `-`, `@`) in allen CSV-Exporten (T25c).
-* **2FA & Step-Up-Schutz:** Zwei-Faktor-Authentifizierung (TOTP) für Vorstände verpflichtend; 2FA-Erzwingung bei Einladungsannahme (T26c) und Passwortbestätigung (Step-Up) beim Gerätewechsel (T26d).
+* **2FA, Step-Up & Open-Redirect-Schutz:** Zwei-Faktor-Authentifizierung (TOTP) für Vorstände verpflichtend; 2FA-Erzwingung bei Einladungsannahme (T26c), Passwortbestätigung (Step-Up) beim Gerätewechsel (T26d) und Open-Redirect-Schutz (CWE-601) mit strikter Host- und Schemavalidierung (T26e).
 
 ---
 
@@ -162,6 +162,8 @@ Vereinsdaten werden vorrangig in der Datenbank über das Singleton-Modell `ClubP
 | Dokument | Beschreibung |
 | --- | --- |
 | [`docs/prd.md`](docs/prd.md) | Fachliches Lastenheft, Berechtigungsmatrix (§3.8), Release-Schnitt v1 / v1.1 |
+| [`docs/funktionen.md`](docs/funktionen.md) / [HTML](docs/funktionen.html) | Lückenlose Modul- und Funktionsübersicht aller Vereins- und Schutzmechanismen |
+| [`docs/anschreiben_testverein.md`](docs/anschreiben_testverein.md) | Formulierungsvorlagen für die Erstansprache von Vorständen für den Pilotbetrieb |
 | [`docs/abnahme.md`](docs/abnahme.md) | Abnahmekriterien, DSGVO-Erfüllungsnachweis und Meilensteine |
 | [`docs/deployment.md`](docs/deployment.md) | Produktiv-Deployment, TLS-Setup mit Caddy, verschlüsselte Backups, Restore-Test & Uptime Kuma |
 | [`docs/ersteinrichtung.md`](docs/ersteinrichtung.md) | Leitfaden für die erstmalige Inbetriebnahme und Datenübernahme |
@@ -182,7 +184,7 @@ Vereinsdaten werden vorrangig in der Datenbank über das Singleton-Modell `ClubP
 Dieses Projekt ist freie Software unter der **[GNU Affero General Public License v3.0](LICENSE)** (AGPL-3.0) — siehe [ADR-029](docs/decisions/ADR-029-lizenz-agplv3-und-open-source-strategie.md).
 
 * **Community-Support (Self-Hosting):**
-  Fragen, Fehlerberichte und Austausch zum eigenständigen Betrieb erfolgen über die öffentlichen [GitHub Issues](https://github.com) und Discussions. Für selbst gehostete Instanzen gibt es keinen garantierten SLA- oder individuellen Einrichtungssupport.
+  Fragen, Fehlerberichte und Austausch zum eigenständigen Betrieb erfolgen über die öffentlichen [GitHub Issues](https://github.com/vibeCodeDE/chessclub/issues) und Discussions. Für selbst gehostete Instanzen gibt es keinen garantierten SLA- oder individuellen Einrichtungssupport.
 * **Managed Hosting & Vorstands-Support ([Schachverwaltung.de](https://schachverwaltung.de)):**
   Für Vereine, die sich nicht um Server, Updates, PostgreSQL, TLS und DSGVO-konforme Backups kümmern möchten, bieten wir die schlüsselfertige Bereitstellung inklusive persönlichem Support und SLA im Monats-/Jahresabonnement an ([ADR-014](docs/decisions/ADR-014-preisgestaltung.md), [ADR-025](docs/decisions/ADR-025-hosting-eu-ebene-scalingo.md)).
 

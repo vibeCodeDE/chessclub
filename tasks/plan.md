@@ -247,6 +247,11 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* `/anmelden/zwei-faktor/neu/` zeigt Passwortabfrage (GET); korrektes Passwort löscht das alte Gerät, setzt `_2fa_user_id` und leitet zur Neueinrichtung um; AuditLog erfasst den Wechsel.
   *Verify:* `pytest core/tests/test_haertung.py members/tests/test_selfservice.py` — **Negativtests:** POST ohne Passwort oder mit falschem Passwort löscht das 2FA-Gerät keinesfalls, meldet Login-Fehlschlag und gibt HTTP 400 mit Formularfehler zurück; unauthentifizierter Aufruf leitet zum Login weiter. · *Files:* `core/auth_views.py`, `core/templates/registration/zwei_faktor_neu.html`, `members/views.py`, `members/templates/members/profil.html`, `core/tests/test_haertung.py`, `members/tests/test_selfservice.py`, `docs/wartung.md` · *Größe:* S · *PRD:* N1.6 · *Release:* v1.1 · *Deps:* T26
 
+- [x] **T26e: Open-Redirect-Schutz bei der Anmeldung (CWE-601 / SEC-15, N1.6)** *(v1.1 — umgesetzt)*
+  Beseitigung von Open-Redirect-Schwachstellen (CWE-601) an Login- und 2FA-Endpunkten (`core/auth_views.py:anmelden`, `zwei_faktor`). Absicherung des Weiterleitungsparameters `next` mittels zentraler Validierungsfunktion `_sicheres_ziel()` unter Verwendung von `django.utils.http.url_has_allowed_host_and_scheme(allowed_hosts={request.get_host()}, require_https=request.is_secure())`. Verhindert das Umleiten authentifizierter Benutzer auf externe Phishing-Seiten via manipulierte Login-Links oder kompromittierte Session-Werte. Template-Sanitisierung für `login.html`.
+  *Acceptance:* Externe oder protokoll-relative URLs in `?next=` werden verworfen und auf den Default (`core:dashboard`) umgeleitet; sichere interne Pfade (z. B. `/turniere/`) bleiben erhalten; 2FA erhält den sicheren Pfad aufrecht; ungültige Werte werden nicht im HTML-Formular gerendert.
+  *Verify:* `pytest core/tests/test_auth.py` — **Negativtests:** `test_negativ_login_rejects_open_redirect_external_url`, `test_negativ_login_rejects_open_redirect_scheme_relative`, `test_negativ_login_page_sanitizes_external_next_parameter`, `test_negativ_authenticated_user_rejects_open_redirect`, `test_negativ_two_factor_rejects_open_redirect_url`, `test_negativ_two_factor_rejects_tampered_session_next`. · *Files:* `core/auth_views.py`, `core/templates/registration/login.html`, `core/tests/test_auth.py` · *Größe:* S · *PRD:* N1.6 · *Release:* v1.1 · *Deps:* T26, T26d
+
 - [x] **T15: Kassenbuch** *(v1.1 — umgesetzt)*
   `CashEntry` (Einnahme/Ausgabe, Kategorie, Betrag, Datum, Notiz, Belegnummer), Liste + Jahresfilter, Jahresabschluss, CSV-Export für den Steuerberater.
   *Acceptance:* Buchungen anlegen/filtern; Jahres-CSV summiert korrekt; **keine** Löschfunktion für Buchungen.
@@ -357,12 +362,20 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
   *Acceptance:* Mehr als 5 POSTs pro Minute von einer IP werden mit HTTP 429 blockiert; GET-Anfragen (Lesen von Turnieren/Seiten) bleiben unbegrenzt möglich; verschiedene IPs besitzen getrennte Budgets; AJAX/JSON liefert saubere Fehlermeldung; allgemeine Tests laufen ungedrosselt mit `RATELIMIT_ENABLE=False`.
   *Verify:* `pytest core/tests/test_ratelimit.py` — **Negativtests:** 6. POST-Versuch liefert 429 auf allen geschützten Routen; GET liefert weiterhin 200; AJAX-Header liefert JSON-429. · *Files:* `requirements.txt`, `config/settings.py`, `config/settings_test.py`, `core/views.py`, `core/auth_views.py`, `members/views.py`, `tournaments/views.py`, `core/templates/core/ratelimited.html`, `templates/429.html`, `core/tests/test_ratelimit.py`, `docs/decisions/ADR-028-rate-limiting-mit-django-ratelimit.md` · *Größe:* S · *Release:* v1.1 · *Deps:* T19, T26b
 
-**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30, T31, T32, T33, T34, T35, T36, T37.
+- [x] **T38: Sofortmaßnahme Release-Sicherheit (MultiFernet, 2FA-Reset CLI, Mail-Queue)** *(v1.1)*
+  Drei zentrale Schutz- und Betriebsmaßnahmen vor dem Go-Live:
+  1. *MultiFernet IBAN Key-Rotation (dues, ADR-010):* Unterstützung von `IBAN_FERNET_KEYS` (kommagetrennte Liste) mit Fallback auf `IBAN_FERNET_KEY` via `MultiFernet`. Neuer Befehl `python manage.py rotate_iban_keys [--dry-run]` schlüsselt Mandats-IBANs auf den aktuellen Primärschlüssel um und schreibt revisionssichere `AuditLog`-Einträge ohne Klartext-IBAN.
+  2. *2FA Notfall-Aussperrschutz (core, N1.6):* Management-Command `python manage.py reset_2fa <username>` löscht bei Schlüssel- oder Geräteverlust das TOTP-Gerät und protokolliert die Aktion revisionssicher im `AuditLog`. Dokumentation in `docs/wartung.md`.
+  3. *Asynchrone E-Mail-Queue & Batching (comms, M5.2/N2.2):* Schlanke, datenbankbasierte E-Mail-Queue (`QueuedMail`) ohne Redis/Celery. Blockweises Abarbeiten per `python manage.py process_mail_queue [--limit 50] [--max-retries 3] [--dry-run]`. Entkopplung in `sende_gruppenmail` mit `QUEUED`-Status.
+  *Acceptance:* Mandate lassen sich mit mehreren Schlüsseln lesen und auf den Primärschlüssel migrieren; ausgesperrte Vorstände können per Server-CLI reaktiviert werden; Massen-E-Mails blockieren den HTTP-Thread nicht und werden kontrolliert abgearbeitet; Dry-Run- und Negativtests greifen zuverlässig.
+  *Verify:* `pytest dues/tests/test_iban_verschluesselung.py core/tests/test_reset_2fa.py comms/tests/test_mail.py` — **Negativtests:** Ungültige Fernet-Keys werfen `ImproperlyConfigured`, unbekannter Nutzer / Nutzer ohne 2FA wirft `CommandError`, SMTP-Fehler führen nach Max-Retries zu `FAILED`, `--dry-run` belässt Datenbanken unberührt. · *Files:* `dues/crypto.py`, `dues/management/commands/rotate_iban_keys.py`, `dues/tests/test_iban_verschluesselung.py`, `core/management/commands/reset_2fa.py`, `core/tests/test_reset_2fa.py`, `docs/wartung.md`, `comms/models.py`, `comms/services.py`, `comms/management/commands/process_mail_queue.py`, `comms/tests/test_mail.py` · *Größe:* M · *Release:* v1.1 · *Deps:* T9, T14, T26
+
+**Checkpoint Final (v1):** Alle PRD-Erfolgskriterien durchgegangen, DSGVO-Checkliste abgehakt, NFR-Nachweis (T25b) abgelegt, Traceability-Tabelle abgeglichen, Berechtigungsmatrix (§3.8) gegen die Tests geprüft, Abnahme durch den Vorstand. Checkliste: `docs/abnahme.md`. **Danach erst v1.1-Tasks:** T7b, T9b, T9c, T15b, T16b, T18, T22, T24b, T29, T30, T31, T32, T33, T34, T25c, T26c, T26d, T26e, T31b, T35, T36, T37, T38.
 
 ## Release-Schnitt
 
 - **v1 (Kern — alle M-Anforderungen):** T1–T14 (inkl. T10b, T11b, T12), T16, T17, T19, T20, T23, T24, T25, T25b, T27
-- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T25c CSV-Formula-Schutz, T26 2FA, T26b Brute-Force/Dev-Toolbar, T26c 2FA-Einladung, T26d 2FA-Step-Up, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T31b CSV-Größenbegrenzung (S1.7/N2.2), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design, T34 Demo-Daten-Steuerung (S7.6), T35 Dateibereinigung (django-cleanup), T36 Saisonverwaltung (S4.7), T37 Rate-Limiting (django-ratelimit)
+- **v1.1 (S-Anforderungen — erst nach v1-Abnahme):** T9c SEPA-XML-Export, T15 Kassenbuch, T15b Storno Kassenbuch, T16b iCal-Feed, T18 Tabellen/Buchholz, T21 Paarung, T22 Turnierexport, T24b Monitoring, T25c CSV-Formula-Schutz, T26 2FA, T26b Brute-Force/Dev-Toolbar, T26c 2FA-Einladung, T26d 2FA-Step-Up, T26e Open-Redirect-Schutz, T28 öffentliche Designsprache, T29 DSB- / DWZ-Synchronisation (K3.6), T30 Modul-Toggles (S7.4), T31 Vereins-Setup (S7.5/S1.7), T31b CSV-Größenbegrenzung (S1.7/N2.2), T32 Admin Import/Export (M1.5/S1.7/S6.2), T33 Operative Hebel & Print/Touch-Design, T34 Demo-Daten-Steuerung (S7.6), T35 Dateibereinigung (django-cleanup), T36 Saisonverwaltung (S4.7), T37 Rate-Limiting (django-ratelimit), T38 Release-Sicherheit (MultiFernet, 2FA-Reset CLI, Mail-Queue)
 - **Nacharbeit aus v1, die die Abnahme blockiert:** T7b (Jahresbeträge), T9b (Storno Zahlungen), T11b (Kassenbericht), T12 (Zugriffsprotokoll), T24 (verschlüsseltes Backup)
 - **Out of scope (K):** nuLiga-Mutations-Export / TRF16 (ADR-016 Säule 3), SMS/Erinnerungen (K5.4), DATEV (K6.3)
 
@@ -377,7 +390,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | M4.1 / M4.2 / M4.3 / M4.4 | T16 / T16 / T17 / T17 |
 | S4.6 | T16b *(v1.1)* |
 | S4.7 | T36 *(v1.1 / ADR-027)* |
-| M5.1 / M5.2 | T13 / T14 |
+| M5.1 / M5.2 | T13 / T14 (+T38 Queue) |
 | M7.1 / M7.2 / M7.3 | T6 + T11 / T1 + T2 / T5 |
 | S7.4 | T30 *(v1.1 / ADR-019)* |
 | S7.5 / S1.7 | T31 (+T31b) *(v1.1 / ADR-020)* |
@@ -385,7 +398,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | N1.1 | T24 (Hoststandort + kein CDN/Tracker), T37 (kein reCAPTCHA) |
 | N1.2 / N1.3 / N1.4 | T23 |
 | N1.5 | T5 (Logins/Änderungen) + T12 (Detail-Zugriffe) |
-| N1.6 | T25c + T26 + T26b + T26c + T26d + T26e + T37 *(v1.1 — im PRD als S geführt)* |
+| N1.6 | T25c + T26 + T26b + T26c + T26d + T26e + T37 + T38 *(v1.1 — im PRD als S geführt)* |
 | N1.7 | T19 |
 | N2.1 / N2.4 | T24 |
 | N2.2 / N2.3 | T25b + T26b |
@@ -403,7 +416,7 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 | Schweizer Paarung bei > 64 Spielern zu einfach | Med | `pairing.py` ist bewusst klein; Grenze dokumentieren, Referenz-Tests mit bekanntem Turnierdatensatz, Umstieg auf bbpPairings als möglicher Nachfolger (eigene ADR dann) |
 | E-Mail-Zustellung selbst gehostet (SPF/DKIM) | Med | Versandprotokoll; Provider-/Zusteller-Doku (SPF, DKIM, DMARC) in `docs/deployment.md`; `config.production` verweigert den Start mit Console-Backend |
 | Umfang zu groß für eine Session | Med | **v1/v1.1-Split:** v1 = alle M-Tasks, v1.1 = S-Tasks erst nach Abnahme; Checkpoints nach je 3–5 Tasks |
-| Datenverlust auf Vereinsserver | Hoch | T24: verschlüsselte Backups (restic) + dokumentierter Restore-Test inkl. Entschlüsselung — **offen**, das aktuelle Backup ist nur komprimiert |
+| Datenverlust auf Vereinsserver | Hoch | T24: verschlüsselte Backups (OpenSSL AES-256-CBC PBKDF2) + dokumentierter Restore-Test inkl. Entschlüsselung erfolgreich umgesetzt und verifiziert (siehe docs/deployment.md) |
 | DSGVO-Anforderung („Zugriffe") unvollständig umgesetzt | Med | T12 protokolliert Detailansichten; N1.5 definiert „Zugriff" konkret; Audit-Logs ≥ 12 Monate; Berechtigungsmatrix §3.8 mit Negativtests je Zeile |
 | Finanzdaten werden doch gelöscht | Hoch | T9b (Zahlungen) und T15b (Kassenbuch) erzwingen Gegenbuchung statt Löschung; `test_rollen.py` und `test_audit.py` sichern die Verbote ab |
 | NFRs (Performance, WCAG, Updatepfad) behauptet, aber nie gemessen | Med | T25b misst die 5 Kernflächen auf der Zielhardware und schreibt Messwert/Methodik/Datum in `docs/nfr-pruefung.md`; T24 testet den Updatepfad |
@@ -416,4 +429,4 @@ Selbst gehostete Django-Web-App für einen Schachverein (< 200 Mitglieder): Mitg
 - ~~Exakte Beitragssätze und Kategorien des Vereins~~ — Struktur steht (Kategorien mit Platzhalterbeträgen, per Admin überschreibbar). Offen bleibt das **Eintragen der echten Sätze vor dem ersten Produktiv-Beitragslauf** und die Frage der Jahresbeträge (T7b).
 - Domain/Hostname für das Deployment — vor T24
 - Aufbewahrungsfristen mit Steuerberater bestätigen — Default 36 Monate bis Anonymisierung, 8 Jahre anonymisierte Finanzhistorie nach § 147 AO
-- Schlüsselverwaltung für die IBAN-Verschlüsselung: Wo liegt der Fertnet-Schlüssel im Prod-Betrieb (Secret-Datei neben `.env.prod`, nicht im Repo, nicht auf dem DB-Host), und wie wird er rotiert? Grundsatz steht in [ADR-010](../docs/decisions/ADR-010-iban-verschluesselt-in-der-datenbank.md), die Betriebsentscheidung ist offen.
+- ~~Schlüsselverwaltung für die IBAN-Verschlüsselung~~: In [ADR-010](../docs/decisions/ADR-010-iban-verschluesselt-in-der-datenbank.md) und `docs/deployment.md` geregelt. `IBAN_FERNET_KEY` liegt als Umgebungsvariable in `.env.prod` bzw. im Passwortmanager, wird beim Start validiert und nie ins Repo übertragen.

@@ -1,7 +1,7 @@
 # PRD: Schachvereins-Software
 
-**Status:** Freigegeben v1.6 (Universelle Zugänglichkeit, Barrierefreiheit WCAG 2.1 AA/AAA, Design-Exzellenz) — Änderungen siehe §9
-**Datum:** 2026-10-04
+**Status:** Freigegeben v3.2 (Doku-Synchronisation: CSV-Import, Vanilla-CSS, Backup-Verfahren & Release-Status harmonisiert) — Änderungen siehe §9
+**Datum:** 2026-10-21
 
 ---
 
@@ -34,7 +34,7 @@
 
 - **Backend:** Django (Python) — Admin-Oberfläche, Auth, CSRF, ORM; der Vorstand braucht kein Framework-Wissen, die meiste Pflege läuft über Djangos fertige Admin-Oberfläche
 - **Datenbank:** PostgreSQL
-- **Frontend:** Server-seitig gerendert (Django Templates + Tailwind) — keine getrennte SPA nötig
+- **Frontend:** Server-seitig gerendert (Django Templates + handgeschriebenes responsives Vanilla-CSS: site.css, app.css, landing.css ohne Node.js-Buildschritt) — keine getrennte SPA nötig
 - **Deployment:** Docker Compose (App + DB + Backups) auf vereinseigenem Server, TLS via Reverse Proxy
 - **Hauptanwendung & Website-Modul:** Die Hauptanwendung ist die **Schachverwaltung** (interne operative Vereinsverwaltung). Die öffentliche **Vereinshomepage** (Startseite mit News/Terminen, `/verein/`) ist ein modulares Add-on, das über `ModuleSettings.homepage_aktiv` flexibel aktiviert oder deaktiviert werden kann (ADR-023). Ist sie deaktiviert, leitet `/` direkt zum internen Dashboard bzw. zur Anmeldung.
 
@@ -50,7 +50,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M1.2 Rollen & Berechtigungen: Admin (Vorstand), Kapitän, Mitglied, Gast
 - M1.3 Mitgliederstatus: aktiv, passiv, ausgetreten (historisiert — kein Löschen, sondern Deaktivieren)
 - M1.4 Selbstbedienung: Mitglied sieht eigene Daten und reicht **Änderungswünsche** ein; Admin prüft und gibt frei (kein direktes Editieren)
-- M1.5 Listen: Filter/Suche, CSV-Export (kein Altbestand vorhanden → kein Import nötig)
+- M1.5 Listen: Filter/Suche, CSV-Export (Mitglieder-Import wurde nachträglich als S1.7/T31 im Onboarding-Setup sowie T32 im Admin ergänzt)
 - M1.6 Sonstige Personen: Förderer/ehemalige Mitglieder als passive Einträge
 
 ### 3.2 Beitragsverwaltung (M/S)
@@ -80,7 +80,7 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M4.4 Ergebnisse je Liga-Match (Einzelbretter → Mannschaftsergebnis)
 - S4.5 automatische Tabellenberechnung je Liga
 - S4.6 iCal-Feed der Ligaspiele (abonnierbar im Handykalender, ohne Login nur mit geheimem Token-Link; keine Aufstellungs- oder Personendaten)
-- S4.7 Saisonverwaltung: Saisons definieren (z. B. 2026/2027), aktive Hauptsaison atomar festlegen, Mannschaften und Turniere pro Saison gliedern, Spieldaten-Validierung, geführter Rollover-Assistent und schreibgeschützte Archivierung (T36, ADR-027)
+- S4.7 Saisonverwaltung: Saisons definieren (z. B. 2026/2027), aktive Hauptsaison atomar festlegen, Mannschaften und Turniere pro Saison gliedern, Spieldaten-Validierung, geführter Rollover-Assistent und schreibgeschützte Archivierung (T36, [ADR-027](decisions/ADR-027-saisonverwaltung-fuer-den-vorstand.md))
 
 ### 3.5 Kommunikation (M/S)
 
@@ -102,10 +102,10 @@ Priorisierung: **M** = Muss (v1), **S** = Sollte (v1.1), **K** = Kann (später)
 - M7.1 Dashboard: offene Beiträge, anstehende Termine, letzte Anmeldungen
 - M7.2 Rollenbasierte Navigation (Menüs je Rolle)
 - M7.3 Audit-Log: wer hat Personendaten wann geändert (DSGVO-Nachweis)
-- S7.4 Modul-Toggles im Admin-Panel: Superadmin / Vorstand kann optionale Satellitenmodule (Spielbetrieb, Turniere, Kassenbuch, Kommunikation) im Django Admin an- und ausschalten (ADR-019)
-- S7.5 Vereins-Setup & Stammdatenverwaltung im Browser: Superadmin / Vorstand kann Stammdaten (Name, Anschrift, Spielabendzeiten, SEPA-Gläubiger-ID) in der Datenbank verwalten (ADR-020)
-- S1.7 Mitglieder-CSV-Import: Importfunktion für echte Mitgliederstammdaten inklusive Validierung, optionaler SEPA-Mandatsanlage und Audit-Protokollierung (ADR-020)
-- S7.6 Demo-Daten-Steuerung im Admin-Panel: Superadmin / Vorstand kann Beispieldaten für Vorführ- und Testzwecke im Django Admin ein- und ausschalten (laden/entfernen mit Schutz vor Überschreiben echter Daten und Audit-Trail, ADR-022)
+- S7.4 Modul-Toggles im Admin-Panel: Superadmin / Vorstand kann optionale Satellitenmodule (Spielbetrieb, Turniere, Kassenbuch, Kommunikation) im Django Admin an- und ausschalten ([ADR-019](decisions/ADR-019-modul-toggles-im-admin-panel.md))
+- S7.5 Vereins-Setup & Stammdatenverwaltung im Browser: Superadmin / Vorstand kann Stammdaten (Name, Anschrift, Spielabendzeiten, SEPA-Gläubiger-ID) in der Datenbank verwalten ([ADR-020](decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md))
+- S1.7 Mitglieder-CSV-Import: Importfunktion für echte Mitgliederstammdaten inklusive Validierung, optionaler SEPA-Mandatsanlage und Audit-Protokollierung ([ADR-020](decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md))
+- S7.6 Demo-Daten-Steuerung im Admin-Panel: Superadmin / Vorstand kann Beispieldaten für Vorführ- und Testzwecke im Django Admin ein- und ausschalten (laden/entfernen mit Schutz vor Überschreiben echter Daten und Audit-Trail, [ADR-022](decisions/ADR-022-demo-daten-steuerung-im-admin-panel.md))
 
 ### 3.8 Berechtigungsmatrix (M)
 
@@ -129,8 +129,10 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 | E-Mail an Gruppe | ja | nein | nein | nein |
 | Auskunfts-Export (DSGVO) | ja | nein | nur eigene Person | nein |
 | Audit-/Zugriffslog einsehen | ja | nein | nein | nein |
-| Modul-Toggles verwalten (ADR-019) | ja | nein | nein | nein |
-| Vereins-Setup & Mitglieder-Import (ADR-020) | ja | nein | nein | nein |
+| Modul-Toggles verwalten ([ADR-019](decisions/ADR-019-modul-toggles-im-admin-panel.md)) | ja | nein | nein | nein |
+| Vereins-Setup & Mitglieder-Import ([ADR-020](decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md)) | ja | nein | nein | nein |
+| Demo-Daten-Steuerung ([ADR-022](decisions/ADR-022-demo-daten-steuerung-im-admin-panel.md)) | ja | nein | nein | nein |
+| Saisonverwaltung & Rollover ([ADR-027](decisions/ADR-027-saisonverwaltung-fuer-den-vorstand.md)) | ja | nein | nein | nein |
 
 ---
 
@@ -152,12 +154,12 @@ Verbindliche Zuordnung für T2 (Navigation), T3/T12 (Mitgliederdetail), T17 (Auf
 - N1.3 Löschpflicht: nach Austritt automatische Anonymisierung nach konfigurierbarer Frist (Default 36 Monate); dabei Kontaktdaten + Stammdaten löschen/anonymisieren, Finanzhistorie (Beiträge, Zahlungen) anonymisiert erhalten (nur noch Mitglied-ID). Aufbewahrung der anonymisierten Finanzhistorie: **8 Jahre** nach § 147 AO; die GoBD verweist für die ordnungsgemäße Aufbewahrung darauf, ist aber nicht selbst die Fristquelle. Fristen vor Go-Live mit Steuerberater bestätigen
 - N1.4 Verzeichnis von Verarbeitungstätigkeiten: Maschinenlesbare Exportfunktion der Datenkategorien
 - N1.5 Protokollierung von Logins, Änderungen **und** Zugriffen auf Personendaten (mindestens 12 Monate). „Zugriff" = Aufruf einer Mitglieder-Detailansicht und Ausführung des Auskunfts-Exports; Listenansichten werden nicht einzeln protokolliert
-- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S) inkl. Step-Up Authentication bei Gerätewechsel, Open-Redirect-Schutz bei der Authentifizierung (CWE-601), Brute-Force-Schutz für Logins (django-axes, ADR-015), Rate-Limiting für öffentliche Endpunkte ohne reCAPTCHA (django-ratelimit, ADR-028)
+- N1.6 Verschlüsselte Übertragung (TLS), verschlüsselte Passwörter (bcrypt/argon2), 2FA für Admins (S) inkl. Step-Up Authentication bei Gerätewechsel, Open-Redirect-Schutz bei der Authentifizierung (CWE-601), Brute-Force-Schutz für Logins (django-axes, [ADR-015](decisions/ADR-015-brute-force-schutz-und-dev-profiling.md)), Rate-Limiting für öffentliche Endpunkte ohne reCAPTCHA (django-ratelimit, [ADR-028](decisions/ADR-028-rate-limiting-mit-django-ratelimit.md))
 - N1.7 Gastdaten aus öffentlichen Turnieranmeldungen (Name + E-Mail) gelten als Personendaten Dritter: sichtbar nur in der Turnierverwaltung, **nicht** in Mitgliederlisten/-suchen, mit Zweckbindung (nur Teilnehmerliste dieses Turniers) und dokumentierter Löschfrist nach Turnierende. Einwilligung: Hinweis auf der Anmeldeseite (Art. 6 Abs. 1 lit. b DSGVO — Durchführung des Turniers)
 
 ### 4.2 Sonstige NFR
 
-- N2.1 **Verfügbarkeit:** 99 % im Vereinsalltag; nächtliches automatisches Backup (pg_dump, komprimiert + **verschlüsselt** z. B. GPG/age — Schlüssel getrennt vom DB-Host gelagert, nicht im Repo), Wiederherstellungstest inkl. Entschlüsselung dokumentiert
+- N2.1 **Verfügbarkeit:** 99 % im Vereinsalltag; nächtliches automatisches Backup (pg_dump, komprimiert + **verschlüsselt** via OpenSSL AES-256-CBC PBKDF2 in tools/backup.sh — Schlüssel getrennt vom DB-Host gelagert, nicht im Repo; [ADR-009](decisions/ADR-009-betrieb-caddy-restic-uptime-kuma.md), docs/deployment.md), Wiederherstellungstest inkl. Entschlüsselung dokumentiert
 - N2.2 **Performance:** Seitenladen < 1 s im LAN/DSL; Suchergebnisse < 500 ms; N+1-Query-Prüfung in der Entwicklung via django-debug-toolbar (ADR-015)
 - N2.3 **Bedienbarkeit & Barrierefreiheit (Universal Access):** Tablet-tauglich (Aufstellung am Spieltag); volle Barrierefreiheit nach **WCAG 2.1 Stufe AA** (Ziel AAA bei Textkontrasten ≥ 7:1); vollständige Tastaturbedienbarkeit mit sichtbaren Focus-Ringen (`:focus-visible`); semantische HTML5-Struktur mit ARIA-Landmarks; Screenreader-freundliche Formular-Labels und Fehlermeldungen; altersgerechte Typografie (Schriftgröße ≥ 16 px, Zeilenabstand 1.5, Zoom bis 200 % ohne Überlappung); Touch-Ziele ≥ 44 × 44 px (WCAG 2.5.5) für fehlerfreie Bedienung am Smartphone und durch ältere Mitglieder
 - N2.4 **Wartbarkeit:** Updatepfad per `docker compose pull`; Datenmigrationen versioniert
@@ -194,7 +196,7 @@ Meilensteine heißen **MS1–MS7**, damit sie nicht mit den Anforderungs-IDs (M1
 | MS6 | DSGVO-Härte: Export/Löschfristen/Audit, NFR-Nachweis (Performance/WCAG/Updatepfad), Backups | DSGVO-Checkliste abgehakt, N2.2–N2.4 gemessen |
 | MS7 | Mobil: Responsive-Feinschliff + PWA-Installation (iOS/Android) | App auf Homescreen installiert, 360-px-Check bestanden |
 
-**Release-Schnitt (v1 vs. v1.1):** **v1** umfasst alle M-Anforderungen (§3.1–§3.5 ohne S-Teile, §3.7), die gesamte DSGVO §4.1 (N1.1–N1.5, N1.7) und alle NFR §4.2 (N2.1–N2.7). N1.6 (2FA) und N2.8 (Monitoring) sind im PRD als S geführt und gehören zu v1.1. **v1.1** ergänzt alle S-Anforderungen und wird erst nach v1-Abnahme gebaut: S3.4 Paarung, S3.5 Turnierexport, S4.5 Tabellen, S4.6 iCal-Feed, S5.3 Newsletter, §3.6 Kassenbuch, N1.6 2FA, N2.8 Monitoring. K-Anforderungen (K3.6, K5.4, K6.3) sind out of scope.
+**Release-Schnitt & Umsetzungsstatus (v1 bis v3.1):** Das Kernrelease **v1** (alle M-Anforderungen, DSGVO N1.1–N1.5/N1.7 und NFR N2.1–N2.7) ist vollständig abgenommen (siehe docs/abnahme.md). Sämtliche **v1.1**-S-Anforderungen (S2.7 SEPA-XML, S3.4 Schweizer Paarung, S3.5 Turnierexport, S4.5 Tabellen/Buchholz, S4.6 iCal-Feeds, S4.7 Saisonverwaltung, §3.6 Kassenbuch, N1.6 2FA & Step-Up, N2.8 Monitoring) sowie K3.6 (DSB-/DWZ-Sync via T29/ADR-016) sind fertig umgesetzt und getestet (> 740 automatisierte Tests). K-Anforderungen K5.4 (SMS) und K6.3 (DATEV-Direktanbindung) verbleiben out of scope.
 
 ---
 
@@ -224,7 +226,7 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | 3 | Selbstbedienung | **Änderungswunsch-Workflow**, kein direktes Editieren |
 | 4 | Bestehende Website | **Keine** — App liefert auch die öffentliche Startseite |
 | 5 | Hosting | **Selbst gehostet** durch den Verein (Docker Compose), Standort EU/DE (N1.1) |
-| 6 | Altbestand | **Keiner** — keine CSV-Importfunktion nötig |
+| 6 | Altbestand / CSV-Import | Ursprünglich kein Import für v1 geplant; mit **S1.7 ([ADR-020](decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md))** und **T32 ([ADR-021](decisions/ADR-021-django-import-export-im-admin.md))** wurde ein robuster CSV-Import im Onboarding-Setup und Admin ergänzt |
 | 7 | Turnieranmeldung durch Gäste | **Zulässig** bis Anmeldeschluss; Gastdaten sind Personendaten Dritter und folgen N1.7 |
 
 ---
@@ -253,4 +255,6 @@ Architektur-Entscheidungen sind damit abgeschlossen. **Operativ offene Punkte** 
 | v2.9 | 2026-10-20 | Dateigrößen-Begrenzung beim Mitglieder-CSV-Upload (max. 2 MB) zum DoS-/OOM-Schutz (S1.7, N2.2) in Task T31b |
 | v3.0 | 2026-10-20 | Re-Authentication / Step-Up Authentication bei 2FA-Gerätewechsel (N1.6) in Task T26d |
 | v3.1 | 2026-10-20 | Open-Redirect-Schutz (CWE-601) bei Login und 2FA mit url_has_allowed_host_and_scheme (N1.6) in Task T26e |
+| v3.2 | 2026-10-21 | Bereinigung historischer Dokumentations-Widersprüche: M1.5 & §8 #6 (CSV-Import via S1.7/T31 und T32 ergänzt), §2 (Vanilla-CSS statt Tailwind), N2.1 (OpenSSL AES-256-CBC PBKDF2), §6 (Release-Schnitt auf Abnahmestatus v3.1 inkl. K3.6 aktualisiert) |
+| v3.3 | 2026-10-21 | Sofortmaßnahme Release-Sicherheit (Task T38): MultiFernet IBAN Key-Rotation (ADR-010), 2FA-Reset CLI-Aussperrschutz (N1.6) und asynchrone E-Mail-Queue/Batching (M5.2, N2.2) |
 

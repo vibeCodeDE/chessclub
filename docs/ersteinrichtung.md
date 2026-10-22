@@ -65,7 +65,9 @@ Bevor Fachdaten über das Webinterface erfasst werden, müssen die Basisdaten de
      * *Datenschutz:* Die IBAN wird in der Datenbank automatisch mit AES-256 verschlüsselt gespeichert ([ADR-010](decisions/ADR-010-iban-verschluesselt-in-der-datenbank.md)) und in Masken nur gekürzt dargestellt (`DE89 •••• 1234`).
 
 > [!TIP]
-> **Massen-Import aus Altsystemen:** Bei mehr als 20–30 Mitgliedern empfiehlt es sich, die Bestandsdaten als CSV vorzubereiten und einmalig über ein Skript (analog zu `seed_demo.py`) importieren zu lassen.
+> **Massen-Import aus Altsystemen (Web & Admin):** Bei größeren Beständen können Mitgliederdaten direkt über die Web-Oberfläche importiert werden:
+> 1. **Geführter Setup-Assistent:** Unter `/admin/setup/` bzw. `/verein/setup/` (Onboarding-Wizard, [ADR-020](decisions/ADR-020-vereinsstammdaten-in-der-datenbank.md)) mit Schritt-für-Schritt-Validierung und optionaler automatischer SEPA-Mandatsanlage.
+> 2. **Django Admin Import/Export:** Unter `/admin/members/member/import/` ([ADR-021](decisions/ADR-021-django-import-export-im-admin.md)) mit Dateigrößen-Schutz (max. 2 MB, T31b), Dry-Run-Vorschau und Formatunterstützung für CSV/XLSX.
 
 ---
 
@@ -108,7 +110,7 @@ Bevor Fachdaten über das Webinterface erfasst werden, müssen die Basisdaten de
 
 * **Pfad:** Menü **Spielbetrieb** &rarr; **Mannschaften** (`/mannschaften/`)
 * **Vorgehen:**
-  1. **Mannschaften anlegen:** Z. B. *1. Mannschaft (Bezirksliga)*, *2. Mannschaft (Kreisklasse)* inkl. Zuweisung des Mannschaftsführers.
+  1. **Saison & Mannschaften anlegen:** Im Admin unter *Teams &rarr; Saisons* die aktive Hauptsaison (z. B. 2026/2027, [ADR-027](decisions/ADR-027-saisonverwaltung-fuer-den-vorstand.md)) festlegen. Anschließend Mannschaften (z. B. *1. Mannschaft*, *2. Mannschaft*) der Saison zuordnen und Mannschaftsführer benennen.
   2. **Rangliste / Stammaufstellung:** Spieler der Reihenfolge nach den Brettern zuordnen.
   3. **Spielplan anlegen:** Begegnungen der Saison mit Datum, Uhrzeit, Heim-/Auswärtsspiel und gegnerischem Verein eintragen.
   4. Die iCal-Kalenderfeeds für Spieler und die Verfügbarkeits-Abfrage (1-Klick-Rückmeldung) sind damit sofort einsatzbereit.
