@@ -60,6 +60,7 @@ class MailLog(models.Model):
     """Protokoll eines Gruppen-E-Mail-Versands (PRD M5.2/N1.5)."""
 
     class Status(models.TextChoices):
+        QUEUED = "queued", "In Warteschlange"
         GESENDET = "gesendet", "Gesendet"
         TEILWEISE = "teilweise", "Teilweise gesendet"
         FEHLGESCHLAGEN = "fehlgeschlagen", "Fehlgeschlagen"
@@ -101,8 +102,53 @@ class MailLog(models.Model):
     @property
     def status_badge(self):
         return {
+            self.Status.QUEUED: "badge-warnung",
             self.Status.GESENDET: "badge-bezahlt",
             self.Status.TEILWEISE: "badge-warnung",
             self.Status.FEHLGESCHLAGEN: "badge-offen",
             self.Status.TEST: "badge-entwurf",
         }.get(self.status, "badge-entwurf")
+
+
+class QueuedMail(models.Model):
+    """Ausstehende E-Mail in der schlanken Versand-Warteschlange (T38).
+
+    Ermöglicht blockweisen, asynchronen Versand großer Empfängermengen
+    ohne Abhängigkeit von Celery/Redis.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Ausstehend"
+        SENT = "sent", "Gesendet"
+        FAILED = "failed", "Fehlgeschlagen"
+
+    mail_log = models.ForeignKey(
+        MailLog,
+        verbose_name="E-Mail-Protokoll",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="queued_mails",
+    )
+    empfaenger_email = models.EmailField("Empfänger-E-Mail")
+    betreff = models.CharField("Betreff", max_length=200)
+    text = models.TextField("Text")
+    status = models.CharField(
+        "Status",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    versuche = models.PositiveIntegerField("Versuche", default=0)
+    fehler_meldung = models.TextField("Fehlermeldung", blank=True)
+    erstellt_am = models.DateTimeField("Erstellt am", auto_now_add=True)
+    gesendet_am = models.DateTimeField("Gesendet am", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Warteschlangen-E-Mail"
+        verbose_name_plural = "Warteschlangen-E-Mails"
+        ordering = ["erstellt_am"]
+
+    def __str__(self):
+        return f"{self.empfaenger_email} - {self.betreff} ({self.status})"
+

@@ -2,14 +2,20 @@
 
 import json
 from datetime import date, timedelta
+from io import StringIO
 
 from django.contrib.auth.models import Group, User
 from django.core import mail
+from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from comms.models import MailLog
-from comms.services import empfaenger_und_uebersprungene, sende_gruppenmail
+from comms.models import MailLog, QueuedMail
+from comms.services import (
+    empfaenger_und_uebersprungene,
+    process_mail_queue_batch,
+    sende_gruppenmail,
+)
 from members.models import Member
 
 
@@ -153,3 +159,144 @@ class AnonymisierungsVorbereitungTests(TestCase):
         """Stellt sicher, dass Datumsrechnungen für Löschfristen funktionieren (T20)."""
         grenze = date.today() - timedelta(days=730)
         self.assertLess(grenze, date.today())
+
+
+class MailQueueBatchTests(TestCase):
+    def setUp(self):
+        self.admin = make_user("vorstand_queue", "admin")
+        self.member1 = Member.objects.create(
+            vorname="Anton", nachname="Alge", eintrittsdatum=date(2022, 1, 1),
+            email="anton@example.org", email_opt_in=True,
+        )
+        self.member2 = Member.objects.create(
+            vorname="Berta", nachname="Berg", eintrittsdatum=date(2022, 1, 1),
+            email="berta@example.org", email_opt_in=True,
+        )
+        self.member3 = Member.objects.create(
+            vorname="Clara", nachname="Claus", eintrittsdatum=date(2022, 1, 1),
+            email="clara@example.org", email_opt_in=True,
+        )
+
+    def test_async_queue_stellt_in_warteschlange_ohne_sofortigen_versand(self):
+        """async_send=True reiht E-Mails als PENDING ein und versendet nichts im Request-Thread."""
+        log = sende_gruppenmail(
+            betreff="Warteschlangen-Test",
+            text="Hallo Queue!",
+            zielgruppe=MailLog.Zielgruppe.AKTIV,
+            benutzer=self.admin,
+            async_send=True,
+        )
+
+        self.assertEqual(log.status, MailLog.Status.QUEUED)
+        self.assertEqual(log.anzahl_empfaenger, 3)
+        self.assertEqual(len(mail.outbox), 0, "Im asynchronen Modus darf kein sofortiger SMTP-Versand erfolgen")
+
+        queued = QueuedMail.objects.filter(mail_log=log)
+        self.assertEqual(queued.count(), 3)
+        self.assertTrue(all(item.status == QueuedMail.Status.PENDING for item in queued))
+        self.assertTrue(all(item.versuche == 0 for item in queued))
+
+    def test_process_mail_queue_dry_run_aendert_keine_zustaende(self):
+        """--dry-run simuliert den Queue-Durchlauf ohne SMTP-Zustellung oder Statuswechsel."""
+        log = sende_gruppenmail(
+            betreff="Dry-Run-Probe",
+            text="Probeinhalt",
+            zielgruppe=MailLog.Zielgruppe.AKTIV,
+            benutzer=self.admin,
+            async_send=True,
+        )
+
+        out = StringIO()
+        call_command("process_mail_queue", "--dry-run", stdout=out)
+
+        self.assertIn("[Dry-Run] 3 E-Mail(s) würden verarbeitet werden", out.getvalue())
+        self.assertEqual(len(mail.outbox), 0)
+
+        # Datensätze in DB bleiben PENDING mit 0 Versuchen
+        queued = QueuedMail.objects.filter(mail_log=log)
+        self.assertTrue(all(item.status == QueuedMail.Status.PENDING for item in queued))
+        self.assertTrue(all(item.versuche == 0 for item in queued))
+        log.refresh_from_db()
+        self.assertEqual(log.status, MailLog.Status.QUEUED)
+
+    def test_process_mail_queue_batch_limit_und_vollstaendige_abarbeitung(self):
+        """Blockweises Abarbeiten per --limit teilt große Sendemengen auf."""
+        log = sende_gruppenmail(
+            betreff="Batch-Test",
+            text="Batching klappt.",
+            zielgruppe=MailLog.Zielgruppe.AKTIV,
+            benutzer=self.admin,
+            async_send=True,
+        )
+
+        # 1. Batch mit Limit 2
+        out1 = StringIO()
+        call_command("process_mail_queue", "--limit=2", stdout=out1)
+        self.assertIn("2 versendet, 0 fehlgeschlagen, 1 verbleibend.", out1.getvalue())
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(QueuedMail.objects.filter(mail_log=log, status=QueuedMail.Status.SENT).count(), 2)
+        self.assertEqual(QueuedMail.objects.filter(mail_log=log, status=QueuedMail.Status.PENDING).count(), 1)
+
+        log.refresh_from_db()
+        self.assertEqual(log.status, MailLog.Status.TEILWEISE)
+
+        # 2. Batch verarbeitet den Rest
+        out2 = StringIO()
+        call_command("process_mail_queue", "--limit=2", stdout=out2)
+        self.assertIn("1 versendet, 0 fehlgeschlagen, 0 verbleibend.", out2.getvalue())
+        self.assertEqual(len(mail.outbox), 3)
+        self.assertEqual(QueuedMail.objects.filter(mail_log=log, status=QueuedMail.Status.SENT).count(), 3)
+        self.assertEqual(QueuedMail.objects.filter(mail_log=log, status=QueuedMail.Status.PENDING).count(), 0)
+
+        log.refresh_from_db()
+        self.assertEqual(log.status, MailLog.Status.GESENDET)
+
+    def test_smtp_fehler_und_max_retries_negativtest(self):
+        """Negativtest: SMTP-Ausfälle zählen Versuche hoch und setzen erst bei max_retries auf FAILED."""
+        from unittest.mock import patch
+
+        log = sende_gruppenmail(
+            betreff="Fehler-Queue",
+            text="Wird fehlschlagen.",
+            zielgruppe=MailLog.Zielgruppe.AKTIV,
+            test_empfaenger="fehler@example.org",
+            benutzer=self.admin,
+            async_send=True,
+        )
+
+        item = QueuedMail.objects.get(mail_log=log)
+        self.assertEqual(item.status, QueuedMail.Status.PENDING)
+        self.assertEqual(item.versuche, 0)
+
+        with patch("comms.services.send_mail", side_effect=RuntimeError("Verbindung verweigert")):
+            # Versuch 1 (max_retries=3): noch PENDING
+            res1 = process_mail_queue_batch(mail_log=log, max_retries=3)
+            item.refresh_from_db()
+            self.assertEqual(item.versuche, 1)
+            self.assertEqual(item.status, QueuedMail.Status.PENDING)
+            self.assertIn("Verbindung verweigert", item.fehler_meldung)
+            self.assertEqual(res1["gesendet"], 0)
+
+            # Versuch 2
+            process_mail_queue_batch(mail_log=log, max_retries=3)
+            item.refresh_from_db()
+            self.assertEqual(item.versuche, 2)
+            self.assertEqual(item.status, QueuedMail.Status.PENDING)
+
+            # Versuch 3: Erreicht max_retries=3 -> Übergang zu FAILED
+            res3 = process_mail_queue_batch(mail_log=log, max_retries=3)
+            item.refresh_from_db()
+            self.assertEqual(item.versuche, 3)
+            self.assertEqual(item.status, QueuedMail.Status.FAILED)
+            self.assertEqual(res3["fehlgeschlagen"], 1)
+
+            log.refresh_from_db()
+            self.assertEqual(log.status, MailLog.Status.FEHLGESCHLAGEN)
+            self.assertEqual(log.anzahl_fehler, 1)
+
+            # Ein weiterer Lauf rührt das fehlgeschlagene Element nicht mehr an
+            res4 = process_mail_queue_batch(mail_log=log, max_retries=3)
+            self.assertEqual(res4["gesendet"], 0)
+            self.assertEqual(res4["fehlgeschlagen"], 0)
+            self.assertEqual(res4["verbleibend"], 0)
+

@@ -36,6 +36,15 @@ Personen (Abschnitt „Monitoring“ in `docs/deployment.md`).
 
 > Ohne Code kein Zugriff auf Vorstandsfunktionen. Geht das Handy verloren, kann
 > eine zweite Vorstandsperson das Gerät in `/admin/core/twofactordevice/` löschen.
+>
+> ### Notfall-Aussperrschutz per Server-CLI
+> Ist kein weiterer Administrator eingeloggt, kann ein Administrator auf dem Server das 2FA-Gerät direkt per Management-Command zurücksetzen:
+> ```bash
+> dc exec app python manage.py reset_2fa <username>
+> # bzw. im Docker-Compose-Standard:
+> docker compose exec app python manage.py reset_2fa <username>
+> ```
+> Die Aktion wird revisionssicher im `AuditLog` protokolliert. Beim nächsten Login kann der Benutzer ein neues Gerät einrichten.
 
 ## Häufige Aufgaben
 
@@ -59,6 +68,17 @@ angeschrieben; jede Sendung steht im Protokoll.
 **Turnier** – „Turnierverwaltung“ → Turnier anlegen → Teilnehmer erfassen →
 „Runde auslosen“ → Ergebnisse eintragen. Die Tabelle rechnet Live-Wertung
 (Punkte, Buchholz); Druck- und CSV-Ausgabe für ChessResults liegen bereit.
+
+**Saisonwechsel & Saisonverwaltung** – Im Django-Admin unter *Teams → Saisons*
+(`/admin/teams/season/`) zum Saisonübergang die neue Saison anlegen und als aktiv
+markieren (ADR-027). Abgeschlossene Saisons können archiviert werden.
+
+**Demo-Daten steuern** – Unter `/admin/core/demodata/` können autorisierte Vorstände
+Musterdaten für Schulungs- oder Vorführzwecke ein- und ausschalten (ADR-022).
+
+**Mitglieder- & Kassenbuch-Import** – Im Django-Admin unter `/admin/members/member/import/`
+bzw. `/admin/cashbook/cashentry/import/` können Datensätze per CSV/Excel importiert
+werden (ADR-021, Upload-Begrenzung: 2 MB zum DoS-Schutz).
 
 ## Jährliche Pflichten
 
@@ -90,7 +110,7 @@ Vorher manuell sichern (siehe `docs/deployment.md`, Abschnitt 5).
 | --- | --- |
 | Seite zeigt 502/„Bad Gateway“ | `dc ps`, dann `dc restart app` |
 | „Service Unavailable“ nach Update | `dc logs app \| tail -50`, Migration prüfen |
-| Login geht nicht mehr | Passwort-Reset über `/passwort/aendern/`; 2FA-Gerät ggf. in `/admin/` löschen |
+| Login geht nicht mehr | Passwort-Reset über `/passwort/aendern/`; 2FA-Gerät in `/admin/` oder via CLI `reset_2fa <username>` löschen |
 | Daten versehentlich geändert | `/audit/` zeigt Wer/Was/Wann; Backup-Restore laut Doku |
 | Verdacht auf Datenabfluss | Backup sichern, Zugänge sperren, Vorstand informieren (DSGVO-Meldefrist 72 h) |
 
