@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Vereinsverwaltung für den Schachverein: Mitglieder, Beiträge, Spielbetrieb und Turniere.">
   <title>{% block title %}Dashboard{% endblock %} · {{ club_short }}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261004">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261022">
   {% if pwa_aktiv %}
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
   {% endif %}
@@ -22,31 +22,47 @@
 <a class="skip-link" href="#main-content">Zum Hauptinhalt springen</a>
 
 <div class="app app-shell">
-  <aside class="sidebar" id="sidebar" aria-label="Hauptnavigation">
-    <a class="brand sidebar-brand" href="{% url 'core:dashboard' %}">
-      <span class="brand-mark" aria-hidden="true"><svg class="icon" style="width:26px;height:26px"><use href="#i-knight"></use></svg></span>
-      <span>schach<span class="brand-second">verwaltung<span class="brand-period">.de</span></span></span>
-    </a>
+  <aside class="sidebar" id="sidebar" aria-label="Seitenleiste">
+    <div class="sidebar-header">
+      <a class="brand sidebar-brand" href="{% url 'core:dashboard' %}">
+        <span class="brand-mark" aria-hidden="true"><svg class="icon" style="width:26px;height:26px"><use href="#i-knight"></use></svg></span>
+        <span>schach<span class="brand-second">verwaltung<span class="brand-period">.de</span></span></span>
+      </a>
+      <button class="icon-btn sidebar-close-btn" type="button" data-sidebar-close aria-label="Navigation schließen">
+        <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </div>
 
     <div class="club-switcher">
       <span class="club-emblem" aria-hidden="true"><svg class="icon" style="width:20px;height:20px"><use href="#i-knight"></use></svg></span>
-      <span>
+      <span class="club-switcher-meta">
         <strong>{{ club_name|default:club_short }}</strong>
         <small>{{ club_short }} · Dein Verein</small>
       </span>
+      {% if user_role == 'admin' %}
+      <a href="{% url 'core:club_setup_profile' %}" class="club-switcher-btn" title="Vereinsdaten &amp; Einstellungen" aria-label="Vereins-Setup aufrufen">
+        <svg class="icon icon-xs" aria-hidden="true"><use href="#i-sliders"></use></svg>
+      </a>
+      {% endif %}
     </div>
 
     <nav class="sidebar-nav main-navigation" aria-label="Hauptnavigation">
       {% for sektion in nav_sektionen %}
-        <div class="nav-section">
-          {% if sektion.titel %}<p class="nav-label nav-section-title">{{ sektion.titel|upper }}</p>{% endif %}
+        <div class="nav-section{% if sektion.is_active %} is-section-active{% endif %}">
+          {% if sektion.titel %}
+            <div class="nav-section-header">
+              <p class="nav-label nav-section-title">{{ sektion.titel|upper }}</p>
+            </div>
+          {% endif %}
           <div class="nav-group">
             {% for link in sektion.links %}
               {% url link.url_name as link_url %}
-              <a class="nav-item nav-link {% if link_url and request.path == link_url %}active is-active{% endif %}" href="{{ link_url }}">
-                <svg class="icon"><use href="#i-{{ link.icon }}"></use></svg>
+              <a class="nav-item nav-link {% if link.is_active or link_url and request.path == link_url %}active is-active{% endif %}" href="{{ link.url|default:link_url }}"{% if link.is_active or link_url and request.path == link_url %} aria-current="page"{% endif %}>
+                <svg class="icon" aria-hidden="true"><use href="#i-{{ link.icon }}"></use></svg>
                 <span class="label">{{ link.label }}</span>
-                {% if link.badge %}<span class="nav-badge">{{ link.badge }}</span>{% endif %}
+                {% if link.badge %}
+                  <span class="nav-badge" aria-label="{{ link.badge }} offene Aufgaben">{{ link.badge }}</span>
+                {% endif %}
               </a>
             {% endfor %}
           </div>
@@ -63,8 +79,8 @@
       </div>
 
       <div class="utility-nav">
-        <a href="{% url 'members:profil' %}"><svg class="icon icon-sm"><use href="#i-settings"></use></svg> Einstellungen</a>
-        <a href="{% url 'core:impressum' %}"><svg class="icon icon-sm"><use href="#i-alert"></use></svg> Hilfe &amp; Support</a>
+        <a href="{% url 'members:profil' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-user"></use></svg> Mein Profil</a>
+        <a href="{% url 'core:impressum' %}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"></use></svg> Impressum &amp; Hilfe</a>
       </div>
 
       <div class="sidebar-profile">

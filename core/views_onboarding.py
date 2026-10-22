@@ -2,7 +2,7 @@
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
@@ -12,7 +12,13 @@ from core.forms_onboarding import (
     OnboardingProfileForm,
     OnboardingQuickFeeForm,
 )
-from core.models import AuditLog, ClubProfile, ModuleSettings, OnboardingProgress, StaffInvitation
+from core.models import (
+    AuditLog,
+    ClubProfile,
+    ModuleSettings,
+    OnboardingProgress,
+    StaffInvitation,
+)
 from core.roles import ADMIN_GROUP, role_required
 from core.services import (
     apply_default_fee_categories,

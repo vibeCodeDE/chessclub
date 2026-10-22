@@ -299,6 +299,7 @@ DSGVO_ANONYMISIERUNGS_FRIST_TAGE = int(os.environ.get("DSGVO_FRIST_TAGE", "730")
 # Ohne Schluessel laeuft die App, aber jede IBAN-Zugriffsart bricht mit
 # ImproperlyConfigured ab – config/production.py verlangt den Schluessel.
 IBAN_FERNET_KEY = os.environ.get("IBAN_FERNET_KEY", "")
+IBAN_FERNET_KEYS = os.environ.get("IBAN_FERNET_KEYS", "")
 
 # Härtung im Produktivbetrieb (hinter TLS-Reverse-Proxy, PRD N1.6).
 if not DEBUG:

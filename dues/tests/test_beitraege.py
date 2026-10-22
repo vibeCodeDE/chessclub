@@ -378,6 +378,65 @@ class MitgliedsKontoTests(TestCase):
         self.assertNotContains(response, "FREMD-MANDAT-999")
         self.assertNotContains(response, "Geheim")
 
+    def test_benutzer_ohne_mitgliedsprofil_sieht_leeren_zustand(self):
+        """Negativ-/Randfall-Test: Benutzer ohne verkn??pftes Mitgliedsprofil st??rzt nicht ab."""
+        user = User.objects.create_user("kein_profil", password="x")
+        self.client.force_login(user)
+        response = self.client.get("/mein-beitragskonto/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Kein Mitgliedsprofil zugeordnet")
+
+    def test_mitglied_mit_vollstaendigen_zahlungen_und_sepa_mandat(self):
+        """Mitglied mit bezahltem Beitrag und Mandat sieht Status Ausgeglichen, Mandatsreferenz und Zahlungen."""
+        user = User.objects.create_user("p_voll", password="x")
+        group, _ = Group.objects.get_or_create(name="mitglied")
+        user.groups.add(group)
+        member = Member.objects.create(
+            vorname="Clara", nachname="Schach", eintrittsdatum=date(2021, 1, 1), user=user
+        )
+        fee = MembershipFee.objects.create(
+            member=member, jahr=2026, kategorie_name="Erwachsene",
+            betrag=Decimal("120.00"), faellig_am=date(2026, 1, 31),
+        )
+        Payment.objects.create(
+            fee=fee, betrag=Decimal("120.00"), datum=date(2026, 1, 15), art=Payment.Art.SEPA, notiz="Lastschrifteinzug"
+        )
+        fee.status_aktualisieren()
+        SepaMandate.objects.create(
+            member=member, referenz="SCKS-MANDAT-001", iban="DE89370400440532013000",
+            erteilt_am=date(2026, 1, 1), status=SepaMandate.Status.AKTIV
+        )
+
+        self.client.force_login(user)
+        response = self.client.get("/mein-beitragskonto/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ausgeglichen")
+        self.assertContains(response, "120,00 €")
+        self.assertContains(response, "SCKS-MANDAT-001")
+        self.assertContains(response, "Verbuchte Zahlungen")
+        self.assertContains(response, "Lastschrifteinzug")
+        self.assertContains(response, "Bankverbindung des Vereins")
+
+    def test_mitglied_mit_mahnstufe_sieht_warnhinweis(self):
+        """Mitglied mit Mahnstufe sieht den Mahnstatus am Posten."""
+        user = User.objects.create_user("p_mahn", password="x")
+        group, _ = Group.objects.get_or_create(name="mitglied")
+        user.groups.add(group)
+        member = Member.objects.create(
+            vorname="David", nachname="Saeumig", eintrittsdatum=date(2021, 1, 1), user=user
+        )
+        MembershipFee.objects.create(
+            member=member, jahr=2026, kategorie_name="Erwachsene",
+            betrag=Decimal("90.00"), faellig_am=date(2026, 1, 31),
+            mahnstufe=1,
+        )
+
+        self.client.force_login(user)
+        response = self.client.get("/mein-beitragskonto/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1. Mahnung")
+        self.assertContains(response, "Hinweis der Kassenführung")
+
 
 class BerechtigungsUndFehlerpfadTests(TestCase):
     """403-Negativtests ('403 verändert nichts'), Fehlerpfade, Admin-Schutz & Query-Budget."""

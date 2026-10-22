@@ -4,6 +4,7 @@ import csv
 from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -32,7 +33,9 @@ from .models import (
     MembershipFee,
     Payment,
     SepaMandate,
+    format_iban,
     jahres_uebersicht,
+    normalize_iban,
 )
 from .services import (
     beitragslauf,
@@ -531,7 +534,6 @@ def sepa_sammelverbuchung_view(request, jahr=None):
     return redirect(f"/beitraege/?jahr={jahr}")
 
 
-
 @role_required(ADMIN_GROUP)
 def kassenbericht(request):
     """Reine Lese-Sicht für den Kassenbericht (PRD M2.6).
@@ -604,16 +606,66 @@ def kassenbericht_export(request):
 @login_required
 def mein_konto(request):
     """Mitgliedssicht: eigene Beiträge und Zahlungen (PRD M1.4/M2.5)."""
-    member = Member.objects.filter(user=request.user).first()
+    member = (
+        Member.objects.select_related("beitragskategorie", "sepa_mandat")
+        .filter(user=request.user)
+        .first()
+    )
     posten = (
-        MembershipFee.objects.filter(member=member).prefetch_related("zahlungen").order_by("-jahr")
+        list(
+            MembershipFee.objects.filter(member=member)
+            .prefetch_related("zahlungen")
+            .order_by("-jahr")
+        )
         if member
         else []
     )
+    offen_summe = sum((fee.offener_betrag for fee in posten), Decimal("0.00"))
+    gesamt_soll = sum((fee.betrag for fee in posten), Decimal("0.00"))
+    gesamt_bezahlt = sum((fee.bezahlter_betrag for fee in posten), Decimal("0.00"))
+
+    zahlungen = []
+    hat_mahnstufe = False
+    for fee in posten:
+        if fee.mahnstufe > 0:
+            hat_mahnstufe = True
+        for z in fee.zahlungen.all():
+            zahlungen.append(z)
+    zahlungen.sort(key=lambda z: (z.datum, z.pk), reverse=True)
+
+    from core.services import get_club_profile
+
+    profil = get_club_profile(request)
+    club_iban_raw = (
+        profil.sepa_iban if profil and profil.sepa_iban else getattr(settings, "SEPA_CREDITOR_IBAN", "")
+    ).strip()
+    clean_club_iban = normalize_iban(club_iban_raw)
+    club_iban_formatiert = format_iban(clean_club_iban) if clean_club_iban else ""
+    club_bic = (
+        profil.sepa_bic if profil and profil.sepa_bic else getattr(settings, "SEPA_CREDITOR_BIC", "")
+    ).strip()
+    club_empfaenger = (
+        profil.sepa_glaeubiger_name
+        if profil and profil.sepa_glaeubiger_name
+        else (
+            getattr(settings, "SEPA_CREDITOR_NAME", "")
+            or (profil.name if profil and profil.name else getattr(settings, "CLUB_NAME", ""))
+        )
+    ).strip()
+
     kontext = {
         "member": member,
         "posten": posten,
         "mandat": getattr(member, "sepa_mandat", None) if member else None,
-        "offen_summe": sum((fee.offener_betrag for fee in posten), Decimal("0.00")) if member else Decimal("0.00"),
+        "offen_summe": offen_summe,
+        "gesamt_soll": gesamt_soll,
+        "gesamt_bezahlt": gesamt_bezahlt,
+        "aktueller_posten": posten[0] if posten else None,
+        "zahlungen": zahlungen,
+        "hat_mahnstufe": hat_mahnstufe,
+        "club_iban": clean_club_iban,
+        "club_iban_formatiert": club_iban_formatiert,
+        "club_bic": club_bic,
+        "club_empfaenger": club_empfaenger,
     }
     return render(request, "dues/mein_konto.html", kontext)

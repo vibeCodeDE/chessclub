@@ -80,6 +80,19 @@ class VorstandsDashboardTests(TestCase):
         response = self.client.get("/dashboard/")
         self.assertContains(response, "SV Test")
 
+    def test_admin_main_content_schnellaktionen(self):
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "Schnellzugriff")
+        self.assertContains(response, "Neues Mitglied")
+        self.assertContains(response, "Zahlung buchen")
+        self.assertContains(response, "Beitragslauf")
+
+    def test_admin_main_content_leerer_jahrgang(self):
+        """Randfall: In einem Beitragsjahr ohne Beitragslauf wird der Hinweis auf den Beitragslauf gezeigt."""
+        MembershipFee.objects.all().delete()
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "Noch kein Beitragslauf")
+
 
 class KapitaenDashboardTests(TestCase):
     """PRD §3.8: Beiträge, Zahlungen, Mahnungen, Kasse und Audit-Log sind
@@ -120,6 +133,7 @@ class KapitaenDashboardTests(TestCase):
         self.assertNotContains(response, "Offene Beitragsposten")
         self.assertNotContains(response, "Kasse")
         self.assertNotContains(response, "/beitraege/export.csv")
+        self.assertNotContains(response, "Schnellzugriff")
 
     def test_keine_mitgliederliste_und_kein_auditlog(self):
         response = self.client.get("/dashboard/")

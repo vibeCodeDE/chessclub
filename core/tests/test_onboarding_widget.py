@@ -5,12 +5,11 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.urls import reverse
 
-from core.models import AuditLog, ClubProfile, OnboardingProgress, StaffInvitation
+from core.models import AuditLog, ClubProfile, OnboardingProgress
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, MITGLIED_GROUP
 from core.services import get_onboarding_checklist_status
 from dues.models import FeeCategory
 from members.models import Member
-from teams.models import Team
 
 User = get_user_model()
 

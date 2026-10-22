@@ -198,11 +198,74 @@
 <div class="dashboard-columns">
   <div class="dashboard-main-column">
     {% if rolle == "admin" %}
+    <section class="panel quick-actions-panel">
+      <div class="panel-heading" style="padding:14px 20px;border-bottom:1px solid var(--border)">
+        <div>
+          <h2 style="font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted)">
+            <svg class="icon icon-sm" style="color:var(--forest)"><use href="#i-knight"></use></svg>
+            Schnellzugriff &amp; Verwaltung
+          </h2>
+        </div>
+      </div>
+      <div class="card-body" style="padding:16px 20px">
+        <div class="quick-action-grid">
+          <a class="quick-action-card" href="{% url 'members:member_create' %}">
+            <span class="quick-action-icon"><svg class="icon icon-sm"><use href="#i-users"></use></svg></span>
+            <span class="quick-action-text">
+              <strong>Neues Mitglied</strong>
+              <small>Stammdaten aufnehmen</small>
+            </span>
+          </a>
+          <a class="quick-action-card" href="{% url 'dues:overview' %}">
+            <span class="quick-action-icon"><svg class="icon icon-sm"><use href="#i-card"></use></svg></span>
+            <span class="quick-action-text">
+              <strong>Beitragslauf</strong>
+              <small>Beitragsjahr {{ jahr }}</small>
+            </span>
+          </a>
+          <a class="quick-action-card" href="{% url 'dues:overview' %}?status=offen">
+            <span class="quick-action-icon"><svg class="icon icon-sm"><use href="#i-wallet"></use></svg></span>
+            <span class="quick-action-text">
+              <strong>Zahlung buchen</strong>
+              <small>{{ uebersicht.offene_anzahl }} offene Posten</small>
+            </span>
+          </a>
+          {% if module_settings.kassenbuch_aktiv %}
+          <a class="quick-action-card" href="{% url 'cashbook:entry_create' %}">
+            <span class="quick-action-icon"><svg class="icon icon-sm"><use href="#i-plus"></use></svg></span>
+            <span class="quick-action-text">
+              <strong>Kassenbuchung</strong>
+              <small>Einnahme / Ausgabe</small>
+            </span>
+          </a>
+          {% endif %}
+          {% if module_settings.spielbetrieb_aktiv %}
+          <a class="quick-action-card" href="{% url 'teams:match_create' %}">
+            <span class="quick-action-icon"><svg class="icon icon-sm"><use href="#i-swords"></use></svg></span>
+            <span class="quick-action-text">
+              <strong>Ligaspiel planen</strong>
+              <small>Begegnung anlegen</small>
+            </span>
+          </a>
+          {% endif %}
+          {% if module_settings.turniere_aktiv %}
+          <a class="quick-action-card" href="{% url 'tournaments:manage_create' %}">
+            <span class="quick-action-icon"><svg class="icon icon-sm"><use href="#i-trophy"></use></svg></span>
+            <span class="quick-action-text">
+              <strong>Turnier ausschreiben</strong>
+              <small>Anmeldung öffnen</small>
+            </span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="panel-heading">
         <div>
           <h2>Offene Beiträge <span class="count-badge">{{ offene_posten|length }}</span></h2>
-          <p>Ein Überblick über ausstehende Zahlungen.</p>
+          <p>Ein Überblick über ausstehende Zahlungen im Beitragsjahr {{ jahr }}.</p>
         </div>
         <a class="text-button" href="{% url 'dues:overview' %}?status=offen">
           Alle ansehen <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-up-right"></use></svg>
@@ -228,41 +291,61 @@
                     <span class="avatar avatar-sm avatar-sage">{{ fee.member.nachname|slice:":1" }}</span>
                     <span>
                       <strong>{{ fee.member }}</strong>
-                      <small>{{ fee.kategorie_name }}</small>
+                      <small>Eintritt {{ fee.member.eintrittsdatum|date:"d.m.Y" }}</small>
                     </span>
                   </a>
                 </td>
-                <td>{{ fee.kategorie_name }}</td>
+                <td><span class="badge badge-neutral">{{ fee.kategorie_name }}</span></td>
                 <td class="amount muted">{{ fee.betrag|floatformat:2 }} €</td>
-                <td class="amount semibold">{{ fee.offener_betrag|floatformat:2 }} €</td>
+                <td class="amount semibold" style="color:var(--danger)">{{ fee.offener_betrag|floatformat:2 }} €</td>
                 <td>
                   {% if fee.mahnstufe %}
-                    <span class="badge badge-amber">{{ fee.mahnstufe }}. Mahnung</span>
+                    <span class="badge badge-amber" title="{{ fee.mahnstufe }}. Mahnstufe aktiv"><span class="badge-dot"></span>{{ fee.mahnstufe }}. Mahnung</span>
+                  {% elif fee.status == 'teilweise' %}
+                    <span class="badge badge-amber"><span class="badge-dot"></span>Teilzahlung</span>
                   {% else %}
                     <span class="badge badge-neutral"><span class="badge-dot"></span>Offen</span>
                   {% endif %}
                 </td>
                 <td class="action-cell">
-                  <a class="row-action" href="{% url 'dues:fee_detail' fee.pk %}" title="Zahlung buchen" aria-label="Zahlung buchen für {{ fee.member }}">
-                    <svg class="icon icon-sm"><use href="#i-arrow-up-right"></use></svg>
+                  <a class="btn small button button-secondary" href="{% url 'dues:fee_detail' fee.pk %}" title="Zahlung buchen für {{ fee.member }}" aria-label="Zahlung buchen für {{ fee.member }}" style="padding:4px 10px;font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px">
+                    <span>Zahlung buchen</span>
+                    <svg class="icon icon-sm" style="width:11px;height:11px"><use href="#i-arrow-up-right"></use></svg>
                   </a>
                 </td>
               </tr>
             {% empty %}
-              <tr>
-                <td colspan="6">
-                  {% include "includes/empty_state.html" with icon="check" titel="Alle Beiträge bezahlt" text="Für dieses Jahr ist kein Beitrag offen – sehr gut." small=True %}
-                </td>
-              </tr>
+              {% if uebersicht.anzahl == 0 %}
+                <tr>
+                  <td colspan="6">
+                    <div class="empty-state small" style="padding:28px 16px;text-align:center">
+                      <span class="empty-icon"><svg class="icon" style="color:var(--sage)"><use href="#i-card"></use></svg></span>
+                      <h3>Noch kein Beitragslauf für {{ jahr }}</h3>
+                      <p>Für dieses Beitragsjahr wurden noch keine Beitragsposten generiert.</p>
+                      <a href="{% url 'dues:overview' %}" class="btn small button button-primary" style="margin-top:10px;display:inline-flex;align-items:center;gap:6px">
+                        <svg class="icon icon-sm" style="width:12px;height:12px"><use href="#i-plus"></use></svg> Beitragslauf durchführen
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6">
+                    {% include "includes/empty_state.html" with icon="check" titel="Alle Beiträge bezahlt" text="Für dieses Jahr ist kein Beitrag offen – sehr gut." small=True %}
+                  </td>
+                </tr>
+              {% endif %}
             {% endfor %}
           </tbody>
         </table>
       </div>
       <div class="panel-footer">
         <span><span class="status-dot amber"></span>{{ uebersicht.offen|floatformat:2 }} € insgesamt offen</span>
-        <a class="text-button" href="{% url 'dues:overview' %}">
-          Beiträge verwalten <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-right"></use></svg>
-        </a>
+        <div style="display:inline-flex;align-items:center;gap:12px">
+          <a class="text-button" href="{% url 'dues:overview' %}">
+            Beiträge verwalten <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-right"></use></svg>
+          </a>
+        </div>
       </div>
     </section>
     {% else %}
@@ -316,6 +399,10 @@
         {% if module_settings.spielbetrieb_aktiv %}
         <a class="text-button" href="{% url 'teams:match_list' %}">
           Zum Spielplan <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-up-right"></use></svg>
+        </a>
+        {% elif module_settings.turniere_aktiv %}
+        <a class="text-button" href="{% url 'tournaments:public_list' %}">
+          Zu den Turnieren <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-arrow-up-right"></use></svg>
         </a>
         {% endif %}
       </div>
@@ -494,30 +581,7 @@
         {% endfor %}
       </div>
     </section>
-    {% if module_settings.homepage_aktiv %}
-    <a class="club-evening-card" href="{% url 'core:verein' %}">
-    {% else %}
-    <div class="club-evening-card">
-    {% endif %}
-      <img src="{% static 'img/klubabend.jpg' %}" alt="Schachabend im Vereinsheim" class="evening-img" loading="lazy" width="400" height="235">
-      <span class="photo-shade"></span>
-      <div class="evening-content">
-        <span class="evening-eyebrow"><span></span>UNSER VEREINSABEND</span>
-        <strong>Gute Züge.<br>Gute Gesellschaft.</strong>
-        <span class="evening-date">
-          <svg class="icon icon-sm" style="width:13px;height:13px"><use href="#i-clock"></use></svg>
-          Freitags ab 19:00 Uhr · Vereinsheim
-        </span>
-        {% if module_settings.homepage_aktiv %}
-        <span class="evening-link">Dabei sein <svg class="icon icon-sm" style="width:15px;height:15px"><use href="#i-arrow-up-right"></use></svg></span>
-        {% endif %}
-      </div>
-    {% if module_settings.homepage_aktiv %}
-    </a>
-    {% else %}
-    </div>
-    {% endif %}
-
+    {% if eigene_mannschaften %}
     <section class="panel">
       <div class="panel-heading"><h2>Meine Mannschaften</h2></div>
       <div class="task-list">
@@ -530,11 +594,10 @@
             </span>
             <svg class="icon icon-sm" style="color:#a6af9b"><use href="#i-arrow-right"></use></svg>
           </a>
-        {% empty %}
-          <div class="muted" style="padding:15px">Du bist aktuell kein Kapitän einer Mannschaft.</div>
         {% endfor %}
       </div>
     </section>
+    {% endif %}
     {% endif %}
   </aside>
 </div>

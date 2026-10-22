@@ -224,9 +224,9 @@ class SicherheitsHeaderTests(TestCase):
 
     def test_csp_nonce_im_request_verfuegbar(self):
         """CSPMiddleware erzeugt einen Nonce im Request für Skripte und Templates."""
+        from csp.middleware import CSPMiddleware
         from django.http import HttpResponse
         from django.test import RequestFactory
-        from csp.middleware import CSPMiddleware
 
         rf = RequestFactory()
         req = rf.get("/")

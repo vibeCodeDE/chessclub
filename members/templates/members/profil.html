@@ -2,165 +2,549 @@
 
 {% block title %}Mein Profil{% endblock %}
 {% block page_title %}Mein Profil{% endblock %}
-{% block crumbs %}<div class="crumbs">Selbstbedienung · Änderungen werden von der Vorstandschaft geprüft</div>{% endblock %}
+{% block crumbs %}
+<span class="crumbs-detail">Selbstbedienung · Änderungen mit Vorstandsprüfung</span>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-heading">
+  <div>
+    <div class="page-eyebrow">Selbstbedienung</div>
+    <h1>Mein Profil</h1>
+    <p>Deine persönlichen Mitgliedsdaten, Wertungszahlen, Beitragsstatus und Terminkalender im Überblick.</p>
+  </div>
+  <div class="page-heading-actions">
+    {% if member %}
+      <a class="btn secondary button button-secondary" href="{% url 'core:dsgvo_pdf' member.pk %}" title="Vollständige Datenauskunft nach Art. 15 DSGVO als PDF herunterladen">
+        <svg class="icon icon-sm"><use href="#i-download"></use></svg> DSGVO-Auskunft (PDF)
+      </a>
+      <a class="btn secondary button button-secondary" href="{% url 'dues:mein_konto' %}" title="Alle Buchungen und Zahlungsbelege ansehen">
+        <svg class="icon icon-sm"><use href="#i-wallet"></use></svg> Beitragskonto
+      </a>
+      {% if module_settings.spielbetrieb_aktiv %}
+        <a class="btn button button-primary" href="{% url 'teams:meine_aufstellungen' %}" title="Meine Einsätze an den Ligabrettern">
+          <svg class="icon icon-sm"><use href="#i-swords"></use></svg> Meine Einsätze
+        </a>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
 
 {% block content %}
+{% if member %}
+  <div class="stats-grid">
+    <section class="stat-card">
+      <div class="stat-label">
+        <span>Mitgliedsstatus</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+      </div>
+      <div class="stat-value">
+        <span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span>
+      </div>
+      <div class="stat-bottom">
+        <span>Seit {{ member.eintrittsdatum|date:"d.m.Y" }}</span>
+        <span class="middle-dot">·</span>
+        <span>{{ member.beitragskategorie.name|default:"Standard" }}</span>
+      </div>
+    </section>
+
+    <section class="stat-card">
+      <div class="stat-label">
+        <span>Wertungszahl (DWZ)</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-trophy"></use></svg>
+      </div>
+      <div class="stat-value">
+        {% if member.dwz %}
+          <strong>{{ member.dwz_formatiert }}</strong>
+        {% else %}
+          <span class="muted" style="font-size:1.15rem;font-weight:600">– keine DWZ –</span>
+        {% endif %}
+      </div>
+      <div class="stat-bottom">
+        <span>ZPS: {{ member.zps_nummer|default:"–" }}</span>
+        {% if member.fide_id %}
+          <span class="middle-dot">·</span>
+          <span>FIDE: {{ member.fide_id }}</span>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="stat-card {% if offener_beitrag_summe > 0 %}accent-warn{% else %}accent-success{% endif %}">
+      <div class="stat-label">
+        <span>Offener Beitrag</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-wallet"></use></svg>
+      </div>
+      <div class="stat-value money-value">
+        {{ offener_beitrag_summe|floatformat:2 }} €
+      </div>
+      <div class="stat-bottom">
+        {% if mandat %}
+          <span><span class="status-dot green"></span>SEPA {{ mandat.iban_kurz }}</span>
+        {% else %}
+          <span><span class="status-dot amber"></span>Überweisung/Bar</span>
+        {% endif %}
+        <a href="{% url 'dues:mein_konto' %}" class="link-btn" style="font-size:11.5px">Details &rarr;</a>
+      </div>
+    </section>
+
+    <section class="stat-card">
+      <div class="stat-label">
+        <span>Ligaeinsätze &amp; Spielplan</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-swords"></use></svg>
+      </div>
+      <div class="stat-value">
+        {{ aufstellungen_gesamt|default:aufstellungen|length }}
+      </div>
+      <div class="stat-bottom">
+        {% if calendar_url %}
+          <span><span class="status-dot green"></span>iCal synchronisiert</span>
+        {% else %}
+          <span><span class="status-dot gray"></span>Kein iCal-Abo</span>
+        {% endif %}
+        {% if module_settings.spielbetrieb_aktiv %}
+          <a href="{% url 'teams:meine_aufstellungen' %}" class="link-btn" style="font-size:11.5px">Einsätze &rarr;</a>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+{% endif %}
+
 <div class="grid main-side">
   <div>
-    <div class="card">
-      <div class="card-head"><h2>Meine Stammdaten</h2><span class="sub">Änderungen bitte über den Wunsch-Workflow</span></div>
-      {% if member %}
-        <div class="card-body">
-          <div class="row-lead mb-2">
-            <span class="avatar" style="width:52px;height:52px;font-size:1.1rem">{{ member.nachname|slice:":1" }}{{ member.vorname|slice:":1" }}</span>
-            <span>
-              <h2 class="mb-0">{{ member.vorname }} {{ member.nachname }}</h2>
-              <span class="cell-sub">Mitglied seit {{ member.eintrittsdatum|date:"d.m.Y" }} · {{ member.get_status_display }}</span>
-            </span>
-          </div>
-          <div class="grid cols-2">
-            <dl class="list">
-              <li><span class="grow"><span class="meta">E-Mail</span><span class="title">{{ member.email|default:"–" }}</span></span></li>
-              <li><span class="grow"><span class="meta">Telefon</span><span class="title">{{ member.telefon|default:"–" }}</span></span></li>
-              <li><span class="grow"><span class="meta">Beitragskategorie</span><span class="title">{{ member.beitragskategorie.name|default:"–" }}</span></span></li>
-            </dl>
-            <dl class="list">
-              <li><span class="grow"><span class="meta">Straße</span><span class="title">{{ member.strasse|default:"–" }}</span></span></li>
-              <li><span class="grow"><span class="meta">PLZ / Ort</span><span class="title">{{ member.plz|default:"–" }} {{ member.ort|default:"" }}</span></span></li>
-              <li><span class="grow"><span class="meta">Rundbrief</span><span class="title">{{ member.email_opt_in|yesno:"erlaubt,nicht erlaubt" }}</span></span></li>
-            </dl>
-          </div>
-        </div>
-      {% else %}
-        {% include "includes/empty_state.html" with icon="user" titel="Kein Mitgliedsprofil hinterlegt" text="Ihr Konto ist noch nicht mit einem Mitglied verknüpft – es liegt noch kein Mitgliedsprofil vor. Bitte wenden Sie sich an die Vorstandschaft." %}
-      {% endif %}
-    </div>
-
     {% if member %}
       <div class="card">
         <div class="card-head">
-          <h2>Mein Beitragskonto</h2>
-          <a class="link-btn" href="{% url 'dues:mein_konto' %}">Alle Zahlungen</a>
+          <h2><svg class="icon icon-sm"><use href="#i-user"></use></svg> Meine Stammdaten &amp; Verbandsdaten</h2>
+          <span class="sub">Änderungen bitte über den Wunsch-Workflow</span>
+        </div>
+        <div class="card-body">
+          <div class="row-lead mb-2" style="display:flex;align-items:center;gap:16px">
+            <span class="avatar avatar-sage" style="width:56px;height:56px;font-size:1.2rem;border-radius:50%">{{ member.nachname|slice:":1" }}{{ member.vorname|slice:":1" }}</span>
+            <div style="min-width:0;flex:1">
+              <h2 class="mb-0" style="font-size:1.35rem;font-weight:700">{{ member.vorname }} {{ member.nachname }}</h2>
+              <div class="cell-sub mt-1" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                <span>Mitglied seit {{ member.eintrittsdatum|date:"d.m.Y" }}</span>
+                <span class="middle-dot">·</span>
+                <span class="badge badge-{{ member.status }}">{{ member.get_status_display }}</span>
+                {% if member.beitragskategorie %}
+                  <span class="middle-dot">·</span>
+                  <span class="badge badge-neutral">{{ member.beitragskategorie.name }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-info mb-2" style="font-size:13px;line-height:1.5;display:flex;gap:10px;align-items:flex-start">
+            <svg class="icon icon-sm" style="flex-shrink:0;margin-top:2px"><use href="#i-edit"></use></svg>
+            <div>
+              <strong>Selbstbedienung (PRD M1.4):</strong> Anschrift, E-Mail-Adresse und Telefonnummer können nicht direkt überschrieben werden. Reiche deinen Änderungswunsch über das Formular rechts ein – nach Prüfung durch den Vorstand werden deine Daten aktualisiert.
+            </div>
+          </div>
+
+          <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:var(--sage);margin-top:1.5rem;margin-bottom:0.75rem">
+            Kontaktdaten &amp; Erreichbarkeit
+          </h3>
+          <div class="grid cols-2 mb-2">
+            <dl class="list" style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden">
+              <li>
+                <span class="grow">
+                  <span class="meta">E-Mail-Adresse</span>
+                  <span class="title">
+                    {% if member.email %}
+                      <a href="mailto:{{ member.email }}" style="word-break:break-all">{{ member.email }}</a>
+                    {% else %}
+                      <span class="muted">– nicht hinterlegt –</span>
+                    {% endif %}
+                  </span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Telefon / Mobil</span>
+                  <span class="title">
+                    {% if member.telefon %}
+                      <a href="tel:{{ member.telefon }}">{{ member.telefon }}</a>
+                    {% else %}
+                      <span class="muted">– nicht hinterlegt –</span>
+                    {% endif %}
+                  </span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">E-Mail-Rundbrief (Newsletter)</span>
+                  <span class="title">
+                    {% if member.email_opt_in %}
+                      <span class="badge badge-aktiv"><svg class="icon icon-xs"><use href="#i-check"></use></svg> Erlaubt</span>
+                    {% else %}
+                      <span class="badge badge-neutral"><svg class="icon icon-xs"><use href="#i-x"></use></svg> Nicht erlaubt</span>
+                    {% endif %}
+                  </span>
+                </span>
+              </li>
+            </dl>
+            <dl class="list" style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden">
+              <li>
+                <span class="grow">
+                  <span class="meta">Straße &amp; Hausnummer</span>
+                  <span class="title">{{ member.strasse|default:"– nicht hinterlegt –" }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Postleitzahl &amp; Ort</span>
+                  <span class="title">{% if member.plz or member.ort %}{{ member.plz }} {{ member.ort }}{% else %}<span class="muted">– nicht hinterlegt –</span>{% endif %}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Geburtsdatum</span>
+                  <span class="title">{{ member.geburtsdatum|date:"d.m.Y"|default:"–" }}</span>
+                </span>
+              </li>
+            </dl>
+          </div>
+
+          <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:var(--sage);margin-top:1.5rem;margin-bottom:0.75rem">
+            Deutscher Schachbund (DSB) &amp; Wertungszahlen
+          </h3>
+          <div class="grid cols-2">
+            <dl class="list" style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden">
+              <li>
+                <span class="grow">
+                  <span class="meta">DWZ (Deutsche Wertungszahl)</span>
+                  <span class="title">
+                    {% if member.dwz %}
+                      <strong class="mono" style="font-size:1.1rem;color:var(--forest-dark)">{{ member.dwz_formatiert }}</strong>
+                    {% else %}
+                      <span class="muted">– keine DWZ hinterlegt –</span>
+                    {% endif %}
+                  </span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">ZPS-Passnummer</span>
+                  <span class="title mono">{{ member.zps_nummer|default:"–" }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Personenkennziffer (PKZ)</span>
+                  <span class="title mono">{{ member.pkz|default:"–" }}</span>
+                </span>
+              </li>
+            </dl>
+            <dl class="list" style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden">
+              <li>
+                <span class="grow">
+                  <span class="meta">FIDE-ID (Weltschachbund)</span>
+                  <span class="title mono">{{ member.fide_id|default:"–" }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Spielberechtigung</span>
+                  <span class="title">{{ member.get_spielberechtigung_display|default:"Erstmitgliedschaft" }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Benutzerkonto</span>
+                  <span class="title mono">{{ request.user.username }}</span>
+                </span>
+              </li>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2><svg class="icon icon-sm"><use href="#i-wallet"></use></svg> Mein Beitragskonto</h2>
+          <a class="link-btn" href="{% url 'dues:mein_konto' %}">Alle Zahlungen &amp; Details &rarr;</a>
         </div>
         <div class="table-wrap">
           <table class="data">
-            <thead><tr><th>Jahr</th><th>Kategorie</th><th class="right">Betrag</th><th class="right">Offen</th><th>Status</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Jahr</th>
+                <th>Kategorie</th>
+                <th class="right">Betrag</th>
+                <th class="right">Bezahlt</th>
+                <th class="right">Offen</th>
+                <th>Status</th>
+              </tr>
+            </thead>
             <tbody>
               {% for fee in posten %}
                 <tr>
-                  <td class="cell-main">{{ fee.jahr }}</td>
+                  <td class="cell-main"><strong>{{ fee.jahr }}</strong></td>
                   <td>{{ fee.kategorie_name }}</td>
-                  <td class="num mono">{{ fee.betrag|floatformat:2 }} €</td>
-                  <td class="num mono">{{ fee.offener_betrag|floatformat:2 }} €</td>
+                  <td class="num mono right">{{ fee.betrag|floatformat:2 }} €</td>
+                  <td class="num mono right">{{ fee.bezahlter_betrag|floatformat:2 }} €</td>
+                  <td class="num mono right {% if fee.offener_betrag > 0 %}text-danger{% endif %}">{{ fee.offener_betrag|floatformat:2 }} €</td>
                   <td><span class="badge badge-{{ fee.status }}">{{ fee.get_status_display }}</span></td>
                 </tr>
               {% empty %}
-                <tr><td colspan="5">{% include "includes/empty_state.html" with icon="wallet" titel="Noch keine Beiträge gebucht" text="Die Kasse erzeugt Ihre Posten mit dem nächsten Beitragslauf." small=True %}</td></tr>
+                <tr>
+                  <td colspan="6">
+                    {% include "includes/empty_state.html" with icon="wallet" titel="Noch keine Beiträge gebucht" text="Die Kasse erzeugt Ihre Posten mit dem nächsten Beitragslauf." small=True %}
+                  </td>
+                </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-        {% if mandat %}
-          <div class="card-foot">
-            <span class="chip"><svg class="icon icon-sm"><use href="#i-card"></use></svg> SEPA-Mandat {{ mandat.referenz }} · {{ mandat.iban_kurz }} · {{ mandat.get_status_display }}</span>
-          </div>
-        {% endif %}
+        <div class="card-foot">
+          {% if mandat %}
+            <span class="chip">
+              <svg class="icon icon-sm"><use href="#i-card"></use></svg>
+              SEPA-Mandat: {{ mandat.referenz }} · {{ mandat.iban_kurz }} · {{ mandat.get_status_display }}
+            </span>
+          {% else %}
+            <span class="cell-sub">
+              <svg class="icon icon-sm"><use href="#i-alert"></use></svg>
+              Kein SEPA-Mandat hinterlegt · Beitragszahlung erfolgt per Überweisung oder Barzahlung.
+            </span>
+          {% endif %}
+          <a href="{% url 'dues:mein_konto' %}" class="link-btn" style="font-weight:600">Zur Beitragsansicht</a>
+        </div>
       </div>
 
       {% if aufstellungen %}
         <div class="card">
-          <div class="card-head"><h2>Meine Einsätze</h2></div>
-          <ul class="list">
-            {% for eintrag in aufstellungen %}
-              <li>
-                <span class="badge badge-bar">Brett {{ eintrag.brett }}</span>
-                <span class="grow">
-                  <span class="title">{{ eintrag.match.team.name }} – {{ eintrag.match.gegner }}</span>
-                  <span class="meta">{{ eintrag.match.datum|date:"d.m.Y" }} · {{ eintrag.ergebnis_anzeige }}</span>
-                </span>
-              </li>
-            {% endfor %}
-          </ul>
+          <div class="card-head">
+            <h2><svg class="icon icon-sm"><use href="#i-swords"></use></svg> Meine Einsätze an den Ligabrettern</h2>
+            {% if module_settings.spielbetrieb_aktiv %}
+              <a class="link-btn" href="{% url 'teams:meine_aufstellungen' %}">Alle Einsätze &rarr;</a>
+            {% endif %}
+          </div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Begegnung</th>
+                  <th>Brett</th>
+                  <th>Gegner</th>
+                  <th>Ergebnis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for eintrag in aufstellungen %}
+                  <tr>
+                    <td class="nowrap cell-sub">{{ eintrag.match.datum|date:"d.m.Y" }}</td>
+                    <td class="cell-main">
+                      <strong>{{ eintrag.match.team.name }}</strong>
+                      <span class="cell-sub">{{ eintrag.match.heimspiel|yesno:"gegen,bei" }} {{ eintrag.match.gegner }}</span>
+                    </td>
+                    <td><span class="badge badge-bar">Brett {{ eintrag.brett }}</span></td>
+                    <td>{{ eintrag.gegner_name|default:"–" }}</td>
+                    <td>
+                      <span class="badge {% if eintrag.ergebnis == '1' %}badge-sieg{% elif eintrag.ergebnis == '0' %}badge-niederlage{% elif eintrag.ergebnis == '0.5' %}badge-remis{% else %}badge-neutral{% endif %}">
+                        {{ eintrag.ergebnis_anzeige }}
+                      </span>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       {% endif %}
 
       {% if calendar_url %}
-        <div class="card mt-2">
+        <div class="card">
           <div class="card-head">
-            <h2>Persönlicher Spielplan &amp; Kalender</h2>
-            <span class="sub">iCal / Webcal Termine</span>
+            <h2><svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Persönlicher Spielplan &amp; Kalender</h2>
+            <span class="sub">iCal / Webcal Terminsynchronisation</span>
           </div>
           <div class="card-body">
-            <p>Abonniere deine persönlichen Einsätze an den Ligabrettern und die Vereinsturniere direkt auf deinem Smartphone (Apple Kalender, Google Kalender, Outlook).</p>
-            <div class="flex gap-1 wrap center mt-1">
-              <a class="btn small" href="{{ calendar_url }}">
+            <p>Abonniere deine persönlichen Einsätze an den Ligabrettern sowie alle Vereinsturniere live auf deinem Smartphone oder Desktop-Kalender (Apple Kalender, Google Kalender, Microsoft Outlook).</p>
+            
+            <div class="field mt-2 mb-2">
+              <label for="calendar-url-field">Dein persönlicher Kalender-Feed</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <input id="calendar-url-field" class="input mono" type="text" readonly value="{{ calendar_url }}" style="font-size:12.5px;background:var(--surface-2);color:var(--text);flex:1;min-width:240px" onclick="this.select()">
+                <button class="btn button button-secondary" type="button" onclick="navigator.clipboard.writeText('{{ calendar_url }}').then(() => { if (window.App && window.App.toast) window.App.toast('Kalender-Link in die Zwischenablage kopiert!', 'success'); else alert('Kalender-Link kopiert!'); })">
+                  Link kopieren
+                </button>
+              </div>
+            </div>
+
+            <div class="flex gap-1 wrap center mt-2">
+              <a class="btn small button button-primary" href="{{ calendar_url }}">
                 <svg class="icon icon-sm"><use href="#i-calendar"></use></svg> Kalender abonnieren (.ics)
               </a>
-              <button class="btn small secondary" type="button" onclick="navigator.clipboard.writeText('{{ calendar_url }}').then(() => { if (window.App && window.App.toast) window.App.toast('Kalender-Link kopiert!', 'success'); else alert('Kopiert!'); })">
-                Link kopieren
-              </button>
               <form method="post" action="{% url 'members:renew_personal_calendar_token' %}" style="display:inline">
                 {% csrf_token %}
                 <button class="btn small ghost text-danger" type="submit" onclick="return confirm('Persönlichen Kalender-Token wirklich erneuern? Bestehende Abonnements auf Ihren Geräten werden ungültig.');">
-                  Token erneuern
+                  <svg class="icon icon-sm"><use href="#i-refresh"></use></svg> Token erneuern
                 </button>
               </form>
             </div>
-            <p class="cell-sub mt-1">Dieser geheime Link synchronisiert deine Spieltage automatisch.</p>
+            <p class="cell-sub mt-2 mb-0">
+              <svg class="icon icon-xs" style="vertical-align:-1px"><use href="#i-shield"></use></svg>
+              Dieser geheime Link synchronisiert deine Spieltage automatisch ohne erneuten Login.
+            </p>
           </div>
         </div>
       {% endif %}
+
+    {% else %}
+      <div class="card">
+        <div class="card-head">
+          <h2><svg class="icon icon-sm"><use href="#i-user"></use></svg> Mein Profil</h2>
+        </div>
+        <div class="card-body">
+          {% include "includes/empty_state.html" with icon="user" titel="Kein Mitgliedsprofil hinterlegt" text="Für dieses Konto ist kein Mitgliedsprofil hinterlegt. Ihr Benutzerkonto ist noch nicht mit einem Datensatz in der Mitgliederkartei verknüpft – bitte wenden Sie sich an die Vorstandschaft." %}
+          {% if is_admin %}
+            <div class="flex center gap-1 mt-2" style="justify-content:center">
+              <a href="{% url 'members:member_create' %}" class="btn button button-primary">
+                <svg class="icon icon-sm"><use href="#i-plus"></use></svg> Neues Mitglied anlegen
+              </a>
+              <a href="{% url 'core:club_setup_profile' %}" class="btn secondary button button-secondary">
+                <svg class="icon icon-sm"><use href="#i-settings"></use></svg> Vereins-Setup
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
     {% endif %}
   </div>
 
   <div>
     <div class="card">
-      <div class="card-head"><h2>Änderung wünschen</h2></div>
-      <form class="card-body" method="post">
+      <div class="card-head">
+        <h2><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Änderung wünschen</h2>
+      </div>
+      <form class="card-body" method="post" id="profil-change-form">
         {% csrf_token %}
         {% include "includes/form_fields.html" with form=form %}
-        <div class="form-actions">
-          <button class="btn" type="submit"><svg class="icon icon-sm"><use href="#i-edit"></use></svg> Wunsch einreichen</button>
+        
+        <div id="profil-current-hint" class="callout-hint mb-2" style="display:none;padding:8px 12px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--border);font-size:12.5px;color:var(--forest-dark);margin-top:6px"></div>
+        
+        <div class="form-actions mt-2">
+          <button class="btn button button-primary" type="submit" style="width:100%;justify-content:center">
+            <svg class="icon icon-sm"><use href="#i-edit"></use></svg> Wunsch einreichen
+          </button>
         </div>
-        <p class="help mt-1 mb-0">Wir prüfen Ihren Wunsch und übernehmen ihn nach Freigabe – so bleiben die Vereinsdaten konsistent.</p>
+        <p class="help mt-2 mb-0">Wir prüfen Ihren Wunsch und übernehmen ihn nach Freigabe – so bleiben die Vereinsdaten konsistent.</p>
       </form>
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>Meine Anträge</h2></div>
+      <div class="card-head">
+        <h2><svg class="icon icon-sm"><use href="#i-clock"></use></svg> Meine Anträge</h2>
+        {% if change_requests %}
+          <span class="count-badge">{{ change_requests|length }}</span>
+        {% endif %}
+      </div>
       <ul class="list">
         {% for wunsch in change_requests %}
           <li>
             <span class="grow">
-              <span class="title">{{ wunsch.get_feld_display }} → „{{ wunsch.wunschwert }}“</span>
-              <span class="meta">{{ wunsch.eingereicht_am|date:"d.m.Y" }}{% if wunsch.kommentar %} · {{ wunsch.kommentar }}{% endif %}</span>
+              <span class="title"><strong>{{ wunsch.get_feld_display }}</strong> &rarr; „{{ wunsch.wunschwert }}“</span>
+              <span class="meta">{{ wunsch.eingereicht_am|date:"d.m.Y · H:i" }} Uhr{% if wunsch.kommentar %} · <em>{{ wunsch.kommentar }}</em>{% endif %}</span>
             </span>
             <span class="badge badge-{{ wunsch.status }}">{{ wunsch.get_status_display }}</span>
           </li>
         {% empty %}
-          <li class="muted" style="padding:1rem">Sie haben noch keinen Änderungswunsch eingereicht.</li>
+          <li class="muted" style="padding:1.5rem 1rem;text-align:center">Sie haben noch keinen Änderungswunsch eingereicht.</li>
         {% endfor %}
       </ul>
     </div>
 
     {% if has_2fa or is_admin %}
       <div class="card">
-        <div class="card-head"><h2>Zwei-Faktor-Authentifizierung (2FA)</h2></div>
+        <div class="card-head">
+          <h2><svg class="icon icon-sm"><use href="#i-shield"></use></svg> Zwei-Faktor-Authentifizierung (2FA)</h2>
+        </div>
         <div class="card-body">
           {% if has_2fa %}
-            <p>Ihr Konto ist durch ein Zwei-Faktor-Gerät (Authenticator-App) geschützt.</p>
-            <a class="btn small secondary" href="{% url 'core:zwei_faktor_neu' %}">
-              <svg class="icon icon-sm"><use href="#i-shield"></use></svg> 2FA-Gerät wechseln
+            <div class="flex center gap-1 mb-1">
+              <span class="badge badge-aktiv"><svg class="icon icon-xs"><use href="#i-check"></use></svg> Aktiv geschützt</span>
+            </div>
+            <p>Ihr Konto ist durch ein Zwei-Faktor-Gerät (Authenticator-App / TOTP) geschützt.</p>
+            <a class="btn small secondary button button-secondary" href="{% url 'core:zwei_faktor_neu' %}">
+              <svg class="icon icon-sm"><use href="#i-refresh"></use></svg> 2FA-Gerät wechseln
             </a>
           {% else %}
-            <p>Für Ihr Vorstandskonto ist ein Zwei-Faktor-Gerät vorgesehen.</p>
-            <a class="btn small" href="{% url 'core:zwei_faktor_neu' %}">
+            <div class="flex center gap-1 mb-1">
+              <span class="badge badge-warn"><svg class="icon icon-xs"><use href="#i-alert"></use></svg> Nicht eingerichtet</span>
+            </div>
+            <p>Für Ihr Vorstandskonto ist ein Zwei-Faktor-Gerät vorgesehen, um vertrauliche Mitglieder- und Finanzdaten zu sichern.</p>
+            <a class="btn small button button-primary" href="{% url 'core:zwei_faktor_neu' %}">
               <svg class="icon icon-sm"><use href="#i-shield"></use></svg> 2FA einrichten
             </a>
           {% endif %}
         </div>
       </div>
     {% endif %}
+
+    {% if member %}
+      <div class="card">
+        <div class="card-head">
+          <h2><svg class="icon icon-sm"><use href="#i-lock"></use></svg> Datenschutz &amp; Selbstauskunft (Art. 15 DSGVO)</h2>
+        </div>
+        <div class="card-body">
+          <p style="font-size:13px;line-height:1.5">
+            Sie haben jederzeit das Recht auf vollständige Transparenz und Auskunft über die zu Ihrer Person verarbeiteten Daten (PRD N1.2).
+          </p>
+          <div class="flex gap-1 wrap mt-2">
+            <a class="btn small secondary button button-secondary" href="{% url 'core:dsgvo_auskunft' member.pk %}" target="_blank">
+              <svg class="icon icon-sm"><use href="#i-eye"></use></svg> Im Browser ansehen
+            </a>
+            <a class="btn small secondary button button-secondary" href="{% url 'core:dsgvo_pdf' member.pk %}">
+              <svg class="icon icon-sm"><use href="#i-download"></use></svg> PDF herunterladen
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  var select = document.querySelector('[data-field="feld"] select');
+  var input = document.querySelector('[data-field="wunschwert"] input');
+  var hint = document.getElementById("profil-current-hint");
+  var values = {{ editable_values_json|default:"{}"|safe }};
+
+  function updateHint() {
+    if (!select || !hint) return;
+    var field = select.value;
+    var current = values[field] || "";
+    if (current) {
+      hint.innerHTML = '<span class="meta" style="display:block;margin-bottom:2px">Aktuell gespeicherter Wert:</span><strong>' + escapeHtml(current) + '</strong>';
+      hint.style.display = "block";
+      if (input && !input.value) {
+        input.placeholder = current;
+      }
+    } else {
+      hint.innerHTML = '<span class="muted">Aktuell ist für dieses Feld kein Wert hinterlegt.</span>';
+      hint.style.display = "block";
+      if (input && !input.value) {
+        input.placeholder = "Neuen Wert eintragen …";
+      }
+    }
+  }
+
+  function escapeHtml(str) {
+    var p = document.createElement("p");
+    p.textContent = str;
+    return p.innerHTML;
+  }
+
+  if (select) {
+    select.addEventListener("change", updateHint);
+    updateHint();
+  }
+});
+</script>
 {% endblock %}

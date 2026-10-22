@@ -14,154 +14,179 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/landing.css' %}">
 </head>
-<body class="lp">
+<body class="site-wrap">
 {% include "includes/sprite.html" %}
 
-<a class="lp-skip" href="#inhalt">Zum Inhalt springen</a>
+<a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
 
-<header class="lp-header">
-  <div class="lp-wrap lp-header-row">
-    <a class="lp-brand" href="{% url 'core:home' %}">
-      <span class="lp-brand-mark" aria-hidden="true">♞</span>
-      <span>{{ product_name }}</span>
+<header class="site-header">
+  <div class="nav-inner">
+    <a class="brand" href="{% url 'core:home' %}" aria-label="{{ product_name }}, zur Startseite">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 36 36" fill="none">
+          <path d="M10 26h16M12 22h12l-1.7-10.5H13.7L12 22ZM15 11.5V7.5M21 11.5V7.5M18 11.5V6M11 26v2h14v-2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="18" cy="17" r="1.4" fill="currentColor" />
+        </svg>
+      </span>
+      <span>{{ product_name }}<span class="brand-period">.</span></span>
     </a>
-    <nav class="lp-nav" aria-label="Hauptnavigation">
+    <nav class="desktop-nav" aria-label="Hauptnavigation">
       <a href="#loesungen">Lösungen</a>
       <a href="#funktionen">Funktionen</a>
       <a href="#datenschutz">Datenschutz</a>
       <a href="#preise">Preise</a>
-      <a href="#faq">Fragen</a>
+      <a href="#faq">FAQ</a>
     </nav>
-    <div class="lp-header-cta">
-      <a class="lp-link" href="{% url 'core:login' %}">Anmelden</a>
-      <a class="btn small" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">Demo anfragen</a>
+    <div class="nav-actions">
+      <a class="nav-login" href="{% url 'core:login' %}">Anmelden</a>
+      <a class="nav-cta" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
+        Demo anfragen {% include "includes/icon.html" with name="arrow-up-right" size="sm" %}
+      </a>
     </div>
   </div>
 </header>
 
 <main id="inhalt">
-  <section class="lp-hero">
-    <div class="lp-wrap lp-hero-grid">
-      <div>
-        <span class="lp-eyebrow">Für Schachvereine in Deutschland</span>
-        <h1>Vereinsverwaltung, die Ihr Vorstand gerne benutzt.</h1>
-        <p class="lp-lede">Mitglieder, Beiträge, Turniere, Mannschaften und Kassenbuch in einer Software. Ohne Excel-Listen, ohne Zettelwirtschaft und mit Datenhaltung in der EU (DSGVO-konform).</p>
-        <div class="lp-actions">
-          <a class="btn gold lp-btn-lg" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
-            Kostenlose Demo anfragen {% include "includes/icon.html" with name="arrow-right" size="sm" %}
-          </a>
-          <a class="btn secondary lp-btn-lg" href="#funktionen">Funktionen ansehen</a>
+  <!-- Hero Section -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-image"></div>
+    <div class="hero-shade"></div>
+    <div class="hero-inner">
+      <div class="hero-content">
+        <div class="hero-eyebrow hero-enter">
+          <span class="eyebrow-line"></span> DIE SOFTWARE FÜR SCHACHVEREINE
         </div>
-        <ul class="lp-checks">
+        <h1 id="hero-title" class="hero-brand hero-enter">
+          {{ product_name }}<span>.</span>
+        </h1>
+        <p class="hero-headline hero-enter">
+          Weniger Verwaltung.<br><em class="serif-italic">Mehr Schach.</em>
+        </p>
+        <p class="hero-description hero-enter">
+          Vereinsverwaltung, die Ihr Vorstand gerne benutzt. Mitglieder, Beiträge, Turniere, Mannschaften und Kassenbuch an einem Ort. Ohne Excel-Listen, ohne Zettelwirtschaft und mit Hosting in der EU (DSGVO-konform).
+        </p>
+        <div class="hero-buttons hero-enter">
+          <a class="button button-lime" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
+            Demo anfragen {% include "includes/icon.html" with name="arrow-up-right" size="sm" %}
+          </a>
+          <a class="button button-outline" href="#loesungen">
+            Produkt entdecken {% include "includes/icon.html" with name="arrow-right" size="sm" %}
+          </a>
+        </div>
+        <ul class="hero-checks hero-enter">
           <li>{% include "includes/icon.html" with name="check" size="sm" %} 30 Tage kostenlos testen</li>
           <li>{% include "includes/icon.html" with name="check" size="sm" %} Datenübernahme inklusive (ab „Verein“)</li>
           <li>{% include "includes/icon.html" with name="check" size="sm" %} Endpreise, keine Umsatzsteuer</li>
         </ul>
       </div>
+    </div>
+    <div class="hero-bottom">
+      <span>FÜR ALLE, DIE DEN VEREIN IN BEWEGUNG HALTEN · 100 % EU-HOSTING</span>
+      <a href="#intro" aria-label="Weiter nach unten scrollen">
+        {% include "includes/icon.html" with name="arrow-right" size="sm" %}
+      </a>
+    </div>
+  </section>
 
-      <div class="lp-mock" role="img" aria-label="Vorschau des Dashboards mit offenen Beiträgen, Mitgliederzahl und nächsten Terminen">
-        <div class="lp-mock-bar"><i></i><i></i><i></i><span>Dashboard</span></div>
-        <div class="lp-mock-body">
-          <div class="lp-mock-stats">
-            <div><small>Aktive Mitglieder</small><strong>87</strong></div>
-            <div class="is-warn"><small>Offene Beiträge</small><strong>1.240 €</strong></div>
-            <div class="is-ok"><small>Turnieranmeldungen</small><strong>24</strong></div>
-          </div>
-          <div class="lp-mock-list">
-            <div><span class="lp-dot gold"></span><b>Vereinsmeisterschaft</b><small>Sa, 18.10. · Schweizer System</small></div>
-            <div><span class="lp-dot"></span><b>SC Musterstadt I gegen SV Nachbarort</b><small>So, 26.10. · 10:00 Uhr</small></div>
-            <div><span class="lp-dot warn"></span><b>3 Mahnungen vorbereitet</b><small>Zur Prüfung durch den Kassenwart</small></div>
+  <!-- Intro / Value Prop Section -->
+  <section id="intro" class="intro-section section-pad">
+    <div class="container">
+      <div class="intro-grid">
+        <div>
+          <span class="eyebrow dark-eyebrow"><span class="eyebrow-dot"></span> GEMACHT FÜR DEN VEREINSALLTAG</span>
+          <h2 class="section-title intro-title">Ein guter Verein<br>braucht <span class="serif-italic">gute Züge.</span></h2>
+        </div>
+        <div class="intro-right">
+          <p>Schach verbindet Menschen. Die Verwaltung dahinter sollte es nicht komplizierter machen. {{ product_name }} bringt Struktur in Ihren Vereinsalltag, damit Sie sich ganz auf Ihr Spiel und Ihr Vereinsleben konzentrieren können.</p>
+          <div class="role-list" aria-label="Geeignet für Vereinsrollen">
+            <span>VORSTAND</span>
+            <span>SPIELLEITUNG</span>
+            <span>KASSENWART</span>
+            <span>MANNSCHAFTSFÜHRER</span>
+            <span>MITGLIEDER</span>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="lp-strip" aria-label="Kennzahlen">
-    <div class="lp-wrap lp-strip-row">
-      <div><strong>6 Bereiche</strong><span>in einer Anwendung</span></div>
-      <div><strong>100 % EU-Hosting</strong><span>DSGVO & Datenschutz</span></div>
-      <div><strong>0 Tracker</strong><span>keine externen Dienste</span></div>
-      <div><strong>Mobil</strong><span>auch als App installierbar</span></div>
-    </div>
-  </section>
-
-  <section class="lp-section lp-pains-showcase" id="loesungen" aria-labelledby="pains-heading">
+  <!-- Showcase / Schmerzpunkte & Interaktive Vorschau (Feature 003) -->
+  <section class="showcase-section section-pad" id="loesungen" aria-labelledby="pains-heading">
     <div id="problem" style="position: absolute; margin-top: -5rem;"></div>
-    <div class="lp-wrap">
-      <div class="lp-head">
-        <span class="lp-eyebrow dark">♞ Schmerzpunkte &amp; Lösungen</span>
-        <h2 class="lp-h2" id="pains-heading">Vereinsarbeit ist Ehrenamt. Sie sollte sich nicht nach Zettelwirtschaft anfühlen.</h2>
-        <p class="lp-muted">Wählen Sie Ihre Rolle im Verein und sehen Sie sofort, wie Schachverwaltung Ihren Alltag erleichtert und typische Frustmomente löst.</p>
+    <div class="container">
+      <div class="showcase-head">
+        <span class="eyebrow dark-eyebrow"><span class="eyebrow-dot"></span> EIN BLICK HINEIN</span>
+        <h2 class="section-title" id="pains-heading">So klar kann<br><span class="serif-italic">Vereinsarbeit sein.</span></h2>
+        <p class="section-sub">Vereinsarbeit ist Ehrenamt. Sie sollte sich nicht nach Zettelwirtschaft anfühlen. Wählen Sie Ihre Rolle im Verein und sehen Sie sofort, wie {{ product_name }} Ihren Alltag erleichtert.</p>
       </div>
 
       <!-- Aggregierter Ersparnis-Banner -->
-      <div class="lp-efficiency-banner" role="region" aria-label="Gesamtnutzen">
-        <div class="lp-efficiency-icon">{% include "includes/icon.html" with name="sparkle" %}</div>
-        <div class="lp-efficiency-text">
-          <div class="lp-efficiency-tag">Nachgewiesene Entlastung</div>
+      <div class="efficiency-banner" role="region" aria-label="Gesamtnutzen">
+        <div class="efficiency-icon">{% include "includes/icon.html" with name="sparkle" %}</div>
+        <div class="efficiency-text">
+          <div class="efficiency-tag">Nachgewiesene Entlastung</div>
           <strong>Bis zu 80 Stunden weniger Büroarbeit pro Saison</strong>
           <span>Für Vorstand, Kassenwart und Spielbetrieb – mehr Zeit für das eigentliche Vereinsleben.</span>
         </div>
-        <div class="lp-efficiency-badge">
+        <div class="efficiency-badge">
           {% include "includes/icon.html" with name="shield" size="sm" %}
           <span>100 % DSGVO &amp; GoBD</span>
         </div>
       </div>
 
-      <!-- Radio Tab Navigation (CSS-gesteuert, 100 % ohne JS lauffähig, volle ARIA-Semantik) -->
-      <div class="lp-role-tab-container">
+      <!-- Pure CSS Radio Tab Steuerung für alle Rollen -->
+      <div class="role-tab-container">
         {% for rolle in rollen_schmerzpunkte %}
-          <input type="radio" name="lp_role" id="role-{{ rolle.id }}" class="lp-role-radio" {% if forloop.first %}checked{% endif %}>
+          <input type="radio" name="lp_role" id="role-{{ rolle.id }}" class="role-radio" {% if forloop.first %}checked{% endif %}>
         {% endfor %}
 
-        <div class="lp-role-selector" role="tablist" aria-label="Vereinsrollen">
+        <div class="role-selector" role="tablist" aria-label="Vereinsrollen">
           {% for rolle in rollen_schmerzpunkte %}
-            <label for="role-{{ rolle.id }}" id="tab-{{ rolle.id }}" class="lp-role-tab" role="tab" aria-controls="panel-{{ rolle.id }}" tabindex="0">
-              <span class="lp-role-tab-icon">{% include "includes/icon.html" with name=rolle.icon %}</span>
-              <span class="lp-role-tab-title">{{ rolle.kurztitel }}</span>
+            <label for="role-{{ rolle.id }}" id="tab-{{ rolle.id }}" class="role-tab" role="tab" aria-controls="panel-{{ rolle.id }}" tabindex="0">
+              <span class="role-tab-icon">{% include "includes/icon.html" with name=rolle.icon %}</span>
+              <span class="role-tab-title">{{ rolle.kurztitel }}</span>
             </label>
           {% endfor %}
         </div>
 
-        <div class="lp-role-panels">
+        <div class="role-panels">
           {% for rolle in rollen_schmerzpunkte %}
-            <div id="panel-{{ rolle.id }}" class="lp-role-panel panel-{{ rolle.id }}" role="tabpanel" aria-labelledby="tab-{{ rolle.id }}">
-              <div class="lp-panel-grid">
+            <div id="panel-{{ rolle.id }}" class="role-panel panel-{{ rolle.id }}" role="tabpanel" aria-labelledby="tab-{{ rolle.id }}">
+              <div class="panel-grid">
                 <!-- Linke Spalte: Schmerzpunkte & Lösungen -->
-                <div class="lp-panel-content">
-                  <div class="lp-panel-header">
-                    <span class="lp-role-badge">{% include "includes/icon.html" with name=rolle.icon size="sm" %} {{ rolle.titel }}</span>
-                    <span class="lp-time-badge">{% include "includes/icon.html" with name="clock" size="sm" %} {{ rolle.ersparnis }}</span>
+                <div class="panel-content">
+                  <div class="panel-header">
+                    <span class="role-badge">{% include "includes/icon.html" with name=rolle.icon size="sm" %} {{ rolle.titel }}</span>
+                    <span class="time-badge">{% include "includes/icon.html" with name="clock" size="sm" %} {{ rolle.ersparnis }}</span>
                   </div>
-                  <h3 class="lp-panel-slogan">{{ rolle.slogan }}</h3>
+                  <h3 class="panel-slogan">{{ rolle.slogan }}</h3>
 
                   <!-- Split-Vergleichskarten -->
-                  <div class="lp-pains-list">
+                  <div class="pains-list">
                     {% for sp in rolle.schmerzpunkte %}
-                      <article class="lp-pain-card">
-                        <div class="lp-pain-card-head">
-                          <span class="lp-pain-number">0{{ forloop.counter }}</span>
-                          <h4 class="lp-pain-title">{{ sp.titel }}</h4>
+                      <article class="pain-card">
+                        <div class="pain-card-head">
+                          <span class="pain-number">0{{ forloop.counter }}</span>
+                          <h4 class="pain-title">{{ sp.titel }}</h4>
                         </div>
-                        <div class="lp-pain-split">
-                          <div class="lp-pain-col is-before">
-                            <div class="lp-pain-col-label">
-                              <span class="lp-pain-indicator is-before">{% include "includes/icon.html" with name="x" size="sm" %}</span>
-                              <span class="lp-pain-tag is-before">Vorher</span>
+                        <div class="pain-split">
+                          <div class="pain-col is-before">
+                            <div class="pain-col-label">
+                              <span class="pain-indicator is-before">{% include "includes/icon.html" with name="x" size="sm" %}</span>
+                              <span class="pain-tag is-before">Vorher</span>
                             </div>
-                            <p class="lp-pain-text">{{ sp.problem }}</p>
+                            <p class="pain-text">{{ sp.problem }}</p>
                           </div>
-                          <div class="lp-pain-col is-after">
-                            <div class="lp-pain-col-label">
-                              <span class="lp-pain-indicator is-after">{% include "includes/icon.html" with name="check" size="sm" %}</span>
-                              <span class="lp-pain-tag is-after">Mit Schachverwaltung</span>
+                          <div class="pain-col is-after">
+                            <div class="pain-col-label">
+                              <span class="pain-indicator is-after">{% include "includes/icon.html" with name="check" size="sm" %}</span>
+                              <span class="pain-tag is-after">Mit Schachverwaltung</span>
                             </div>
-                            <p class="lp-pain-text"><strong>{{ sp.loesung }}</strong></p>
+                            <p class="pain-text"><strong>{{ sp.loesung }}</strong></p>
                             {% if sp.detail %}
-                              <div class="lp-pain-feature-tag">
+                              <div class="pain-feature-tag">
                                 {% include "includes/icon.html" with name="sparkle" size="sm" %}
-                                <small class="lp-pain-detail">{{ sp.detail }}</small>
+                                <small class="pain-detail">{{ sp.detail }}</small>
                               </div>
                             {% endif %}
                           </div>
@@ -170,72 +195,72 @@
                     {% endfor %}
                   </div>
 
-                  <div class="lp-panel-cta">
-                    <a class="btn gold lp-btn-cta" href="mailto:{{ product_contact }}?subject=Demo-Anfrage%20Schwerpunkt%20{{ rolle.titel|urlencode }}">
-                      Kostenlose Demo für {{ rolle.kurztitel }} anfragen {% include "includes/icon.html" with name="arrow-right" size="sm" %}
+                  <div class="panel-cta">
+                    <a class="button button-lime" href="mailto:{{ product_contact }}?subject=Demo-Anfrage%20Schwerpunkt%20{{ rolle.titel|urlencode }}">
+                      Kostenlose Demo für {{ rolle.kurztitel }} anfragen {% include "includes/icon.html" with name="arrow-up-right" size="sm" %}
                     </a>
-                    <span class="lp-cta-reassurance">30 Tage unverbindlich testen · Datenübernahme inklusive</span>
+                    <span class="cta-reassurance">30 Tage unverbindlich testen · Datenübernahme inklusive</span>
                   </div>
                 </div>
 
-                <!-- Rechte Spalte: Interaktives Mockup -->
-                <div class="lp-panel-preview">
-                  <div class="lp-mock lp-mock-interactive" role="region" aria-label="Interaktive Vorschau: {{ rolle.vorschau.fenster_titel }}">
-                    <div class="lp-mock-bar">
-                      <div class="lp-mock-dots" aria-hidden="true">
+                <!-- Rechte Spalte: macOS / App-Window Mockup -->
+                <div class="panel-preview">
+                  <div class="product-window" role="region" aria-label="Interaktive Vorschau: {{ rolle.vorschau.fenster_titel }}">
+                    <div class="window-top">
+                      <div class="window-dots" aria-hidden="true">
                         <i class="dot-red"></i>
                         <i class="dot-yellow"></i>
                         <i class="dot-green"></i>
                       </div>
-                      <span class="lp-mock-title">{{ rolle.vorschau.fenster_titel }}</span>
-                      <span class="lp-mock-status-pill">
-                        <span class="lp-mock-pulse"></span>
+                      <span class="window-url">app.schachverwaltung.de · {{ rolle.vorschau.fenster_titel }}</span>
+                      <span class="status-pill">
+                        <span class="status-pulse"></span>
                         {{ rolle.vorschau.status_badge }}
                       </span>
                     </div>
 
-                    <div class="lp-mock-body">
+                    <div class="window-body">
                       <!-- KPI-Kacheln -->
-                      <div class="lp-mock-stats">
+                      <div class="mock-stats">
                         {% for m in rolle.vorschau.metriken %}
-                          <div class="lp-stat-box is-{{ m.status }}">
+                          <div class="stat-box is-{{ m.status }}">
                             <small>{{ m.label }}</small>
                             <strong>{{ m.wert }}</strong>
                           </div>
                         {% endfor %}
                       </div>
 
-                      <!-- Interaktive Unter-Tabs im Mockup mit CSS-Schaltung -->
+                      <!-- Interaktive Unter-Tabs im Mockup mit reiner CSS-Schaltung -->
                       {% if rolle.vorschau.sub_ansichten %}
-                        <div class="lp-mock-sub-container">
+                        <div class="mock-sub-container">
                           {% for sub in rolle.vorschau.sub_ansichten %}
                             <input type="radio" 
                                    name="mock_sub_{{ rolle.id }}" 
                                    id="sub-{{ rolle.id }}-{{ sub.id }}" 
-                                   class="lp-mock-sub-radio sub-{{ sub.id }}" 
+                                   class="mock-sub-radio sub-{{ sub.id }}" 
                                    {% if forloop.first %}checked{% endif %}>
                           {% endfor %}
 
-                          <div class="lp-mock-subtabs" role="tablist" aria-label="Ansichten für {{ rolle.kurztitel }}">
+                          <div class="mock-subtabs" role="tablist" aria-label="Ansichten für {{ rolle.kurztitel }}">
                             {% for sub in rolle.vorschau.sub_ansichten %}
-                              <label for="sub-{{ rolle.id }}-{{ sub.id }}" class="lp-mock-subtab label-{{ sub.id }}" role="tab" tabindex="0">
+                              <label for="sub-{{ rolle.id }}-{{ sub.id }}" class="mock-subtab label-{{ sub.id }}" role="tab" tabindex="0">
                                 {{ sub.label }}
                               </label>
                             {% endfor %}
                           </div>
 
-                          <div class="lp-mock-views">
+                          <div class="mock-views">
                             {% for sub in rolle.vorschau.sub_ansichten %}
-                              <div class="lp-mock-view view-{{ sub.id }}">
-                                <div class="lp-mock-list">
+                              <div class="mock-view view-{{ sub.id }}">
+                                <div class="mock-list">
                                   {% for zeile in sub.zeilen %}
-                                    <div class="lp-mock-row">
-                                      <span class="lp-mock-icon-badge">{% include "includes/icon.html" with name=zeile.icon size="sm" %}</span>
-                                      <div class="lp-mock-row-content">
+                                    <div class="mock-row">
+                                      <span class="mock-icon-badge">{% include "includes/icon.html" with name=zeile.icon size="sm" %}</span>
+                                      <div class="mock-row-content">
                                         <b>{{ zeile.label }}</b>
                                         <small>{{ zeile.status }}</small>
                                       </div>
-                                      <span class="lp-badge-mini{% if 'Mahnung' in zeile.badge or 'warn' in zeile.badge %} warn{% elif 'Bereit' in zeile.badge or 'Geprüft' in zeile.badge or '1-Klick' in zeile.badge or 'Spitzenreiter' in zeile.badge %} gold{% elif 'Sicher' in zeile.badge or 'Valide' in zeile.badge or 'Aktiv' in zeile.badge %} ok{% endif %}">{{ zeile.badge }}</span>
+                                      <span class="badge-mini{% if 'Mahnung' in zeile.badge or 'warn' in zeile.badge %} warn{% elif 'Bereit' in zeile.badge or 'Geprüft' in zeile.badge or '1-Klick' in zeile.badge or 'Spitzenreiter' in zeile.badge %} gold{% elif 'Sicher' in zeile.badge or 'Valide' in zeile.badge or 'Aktiv' in zeile.badge %} ok{% endif %}">{{ zeile.badge }}</span>
                                     </div>
                                   {% endfor %}
                                 </div>
@@ -245,21 +270,21 @@
                         </div>
                       {% else %}
                         <!-- Fallback falls keine sub_ansichten -->
-                        <div class="lp-mock-list">
+                        <div class="mock-list">
                           {% for zeile in rolle.vorschau.zeilen %}
-                            <div class="lp-mock-row">
-                              <span class="lp-dot{% if 'Mahnung' in zeile.badge or 'warn' in zeile.badge %} warn{% elif 'Bereit' in zeile.badge or 'Geprüft' in zeile.badge or '1-Klick' in zeile.badge or 'Autopilot' in zeile.badge %} gold{% endif %}"></span>
-                              <div class="lp-mock-row-content">
+                            <div class="mock-row">
+                              <span class="mock-dot{% if 'Mahnung' in zeile.badge or 'warn' in zeile.badge %} warn{% elif 'Bereit' in zeile.badge or 'Geprüft' in zeile.badge or '1-Klick' in zeile.badge or 'Autopilot' in zeile.badge %} gold{% endif %}"></span>
+                              <div class="mock-row-content">
                                 <b>{{ zeile.label }}</b>
                                 <small>{{ zeile.status }}</small>
                               </div>
-                              <span class="lp-badge-mini">{{ zeile.badge }}</span>
+                              <span class="badge-mini">{{ zeile.badge }}</span>
                             </div>
                           {% endfor %}
                         </div>
                       {% endif %}
 
-                      <div class="lp-mock-footer">
+                      <div class="mock-footer">
                         <small>{% include "includes/icon.html" with name="shield" size="sm" %} Revisionssichere Live-Simulation · Kein Datenbank-Zugriff</small>
                       </div>
                     </div>
@@ -273,119 +298,197 @@
     </div>
   </section>
 
-  <section class="lp-section lp-alt" id="funktionen">
-    <div class="lp-wrap">
-      <div class="lp-head">
-        <span class="lp-eyebrow dark">Funktionen</span>
-        <h2 class="lp-h2">Alles, was ein Schachverein braucht</h2>
-        <p class="lp-muted">Gebaut für Vereine bis etwa 200 Mitglieder. Jede Rolle sieht nur das, was sie braucht.</p>
+  <!-- Features Grid Section -->
+  <section id="funktionen" class="features-section section-pad">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow dark-eyebrow"><span class="eyebrow-dot"></span> ALLES AN SEINEM PLATZ</span>
+          <h2 class="section-title">Weniger Aufwand.<br><span class="serif-italic">Mehr Überblick.</span></h2>
+        </div>
+        <p>Was ihr für einen gut organisierten Schachverein braucht. Nicht mehr. Nicht weniger.</p>
       </div>
-      <div class="lp-cards">
+      <div class="feature-grid">
         {% for f in funktionen %}
-          <article class="lp-card">
-            <span class="lp-icon">{% include "includes/icon.html" with name=f.icon %}</span>
-            <h3>{{ f.titel }}</h3>
-            <p>{{ f.text }}</p>
-          </article>
+          <div class="feature-item">
+            <div class="feature-top">
+              <span>0{{ forloop.counter }} / 0{{ funktionen|length }}</span>
+              <span class="feature-icon">{% include "includes/icon.html" with name=f.icon %}</span>
+            </div>
+            <div>
+              <h3>{{ f.titel }}</h3>
+              <p>{{ f.text }}</p>
+            </div>
+            <span class="feature-arrow">{% include "includes/icon.html" with name="arrow-up-right" size="sm" %}</span>
+          </div>
         {% endfor %}
       </div>
     </div>
   </section>
 
-  <section class="lp-section" id="rollen">
-    <div class="lp-wrap">
-      <div class="lp-head">
-        <span class="lp-eyebrow dark">Für alle im Verein</span>
-        <h2 class="lp-h2">Jeder bekommt seinen Bereich</h2>
+  <!-- Benefits Section (Dark Forest Green) -->
+  <section class="benefits-section">
+    <div class="container benefits-grid">
+      <div class="benefits-copy">
+        <span class="eyebrow light-eyebrow"><span class="eyebrow-dot"></span> MEHR RAUM FÜRS WESENTLICHE</span>
+        <h2>Der beste Zug?<br><span class="serif-italic">Zeit gewinnen.</span></h2>
+        <p>Wenn Informationen ihren Platz haben, wird aus Vereinsarbeit wieder Zusammenarbeit. Einfach für euch. Gut für alle.</p>
+        <a class="text-link light-link" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
+          {{ product_name }} kennenlernen {% include "includes/icon.html" with name="arrow-up-right" size="sm" %}
+        </a>
       </div>
-      <div class="lp-roles">
+      <div class="benefits-points">
         <div>
-          <h3>Vorstand</h3>
-          <p>Volle Übersicht über Mitglieder, Beiträge, Kasse und Turniere. Änderungswünsche von Mitgliedern prüfen und freigeben.</p>
+          <span>01</span>
+          <p>Weniger Suchen.<br><strong>Mehr Miteinander.</strong></p>
         </div>
         <div>
-          <h3>Mannschaftsführer</h3>
-          <p>Aufstellungen melden, Ergebnisse erfassen und Termine im Blick behalten, ohne Zugriff auf Finanzdaten.</p>
+          <span>02</span>
+          <p>Weniger Nachfragen.<br><strong>Mehr Klarheit.</strong></p>
         </div>
         <div>
-          <h3>Mitglieder</h3>
-          <p>Eigenes Profil, Beitragskonto und Turnieranmeldung. Änderungen der Stammdaten lassen sich direkt beantragen.</p>
+          <span>03</span>
+          <p>Weniger Papierkram.<br><strong>Mehr Schach.</strong></p>
+        </div>
+      </div>
+    </div>
+    <span class="benefit-watermark" aria-hidden="true">♜</span>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="testimonial-section section-pad">
+    <div class="container testimonial-layout">
+      <div class="testimonial-intro">
+        <span class="eyebrow dark-eyebrow"><span class="eyebrow-dot"></span> AUS DEM VEREINSALLTAG</span>
+        <h2 class="section-title">Ein gutes Gefühl,<br><span class="serif-italic">alles im Griff zu haben.</span></h2>
+        <p>So kann sich Vereinsarbeit mit moderner Software und weniger Verwaltungsaufwand anfühlen.</p>
+      </div>
+      <div class="quote-area">
+        <span class="quote-symbol">“</span>
+        <blockquote>Endlich eine Vereinsverwaltung, bei der man nicht erst eine Anleitung lesen muss, bevor man loslegen kann. Alle Mitglieder und Finanzen sind sofort griffbereit.</blockquote>
+        <div class="quote-bottom">
+          <div>
+            <strong>Perspektive aus dem Vorstand &amp; der Kassenführung</strong>
+            <span>Erfahrungsbild aus dem Schachvereins-Alltag</span>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="lp-section lp-dark" id="datenschutz">
-    <div class="lp-wrap lp-two">
-      <div>
-        <span class="lp-eyebrow">Datenschutz</span>
-        <h2 class="lp-h2">Mitgliederdaten gehören in gute Hände</h2>
-        <p class="lp-lede">Vereine verarbeiten personenbezogene Daten, auch von Kindern und Jugendlichen. Die Software ist deshalb von Anfang an auf die DSGVO ausgelegt.</p>
+  <!-- Ablauf / Schritte -->
+  <section id="ablauf" class="steps-section section-pad">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow dark-eyebrow"><span class="eyebrow-dot"></span> SO STARTEN SIE</span>
+          <h2 class="section-title">In vier Schritten einsatzbereit</h2>
+        </div>
+        <p>Von der unverbindlichen Demo bis zum produktiven Einsatz in Ihrem Vorstandsteam.</p>
       </div>
-      <ul class="lp-list-check">
-        {% for punkt in datenschutz_punkte %}
-          <li>{% include "includes/icon.html" with name="shield" %} <span>{{ punkt }}</span></li>
-        {% endfor %}
-      </ul>
-    </div>
-  </section>
-
-  <section class="lp-section" id="ablauf">
-    <div class="lp-wrap">
-      <div class="lp-head">
-        <span class="lp-eyebrow dark">So starten Sie</span>
-        <h2 class="lp-h2">In vier Schritten einsatzbereit</h2>
-      </div>
-      <ol class="lp-steps">
+      <div class="steps-grid">
         {% for titel, text in schritte %}
-          <li>
-            <span class="lp-step-no">{{ forloop.counter }}</span>
+          <div class="step-card">
+            <span class="step-num">0{{ forloop.counter }}</span>
             <h3>{{ titel }}</h3>
             <p>{{ text }}</p>
-          </li>
+          </div>
         {% endfor %}
-      </ol>
+      </div>
     </div>
   </section>
 
-  <section class="lp-section lp-alt" id="preise">
-    <div class="lp-wrap">
-      <div class="lp-head">
-        <span class="lp-eyebrow dark">Preise</span>
-        <h2 class="lp-h2">Einfach und fair für Vereinskassen</h2>
-        <p class="lp-muted">{{ preishinweis }}</p>
+  <!-- Datenschutz & Hosting Section -->
+  <section id="datenschutz" class="security-section section-pad">
+    <div class="container security-grid">
+      <div class="security-intro">
+        <span class="eyebrow light-eyebrow"><span class="eyebrow-dot"></span> DATENSCHUTZ &amp; SICHERHEIT</span>
+        <h2>Mitgliederdaten gehören in gute Hände</h2>
+        <p>Vereine verarbeiten personenbezogene Daten, auch von Kindern und Jugendlichen. Die Software ist deshalb von Anfang an auf die DSGVO ausgelegt. 100 % EU-Hosting, keine Tracker, keine externen Dienste.</p>
+        <div class="security-seal">
+          <span class="seal-icon">{% include "includes/icon.html" with name="shield" %}</span>
+          <div>
+            <strong>Hosting in der EU</strong>
+            <span>DSGVO-konform · Revisionssicheres Audit-Log</span>
+          </div>
+        </div>
       </div>
-      <div class="lp-plans">
+      <div class="security-list">
+        {% for punkt in datenschutz_punkte %}
+          <div class="security-item">
+            <span class="security-check">{% include "includes/icon.html" with name="check" size="sm" %}</span>
+            <p>{{ punkt }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Preistabelle Section -->
+  <section id="preise" class="pricing-section section-pad">
+    <div class="container">
+      <div class="pricing-heading">
+        <span class="eyebrow dark-eyebrow"><span class="eyebrow-dot"></span> EINFACH STARTEN</span>
+        <h2 class="section-title">Ein Plan, der zu<br><span class="serif-italic">eurem Verein passt.</span></h2>
+        <p>Transparent gedacht. Für kleine Clubs und große Ideen.</p>
+        <div class="billing-toggle" role="group" aria-label="Abrechnungszeitraum">
+          <span class="toggle-pill active">Jährlich <span>-20 %</span></span>
+          <span class="toggle-pill">Monatlich</span>
+        </div>
+      </div>
+
+      <div class="pricing-grid">
         {% for stufe in preisstufen %}
-          <article class="lp-plan{% if stufe.hervorgehoben %} is-featured{% endif %}">
-            {% if stufe.hervorgehoben %}<span class="lp-badge">Beliebt</span>{% endif %}
-            <h3>{{ stufe.name }}</h3>
-            <p class="lp-plan-for">{{ stufe.fuer }}</p>
-            <p class="lp-price"><strong>{{ stufe.preis }} €</strong> <span>pro Monat</span></p>
-            <p class="lp-plan-note">{{ stufe.jahr }} € pro Jahr bei Jahreszahlung<br>{{ stufe.preis_monatlich }} € bei monatlicher Zahlung</p>
-            <p class="lp-plan-note"><strong>Einrichtung:</strong> {{ stufe.einrichtung }}</p>
-            <ul>
+          <div class="price-plan{% if stufe.hervorgehoben %} featured-plan{% endif %}">
+            {% if stufe.hervorgehoben %}
+              <div class="popular-tag">FÜR DEN VEREINSALLTAG</div>
+            {% endif %}
+            <div class="plan-top">
+              <span>{{ stufe.fuer }}</span>
+              <h3>{{ stufe.name }}</h3>
+              <p>Passgenau für Ihren Verein. Bereitgestellt auf einer eigenen abgesicherten Instanz.</p>
+            </div>
+            <div class="price-amount">
+              <strong>{{ stufe.preis }} €</strong>
+              <span>/ Monat</span>
+            </div>
+            <div class="billing-note">
+              {{ stufe.jahr }} € pro Jahr bei Jahreszahlung · {{ stufe.preis_monatlich }} € bei monatlicher Zahlung
+            </div>
+            <div class="setup-note">
+              <strong>Einrichtung:</strong> {{ stufe.einrichtung }}
+            </div>
+            <a class="plan-button{% if stufe.hervorgehoben %} plan-button-solid{% else %} plan-button-outline{% endif %}" href="mailto:{{ product_contact }}?subject=Demo%20anfragen%20({{ stufe.name|urlencode }})">
+              Demo anfragen {% include "includes/icon.html" with name="arrow-up-right" size="sm" %}
+            </a>
+            <div class="plan-includes">
+              <span>LEISTUNGEN &amp; FUNKTIONEN</span>
               {% for punkt in stufe.punkte %}
-                <li>{% include "includes/icon.html" with name="check" size="sm" %} {{ punkt }}</li>
+                <p>{% include "includes/icon.html" with name="check" size="sm" %} {{ punkt }}</p>
               {% endfor %}
-            </ul>
-            <a class="btn {% if not stufe.hervorgehoben %}secondary {% endif %}block" href="mailto:{{ product_contact }}?subject=Demo%20anfragen%20({{ stufe.name|urlencode }})">Demo anfragen</a>
-          </article>
+            </div>
+          </div>
         {% endfor %}
       </div>
+      <p class="pricing-disclaimer">{{ preishinweis }}</p>
     </div>
   </section>
 
-  <section class="lp-section" id="faq">
-    <div class="lp-wrap lp-faq-wrap">
-      <div class="lp-head">
-        <span class="lp-eyebrow dark">Häufige Fragen</span>
-        <h2 class="lp-h2">Gut zu wissen</h2>
+  <!-- FAQ Section -->
+  <section id="faq" class="faq-section section-pad">
+    <div class="container faq-grid">
+      <div class="faq-heading">
+        <span class="eyebrow dark-eyebrow"><span class="eyebrow-dot"></span> GUT ZU WISSEN</span>
+        <h2 class="section-title">Noch Fragen?<br><span class="serif-italic">Guter Zug.</span></h2>
+        <p>Hier finden Sie Antworten auf die häufigsten Fragen. Und wenn etwas offenbleibt, sprechen wir einfach persönlich.</p>
+        <a class="text-link dark-link" href="mailto:{{ product_contact }}?subject=Frage%20zu%20{{ product_name|urlencode }}">
+          Frage persönlich stellen {% include "includes/icon.html" with name="arrow-up-right" size="sm" %}
+        </a>
       </div>
-      <div class="lp-faq">
+      <div class="faq-list">
         {% for frage, antwort in faq %}
           <details>
-            <summary>{{ frage }}</summary>
+            <summary>{{ frage }}<span class="faq-plus">+</span></summary>
             <p>{{ antwort }}</p>
           </details>
         {% endfor %}
@@ -393,27 +496,60 @@
     </div>
   </section>
 
-  <section class="lp-cta">
-    <div class="lp-wrap">
-      <h2>Bereit, die Vereinsverwaltung zu vereinfachen?</h2>
-      <p>Wir zeigen Ihnen die Software mit Beispieldaten, kostenlos und unverbindlich.</p>
-      <a class="btn gold lp-btn-lg" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
-        Demo anfragen {% include "includes/icon.html" with name="arrow-right" size="sm" %}
+  <!-- Final Call to Action -->
+  <section class="final-cta">
+    <div class="container final-cta-inner">
+      <span class="eyebrow light-eyebrow"><span class="eyebrow-dot"></span> BEREIT FÜR DEN NÄCHSTEN ZUG?</span>
+      <h2>Mehr Zeit fürs Spiel.<br><span class="serif-italic">Weniger für den Rest.</span></h2>
+      <p>Entdecken Sie, wie {{ product_name }} Ihren Schachverein spürbar entlasten kann.</p>
+      <a class="button button-lime" href="mailto:{{ product_contact }}?subject=Demo%20anfragen">
+        Jetzt Demo anfragen {% include "includes/icon.html" with name="arrow-up-right" size="sm" %}
       </a>
-      <p class="lp-cta-mail"><a href="mailto:{{ product_contact }}">{{ product_contact }}</a></p>
     </div>
+    <div class="cta-board" aria-hidden="true"></div>
   </section>
 </main>
 
-<footer class="lp-footer">
-  <div class="lp-wrap lp-footer-row">
-    <span>© {% now "Y" %} {{ product_name }}</span>
-    <nav aria-label="Rechtliches">
-      <a href="{% url 'core:impressum' %}">Impressum</a>
-      <a href="{% url 'core:datenschutz' %}">Datenschutz</a>
-      <a href="{% url 'core:login' %}">Anmelden</a>
-    </nav>
+<!-- Footer -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-main">
+      <div>
+        <a class="brand brand-light" href="{% url 'core:home' %}">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 36 36" fill="none">
+              <path d="M10 26h16M12 22h12l-1.7-10.5H13.7L12 22ZM15 11.5V7.5M21 11.5V7.5M18 11.5V6M11 26v2h14v-2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="18" cy="17" r="1.4" fill="currentColor" />
+            </svg>
+          </span>
+          <span>{{ product_name }}<span class="brand-period">.</span></span>
+        </a>
+        <p>Mehr Zeit fürs Schach.<br>Weniger Aufwand für den Verein.</p>
+      </div>
+      <div class="footer-links">
+        <div>
+          <strong>ENTDECKEN</strong>
+          <a href="#loesungen">Lösungen</a>
+          <a href="#funktionen">Funktionen</a>
+          <a href="#ablauf">Ablauf</a>
+          <a href="#preise">Preise</a>
+        </div>
+        <div>
+          <strong>INFORMATIONEN</strong>
+          <a href="#faq">FAQ</a>
+          <a href="#datenschutz">Datenschutz</a>
+          <a href="{% url 'core:impressum' %}">Impressum</a>
+          <a href="{% url 'core:datenschutz' %}">Datenschutzerklärung</a>
+          <a href="{% url 'core:login' %}">Anmelden</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© {% now "Y" %} {{ product_name }}. Mit Liebe fürs Schach gemacht.</span>
+      <span>Ein guter Zug für deinen Verein. <span class="footer-chess">♜</span></span>
+    </div>
   </div>
 </footer>
+
 </body>
 </html>

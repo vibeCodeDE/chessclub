@@ -123,14 +123,25 @@
   function initSidebar() {
     const sidebar = $("#sidebar");
     if (!sidebar) return;
-    const backdrop = $("[data-sidebar-close]");
+    const backdrop = $(".sidebar-backdrop");
+    const closeButtons = $$("[data-sidebar-close]");
     const toggles = $$("[data-sidebar-toggle]");
+    let lastActiveElement = null;
+
     const open = () => {
+      lastActiveElement = document.activeElement;
       sidebar.classList.add("is-open");
       toggles.forEach((btn) => btn.setAttribute("aria-expanded", "true"));
-      if (backdrop) backdrop.hidden = false;
-      if (backdrop) backdrop.classList.add("is-open");
+      if (backdrop) {
+        backdrop.hidden = false;
+        backdrop.classList.add("is-open");
+      }
+      const closeBtn = sidebar.querySelector(".sidebar-close-btn");
+      if (closeBtn && window.innerWidth <= 840) {
+        window.setTimeout(() => closeBtn.focus(), 50);
+      }
     };
+
     const close = () => {
       sidebar.classList.remove("is-open");
       toggles.forEach((btn) => btn.setAttribute("aria-expanded", "false"));
@@ -138,16 +149,38 @@
       window.setTimeout(() => {
         if (backdrop && !backdrop.classList.contains("is-open")) backdrop.hidden = true;
       }, 200);
+      if (lastActiveElement && typeof lastActiveElement.focus === "function") {
+        lastActiveElement.focus();
+      }
     };
+
     toggles.forEach((btn) => btn.addEventListener("click", () => {
       sidebar.classList.contains("is-open") ? close() : open();
     }));
-    if (backdrop) backdrop.addEventListener("click", close);
+    closeButtons.forEach((btn) => btn.addEventListener("click", close));
+
     sidebar.addEventListener("click", (event) => {
-      if (event.target.closest("a[href]")) close();
+      if (event.target.closest("a[href]") && window.innerWidth <= 840) close();
     });
+
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape" && sidebar.classList.contains("is-open")) close();
+    });
+
+    // Pfeiltasten-Navigation innerhalb der Hauptnavigation
+    const navItems = $$(".sidebar-nav .nav-item");
+    navItems.forEach((item, index) => {
+      item.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          const next = navItems[index + 1] || navItems[0];
+          next.focus();
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          const prev = navItems[index - 1] || navItems[navItems.length - 1];
+          prev.focus();
+        }
+      });
     });
   }
 

@@ -2,51 +2,455 @@
 
 {% block title %}Mein Beitragskonto{% endblock %}
 {% block page_title %}Mein Beitragskonto{% endblock %}
-{% block crumbs %}<div class="crumbs">Offen: {{ offen_summe|floatformat:2 }} €{% if mandat %} · SEPA-Mandat {{ mandat.referenz }} ({{ mandat.iban_kurz }}){% endif %}</div>{% endblock %}
+{% block crumbs %}
+<div class="crumbs">
+  {% if offen_summe > 0 %}
+    <span class="badge badge-rose"><span class="badge-dot"></span>Offen: {{ offen_summe|floatformat:2 }} €</span>
+  {% else %}
+    <span class="badge badge-green"><span class="badge-dot"></span>Beitragskonto ausgeglichen</span>
+  {% endif %}
+  {% if mandat and mandat.status == 'aktiv' %}
+    <span>· SEPA-Mandat {{ mandat.referenz }} ({{ mandat.iban_kurz }})</span>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-heading">
+  <div>
+    <div class="page-eyebrow">Persönlicher Bereich · Finanzen</div>
+    <h1>Mein Beitragskonto</h1>
+    <p>Übersicht über deine Mitgliedsbeiträge, geleistete Zahlungen und den aktuellen Abrechnungsstatus beim {{ club_short }}.</p>
+  </div>
+  <div class="page-heading-actions">
+    <a class="button button-secondary" href="{% url 'members:profil' %}">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-user"></use></svg> Mein Profil
+    </a>
+    {% if member %}
+      <a class="button button-secondary" href="{% url 'core:dsgvo_pdf' member.pk %}" title="DSGVO-Datenauskunft als PDF herunterladen">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"></use></svg> Datenauskunft (PDF)
+      </a>
+    {% endif %}
+    {% if club_contact %}
+      <a class="button button-secondary" href="mailto:{{ club_contact }}?subject=Frage%20zum%20Beitragskonto">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-mail"></use></svg> Kassenwart kontaktieren
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
 
 {% block content %}
 {% if not member %}
-  <div class="card">{% include "includes/empty_state.html" with icon="user" titel="Kein Mitgliedsprofil" text="Ihr Konto ist noch nicht mit einem Mitglied verknüpft – bitte wenden Sie sich an die Vorstandschaft." %}</div>
+  <div class="card">
+    {% include "includes/empty_state.html" with icon="user" titel="Kein Mitgliedsprofil zugeordnet" text="Dein Benutzerkonto ist noch mit keinem Mitglied verknüpft. Bitte wende dich an die Vorstandschaft, um dein Profil freizuschalten." %}
+  </div>
 {% else %}
-  <div class="grid main-side">
-    <div>
-      {% for fee in posten %}
-        <div class="card">
-          <div class="card-head">
-            <h2>Beitrag {{ fee.jahr }}</h2>
-            <span class="badge badge-{{ fee.status }}">{{ fee.get_status_display }}</span>
-          </div>
-          <div class="card-body">
-            <div class="flex between center mb-1"><span class="muted">Kategorie</span><strong>{{ fee.kategorie_name }}</strong></div>
-            <div class="flex between center mb-1"><span class="muted">Beitrag</span><strong class="mono">{{ fee.betrag|floatformat:2 }} €</strong></div>
-            <div class="flex between center mb-1"><span class="muted">Bezahlt</span><strong class="mono">{{ fee.bezahlter_betrag|floatformat:2 }} €</strong></div>
-            <div class="flex between center mb-2"><span class="muted">Offen</span><strong class="mono">{{ fee.offener_betrag|floatformat:2 }} €</strong></div>
-            <div class="progress {% if fee.offener_betrag %}warn{% else %}success{% endif %}" data-progress="{{ fee.fortschritt_prozent }}"><span style="width:0"></span></div>
-          </div>
-          {% if fee.zahlungen.all %}
-            <ul class="list">
-              {% for zahlung in fee.zahlungen.all %}
-                <li>
-                  <span class="badge badge-{{ zahlung.art }}">{{ zahlung.get_art_display }}</span>
-                  <span class="grow"><span class="title">{{ zahlung.betrag|floatformat:2 }} €</span><span class="meta">{{ zahlung.datum|date:"d.m.Y" }}</span></span>
-                </li>
-              {% endfor %}
-            </ul>
-          {% endif %}
+
+  {% if hat_mahnstufe %}
+    <div class="alert alert-warning mb-3" role="alert">
+      <strong>Hinweis der Kassenführung:</strong> Für dein Beitragskonto ist ein Zahlungsrückstand mit Mahnstufe vermerkt. Bitte begleiche den fälligen Betrag zeitnah oder nimm Kontakt zur Kassenführung auf (<a href="mailto:{{ club_contact }}">{{ club_contact }}</a>).
+    </div>
+  {% endif %}
+
+  {% if offen_summe > 0 and not hat_mahnstufe %}
+    <div class="alert alert-warning mb-3" role="alert">
+      <div class="flex between center wrap gap-1">
+        <div>
+          <strong>Offener Beitragsbetrag: {{ offen_summe|floatformat:2 }} €</strong>
+          <p class="mb-0 mt-1" style="font-size: 13.5px; line-height: 1.45;">
+            {% if mandat and mandat.status == 'aktiv' %}
+              Für dein Konto liegt ein aktives SEPA-Mandat vor. Fällige Beiträge werden zum Stichtag automatisch eingezogen.
+            {% else %}
+              Bitte begleiche offene Posten per Überweisung auf unser Vereinskonto (siehe Bankverbindung rechts) oder reiche ein SEPA-Mandat ein.
+            {% endif %}
+          </p>
         </div>
-      {% empty %}
-        <div class="card">{% include "includes/empty_state.html" with icon="wallet" titel="Noch keine Beiträge" text="Sobald die Kasse Ihren Beitrag bucht, erscheint er hier mit allen Zahlungen." %}</div>
-      {% endfor %}
+        {% if not mandat or mandat.status != 'aktiv' %}
+          <a class="btn small secondary" href="{% url 'members:profil' %}">Änderungswunsch einreichen</a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- KPI Kennzahlen -->
+  <div class="stats-grid mb-3">
+    <div class="stat {% if offen_summe > 0 %}accent-warn{% else %}accent-success{% endif %}">
+      <div class="stat-head">
+        <span class="stat-label">Offener Saldo</span>
+        <span class="stat-icon"><svg class="icon" aria-hidden="true"><use href="#i-wallet"></use></svg></span>
+      </div>
+      <div class="stat-value mono">{{ offen_summe|floatformat:2 }} €</div>
+      <div class="stat-foot">
+        {% if offen_summe > 0 %}
+          <span class="badge badge-rose"><span class="badge-dot"></span>Zahlung ausstehend</span>
+        {% else %}
+          <span class="badge badge-green"><span class="badge-dot"></span>Ausgeglichen</span>
+        {% endif %}
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-head"><h2>Fragen zum Beitrag?</h2></div>
-      <div class="card-body">
-        <p>Bei Fragen zu Beitrag, Ermäßigung oder Zahlungsart hilft die Kassenwart:in gerne weiter.</p>
-        <p class="mb-0"><a href="mailto:{{ club_contact }}">{{ club_contact }}</a></p>
-        <a class="btn secondary block mt-2" href="{% url 'members:profil' %}">Änderung beantragen</a>
+    <div class="stat">
+      <div class="stat-head">
+        <span class="stat-label">Aktueller Jahresbeitrag</span>
+        <span class="stat-icon"><svg class="icon" aria-hidden="true"><use href="#i-calendar"></use></svg></span>
+      </div>
+      <div class="stat-value mono">
+        {% if aktueller_posten %}
+          {{ aktueller_posten.betrag|floatformat:2 }} €
+        {% else %}
+          –
+        {% endif %}
+      </div>
+      <div class="stat-foot">
+        <span class="cell-sub">
+          {% if aktueller_posten %}
+            {{ aktueller_posten.kategorie_name }} ({{ aktueller_posten.jahr }})
+          {% elif member.beitragskategorie %}
+            {{ member.beitragskategorie.name }}
+          {% else %}
+            Keine Kategorie zugeordnet
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="stat accent-success">
+      <div class="stat-head">
+        <span class="stat-label">Geleistete Zahlungen</span>
+        <span class="stat-icon"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg></span>
+      </div>
+      <div class="stat-value mono">{{ gesamt_bezahlt|floatformat:2 }} €</div>
+      <div class="stat-foot">
+        <span class="cell-sub">{{ zahlungen|length }} verbuchte Zahlung{{ zahlungen|length|pluralize:"en" }}</span>
+      </div>
+    </div>
+
+    <div class="stat accent-gold">
+      <div class="stat-head">
+        <span class="stat-label">Zahlungsweise</span>
+        <span class="stat-icon"><svg class="icon" aria-hidden="true"><use href="#i-card"></use></svg></span>
+      </div>
+      <div class="stat-value" style="font-size: 19px; line-height: 1.3;">
+        {% if mandat and mandat.status == 'aktiv' %}
+          SEPA-Einzug
+        {% else %}
+          Überweisung
+        {% endif %}
+      </div>
+      <div class="stat-foot">
+        {% if mandat and mandat.status == 'aktiv' %}
+          <span class="badge badge-blue"><span class="badge-dot"></span>Mandat {{ mandat.iban_kurz }}</span>
+        {% else %}
+          <span class="badge badge-neutral">Manuelle Überweisung</span>
+        {% endif %}
       </div>
     </div>
   </div>
+
+  <div class="grid main-side">
+    <!-- Linke Hauptspalte -->
+    <div class="dashboard-main-column">
+      <!-- Tabelle aller Beitragsjahre -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Jahresbeiträge &amp; Abrechnungsstand</h2>
+            <span class="sub">Übersicht der jährlichen Vereinsbeiträge nach Beschluss der Mitgliederversammlung</span>
+          </div>
+          {% if posten %}
+            <span class="badge badge-neutral">{{ posten|length }} Posten</span>
+          {% endif %}
+        </div>
+
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Beitrag</th>
+                <th>Kategorie</th>
+                <th>Fälligkeit</th>
+                <th class="right">Soll</th>
+                <th class="right">Gezahlt</th>
+                <th class="right">Offen</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fee in posten %}
+                <tr>
+                  <td class="cell-main">
+                    <strong>Beitrag {{ fee.jahr }}</strong>
+                    {% if fee.mahnstufe > 0 %}
+                      <div class="mt-1"><span class="badge badge-mahnung">{{ fee.mahnstufe }}. Mahnung</span></div>
+                    {% endif %}
+                  </td>
+                  <td>{{ fee.kategorie_name }}</td>
+                  <td class="nowrap cell-sub">{{ fee.faellig_am|date:"d.m.Y" }}</td>
+                  <td class="right mono">{{ fee.betrag|floatformat:2 }} €</td>
+                  <td class="right mono cell-sub">{{ fee.bezahlter_betrag|floatformat:2 }} €</td>
+                  <td class="right mono {% if fee.offener_betrag > 0 %}semibold{% endif %}">
+                    {{ fee.offener_betrag|floatformat:2 }} €
+                  </td>
+                  <td>
+                    {% if fee.status == 'bezahlt' %}
+                      <span class="badge badge-green"><span class="badge-dot"></span>Bezahlt</span>
+                    {% elif fee.status == 'offen' %}
+                      <span class="badge badge-rose"><span class="badge-dot"></span>Offen</span>
+                    {% elif fee.status == 'teilweise' %}
+                      <span class="badge badge-amber"><span class="badge-dot"></span>Teilweise</span>
+                    {% elif fee.status == 'erlassen' %}
+                      <span class="badge badge-neutral">Erlassen</span>
+                    {% else %}
+                      <span class="badge badge-neutral">{{ fee.get_status_display }}</span>
+                    {% endif %}
+                    <div class="progress {% if fee.offener_betrag %}warn{% else %}success{% endif %} mt-1" style="height: 4px; min-width: 60px;" data-progress="{{ fee.fortschritt_prozent }}">
+                      <span style="width:0"></span>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7">
+                    {% include "includes/empty_state.html" with icon="wallet" titel="Noch keine Beitragsposten" text="Die Kasse erzeugt deinen Jahresbeitrag mit dem nächsten Beitragslauf." small=True %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            {% if posten %}
+              <tfoot>
+                <tr style="font-weight: 600; border-top: 2px solid var(--line);">
+                  <td colspan="3">Gesamt</td>
+                  <td class="right mono">{{ gesamt_soll|floatformat:2 }} €</td>
+                  <td class="right mono">{{ gesamt_bezahlt|floatformat:2 }} €</td>
+                  <td class="right mono {% if offen_summe > 0 %}semibold{% endif %}">{{ offen_summe|floatformat:2 }} €</td>
+                  <td>
+                    {% if offen_summe > 0 %}
+                      <span class="badge badge-rose"><span class="badge-dot"></span>{{ offen_summe|floatformat:2 }} € offen</span>
+                    {% else %}
+                      <span class="badge badge-green"><span class="badge-dot"></span>Ausgeglichen</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              </tfoot>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+
+      <!-- Verbuchte Zahlungen (Transaktionshistorie) -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Verbuchte Zahlungen</h2>
+            <span class="sub">Vom Verein erfasste Überweisungen, SEPA-Lastschriften und Barzahlungen</span>
+          </div>
+          {% if zahlungen %}
+            <span class="badge badge-neutral">{{ zahlungen|length }} Buchung{{ zahlungen|length|pluralize:"en" }}</span>
+          {% endif %}
+        </div>
+
+        {% if zahlungen %}
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Beitragsjahr</th>
+                  <th>Zahlungsart</th>
+                  <th class="right">Betrag</th>
+                  <th>Buchungsvermerk</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for zahlung in zahlungen %}
+                  <tr>
+                    <td class="nowrap">{{ zahlung.datum|date:"d.m.Y" }}</td>
+                    <td class="cell-main">Beitrag {{ zahlung.fee.jahr }}</td>
+                    <td>
+                      {% if zahlung.art == 'sepa' %}
+                        <span class="badge badge-blue"><svg class="icon icon-xs" aria-hidden="true"><use href="#i-card"></use></svg> {{ zahlung.get_art_display }}</span>
+                      {% elif zahlung.art == 'ueberweisung' %}
+                        <span class="badge badge-neutral"><svg class="icon icon-xs" aria-hidden="true"><use href="#i-refresh"></use></svg> {{ zahlung.get_art_display }}</span>
+                      {% elif zahlung.art == 'bar' %}
+                        <span class="badge badge-bar">{{ zahlung.get_art_display }}</span>
+                      {% else %}
+                        <span class="badge badge-neutral">{{ zahlung.get_art_display }}</span>
+                      {% endif %}
+                      {% if zahlung.ist_storno %}
+                        <span class="badge badge-neutral ml-1">Gegenbuchung</span>
+                      {% endif %}
+                    </td>
+                    <td class="right mono {% if zahlung.betrag < 0 %}muted{% else %}semibold{% endif %}">
+                      {{ zahlung.betrag|floatformat:2 }} €
+                    </td>
+                    <td class="cell-sub">
+                      {{ zahlung.notiz|default:"Zahlungseingang ordnungsgemäß verbucht" }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="card-body">
+            {% include "includes/empty_state.html" with icon="wallet" titel="Noch keine Zahlungen verbucht" text="Sobald eine Zahlung (Überweisung oder Lastschrifteinzug) bei der Vereinskasse eingeht und verbucht wird, findest du sie hier mit Belegdatum." small=True %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Rechte Spalte (Sidebar) -->
+    <div class="dashboard-side-column">
+      <!-- SEPA-Mandat Karte -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>SEPA-Lastschriftmandat</h2>
+            <span class="sub">Automatischer Beitragseinzug</span>
+          </div>
+          {% if mandat and mandat.status == 'aktiv' %}
+            <span class="badge badge-green"><span class="badge-dot"></span>Aktiv</span>
+          {% else %}
+            <span class="badge badge-neutral">Inaktiv</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if mandat %}
+            <dl class="list" style="margin: 0;">
+              <li>
+                <span class="grow">
+                  <span class="meta">Mandatsreferenz</span>
+                  <span class="title mono">{{ mandat.referenz }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Hinterlegte IBAN (geschützt)</span>
+                  <span class="title mono">{{ mandat.iban_kurz }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Kontoinhaber:in</span>
+                  <span class="title">{{ mandat.kontoinhaber|default:member }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Erteilt am</span>
+                  <span class="title">{{ mandat.erteilt_am|date:"d.m.Y" }}</span>
+                </span>
+              </li>
+              <li>
+                <span class="grow">
+                  <span class="meta">Status</span>
+                  <span class="title">{{ mandat.get_status_display }}</span>
+                </span>
+              </li>
+            </dl>
+            <p class="mt-2 mb-0 cell-sub" style="font-size: 12.5px; line-height: 1.45;">
+              Der Einzug erfolgt bankseitig durch die Kasse. Bei Wechsel deiner Bankverbindung reiche bitte über dein Profil einen Änderungswunsch ein.
+            </p>
+            <a class="btn secondary small block mt-2" href="{% url 'members:profil' %}">
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"></use></svg> Bankverbindung ändern
+            </a>
+          {% else %}
+            <p class="cell-sub mb-2">
+              Für dein Mitgliedskonto liegt aktuell kein SEPA-Lastschriftmandat vor.
+              Beiträge müssen manuell überwiesen werden.
+            </p>
+            <p class="cell-sub mb-2" style="font-size: 12.5px;">
+              Möchtest du künftig bequem per Lastschrift zahlen? Reiche einfach deine Kontodaten über dein Profil ein.
+            </p>
+            <a class="btn secondary small block" href="{% url 'members:profil' %}">
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"></use></svg> SEPA-Mandat beantragen
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Vereins-Bankverbindung für Überweisungen -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Bankverbindung des Vereins</h2>
+            <span class="sub">Für manuelle Beitragsüberweisungen</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <dl class="list" style="margin: 0;">
+            <li>
+              <span class="grow">
+                <span class="meta">Empfänger / Verein</span>
+                <span class="title font-medium">{{ club_empfaenger|default:club_name }}</span>
+              </span>
+            </li>
+            {% if club_iban_formatiert or club_iban %}
+              <li>
+                <span class="grow">
+                  <span class="meta">IBAN</span>
+                  <span class="title mono" style="letter-spacing: 0.04em;">{{ club_iban_formatiert|default:club_iban }}</span>
+                </span>
+                <button type="button" class="btn small secondary" style="padding: 4px 8px; font-size: 11px;"
+                        onclick="if(navigator.clipboard){ navigator.clipboard.writeText('{{ club_iban }}'); if(window.App && window.App.toast) window.App.toast('IBAN kopiert!', 'success'); else alert('IBAN kopiert!'); }"
+                        title="IBAN in die Zwischenablage kopieren">
+                  Kopieren
+                </button>
+              </li>
+            {% endif %}
+            {% if club_bic %}
+              <li>
+                <span class="grow">
+                  <span class="meta">BIC</span>
+                  <span class="title mono">{{ club_bic }}</span>
+                </span>
+              </li>
+            {% endif %}
+            <li>
+              <span class="grow">
+                <span class="meta">Verwendungszweck</span>
+                <span class="title mono" style="font-size: 12.5px; word-break: break-all;">
+                  Beitrag {% if aktueller_posten %}{{ aktueller_posten.jahr }}{% else %}2026{% endif %} – {{ member.nachname }}, {{ member.vorname }}
+                </span>
+              </span>
+              <button type="button" class="btn small secondary" style="padding: 4px 8px; font-size: 11px;"
+                      onclick="if(navigator.clipboard){ navigator.clipboard.writeText('Beitrag {% if aktueller_posten %}{{ aktueller_posten.jahr }}{% else %}2026{% endif %} - {{ member.nachname }}, {{ member.vorname }}'); if(window.App && window.App.toast) window.App.toast('Verwendungszweck kopiert!', 'success'); else alert('Verwendungszweck kopiert!'); }"
+                      title="Verwendungszweck in Zwischenablage kopieren">
+                Kopieren
+              </button>
+            </li>
+          </dl>
+          <p class="cell-sub mt-2 mb-0" style="font-size: 12px; line-height: 1.45;">
+            Bitte gib im Verwendungszweck immer das Beitragsjahr und deinen vollständigen Namen an, damit die Kasse die Buchung unmittelbar zuordnen kann.
+          </p>
+        </div>
+      </div>
+
+      <!-- Fragen & Support -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Fragen zum Beitrag?</h2>
+            <span class="sub">Hilfe zu Beitragsstufen &amp; Fristen</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="cell-sub mb-2">
+            Bei Fragen zu deinem Beitragsstatus, Ermäßigungsanträgen (z. B. für Schüler, Studierende oder Passive) oder Zahlungsfristen steht dir die Kassenwart:in gerne zur Seite.
+          </p>
+          {% if club_contact %}
+            <a class="btn small block mb-2" href="mailto:{{ club_contact }}?subject=Frage%20zum%20Beitragskonto%20{{ member.nachname|urlencode }}">
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-mail"></use></svg> E-Mail an die Kasse
+            </a>
+          {% endif %}
+          <a class="btn secondary small block" href="{% url 'members:profil' %}">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-user"></use></svg> Eigenes Profil aufrufen
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
 {% endif %}
 {% endblock %}

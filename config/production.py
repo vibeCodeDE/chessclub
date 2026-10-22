@@ -67,9 +67,9 @@ RATELIMIT_IP_META_KEY = os.environ.get(
 
 # ADR-010: Ohne IBAN-Schlüssel startet der Produktivbetrieb nicht. Sonst ginge
 # ein Mandat mit Klartext-IBAN verloren, sobald jemand den Schlüssel nachsetzt.
-if not os.environ.get("IBAN_FERNET_KEY", "").strip():
+if not os.environ.get("IBAN_FERNET_KEY", "").strip() and not os.environ.get("IBAN_FERNET_KEYS", "").strip():
     raise ImproperlyConfigured(
-        "IBAN_FERNET_KEY muss in der Produktion gesetzt sein (Verschlüsselung "
+        "IBAN_FERNET_KEY bzw. IBAN_FERNET_KEYS muss in der Produktion gesetzt sein (Verschlüsselung "
         "der IBAN, ADR-010). Erzeugen mit: python -c \"from cryptography.fernet "
         "import Fernet; print(Fernet.generate_key().decode())\""
     )

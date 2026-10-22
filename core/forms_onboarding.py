@@ -3,7 +3,13 @@
 from django import forms
 
 from core.models import ClubProfile, ModuleSettings
-from dues.models import FeeCategory
+from dues.forms import FeeCategoryForm as OnboardingQuickFeeForm
+
+__all__ = [
+    "OnboardingModulesForm",
+    "OnboardingProfileForm",
+    "OnboardingQuickFeeForm",
+]
 
 
 class OnboardingProfileForm(forms.ModelForm):
@@ -57,4 +63,3 @@ class OnboardingModulesForm(forms.ModelForm):
         ]
 
 
-from dues.forms import FeeCategoryForm as OnboardingQuickFeeForm

@@ -18,7 +18,7 @@ nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
   <meta property="og:description" content="{% block og_description %}Schach in {{ club_location|default:'unserem Verein' }} – Klubabend, Mannschaften und Turniere.{% endblock %}">
   <meta property="og:site_name" content="{{ club_name }}">
   <meta property="og:image" content="{% block og_image %}{% static 'img/klubabend.jpg' %}{% endblock %}">
-  <link rel="stylesheet" href="{% static 'css/site.css' %}?v=20261003">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}?v=20261022">
   {% if pwa_aktiv %}
   <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
   {% endif %}
@@ -61,10 +61,10 @@ nutzt `css/app.css`. Beide Design-Systeme bleiben getrennt.
       {% else %}
         <a class="nav-link" href="{% url 'core:login' %}">Anmelden</a>
       {% endif %}
-      <a class="mobile-join" href="{% url 'members:join_info' %}">Mitglied werden <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg></a>
+      <a class="mobile-join{% if url_name == 'join_info' %} active{% endif %}" href="{% url 'members:join_info' %}"{% if url_name == 'join_info' %} aria-current="page"{% endif %}>Mitglied werden <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg></a>
     </nav>
 
-    <a class="header-join" href="{% url 'members:join_info' %}">
+    <a class="header-join{% if url_name == 'join_info' %} active{% endif %}" href="{% url 'members:join_info' %}"{% if url_name == 'join_info' %} aria-current="page"{% endif %}>
       Mitglied werden <svg aria-hidden="true"><use href="#i-arrow-up-right"></use></svg>
     </a>
 

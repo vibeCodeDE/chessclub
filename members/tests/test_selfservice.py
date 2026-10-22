@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from core.models import AuditLog, TwoFactorDevice
+from core.models import AuditLog
 from core.roles import ADMIN_GROUP
 from members.models import ChangeRequest, Member
 
@@ -55,6 +55,37 @@ class ProfilSelbstbedienungTests(TestCase):
         self.assertContains(response, "Meier")
         self.assertContains(response, "anna@example.org")
         self.assertContains(response, "030 123456")
+
+    def test_profil_zeigt_verbandsdaten_und_dwz(self):
+        make_member(
+            user=self.user,
+            dwz=1850,
+            dwz_index=45,
+            zps_nummer="C0101-042",
+            fide_id=1234567,
+            pkz="998877",
+        )
+        response = self.client.get("/profil/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1850-45")
+        self.assertContains(response, "C0101-042")
+        self.assertContains(response, "1234567")
+        self.assertContains(response, "998877")
+
+    def test_negativ_profil_ohne_dwz_zeigt_fallback(self):
+        make_member(user=self.user, dwz=None)
+        response = self.client.get("/profil/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "keine DWZ")
+
+    def test_profil_zeigt_dsgvo_links_und_stat_cards(self):
+        member = make_member(user=self.user)
+        response = self.client.get("/profil/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"/mitglieder/{member.pk}/auskunft.pdf")
+        self.assertContains(response, f"/mitglieder/{member.pk}/auskunft/")
+        self.assertContains(response, "Mitgliedsstatus")
+        self.assertContains(response, "Wertungszahl (DWZ)")
 
     def test_profil_without_linked_member_shows_hint(self):
         response = self.client.get("/profil/")

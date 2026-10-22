@@ -488,7 +488,7 @@ def _dashboard_vorstand(request, rolle, heute, jahr):
             "zahlungen_monat": zahlungen_monat,
             "verlauf": verlauf,
             "onboarding_widget": (
-                from_services_onboarding_widget := __import__(
+                __import__(
                     "core.services", fromlist=["get_onboarding_checklist_status"]
                 ).get_onboarding_checklist_status(user=request.user)
             )

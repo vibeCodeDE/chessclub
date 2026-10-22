@@ -1,6 +1,7 @@
 """Navigation, Badges und Vereinsdaten für alle Templates."""
 
 from django.conf import settings
+from django.urls import NoReverseMatch, reverse
 
 from .roles import ADMIN_GROUP, role_of
 from .services import get_module_settings, is_module_active
@@ -71,6 +72,93 @@ NAV_STRUKTUR = [
     ),
 ]
 
+# Zuordnung von Unterseiten / Detail-Views zu ihrem Hauptnavigationspunkt
+VIEW_FALLBACKS = {
+    # Mitglieder
+    "members:member_detail": "members:member_list",
+    "members:member_update": "members:member_list",
+    "members:member_create": "members:member_list",
+    "members:member_status": "members:member_list",
+    "members:member_delete": "members:member_list",
+    "members:member_export": "members:member_list",
+    "members:change_request_approve": "members:change_request_list",
+    "members:change_request_reject": "members:change_request_list",
+    # Finanzen & Beiträge
+    "dues:run_lauf": "dues:overview",
+    "dues:fee_detail": "dues:overview",
+    "dues:payment_create": "dues:overview",
+    "dues:payment_storno": "dues:overview",
+    "dues:sepa_sammelverbuchung": "dues:overview",
+    "dues:sepa_export": "dues:overview",
+    "dues:export": "dues:overview",
+    "dues:category_update": "dues:category_list",
+    "dues:category_toggle": "dues:category_list",
+    "dues:category_delete": "dues:category_list",
+    "dues:mandate_create": "dues:mandate_list",
+    "dues:mandate_update": "dues:mandate_list",
+    "dues:dunning_create": "dues:dunning_list",
+    "dues:dunning_letter": "dues:dunning_list",
+    "dues:kassenbericht_export": "dues:kassenbericht",
+    # Spielbetrieb
+    "teams:season_create": "teams:season_list",
+    "teams:season_edit": "teams:season_list",
+    "teams:season_activate": "teams:season_list",
+    "teams:season_archive": "teams:season_list",
+    "teams:season_reopen": "teams:season_list",
+    "teams:season_delete": "teams:season_list",
+    "teams:season_rollover": "teams:season_list",
+    "teams:team_create": "teams:team_list",
+    "teams:team_detail": "teams:team_list",
+    "teams:team_update": "teams:team_list",
+    "teams:team_delete": "teams:team_list",
+    "teams:match_create": "teams:match_list",
+    "teams:match_detail": "teams:match_list",
+    "teams:match_print": "teams:match_list",
+    "teams:match_update": "teams:match_list",
+    "teams:match_delete": "teams:match_list",
+    "teams:lineup_board_save": "teams:match_list",
+    "teams:lineup_save": "teams:match_list",
+    # Turniere
+    "tournaments:manage_create": "tournaments:manage_list",
+    "tournaments:manage_detail": "tournaments:manage_list",
+    "tournaments:manage_update": "tournaments:manage_list",
+    "tournaments:manage_delete": "tournaments:manage_list",
+    "tournaments:participant_create": "tournaments:manage_list",
+    "tournaments:participant_toggle_startgeld": "tournaments:manage_list",
+    "tournaments:participant_delete": "tournaments:manage_list",
+    "tournaments:round_generate": "tournaments:manage_list",
+    "tournaments:round_delete": "tournaments:manage_list",
+    "tournaments:pairing_result": "tournaments:manage_list",
+    "tournaments:tournament_finish": "tournaments:manage_list",
+    "tournaments:export_csv": "tournaments:manage_list",
+    "tournaments:print_results": "tournaments:manage_list",
+    "tournaments:round_print": "tournaments:manage_list",
+    "tournaments:public_detail": "tournaments:public_list",
+    # Kommunikation
+    "comms:news_create": "comms:news_list",
+    "comms:news_update": "comms:news_list",
+    "comms:news_delete": "comms:news_list",
+    "comms:news_toggle": "comms:news_list",
+    # Kassenbuch
+    "cashbook:entry_create": "cashbook:entry_list",
+    "cashbook:entry_update": "cashbook:entry_list",
+    "cashbook:entry_storno": "cashbook:entry_list",
+    "cashbook:jahresabschluss": "cashbook:entry_list",
+    "cashbook:export": "cashbook:entry_list",
+    # Vereins-Setup & System
+    "core:club_setup": "core:club_setup_profile",
+    "core:club_setup_dues": "core:club_setup_profile",
+    "core:club_setup_teams": "core:club_setup_profile",
+    "core:club_setup_members_import": "core:club_setup_profile",
+    "core:club_setup_import_muster": "core:club_setup_profile",
+    "core:onboarding_step_1": "core:onboarding_wizard",
+    "core:onboarding_step_2": "core:onboarding_wizard",
+    "core:onboarding_step_3": "core:onboarding_wizard",
+    "core:onboarding_step_4": "core:onboarding_wizard",
+    "core:onboarding_step_5": "core:onboarding_wizard",
+    "core:onboarding_step_6": "core:onboarding_wizard",
+}
+
 
 def _is_nav_item_allowed(url_name, request):
     if url_name == "core:home" and not is_module_active("homepage", request):
@@ -117,6 +205,70 @@ def _badges(role, request=None):
     return res
 
 
+def _mark_active_nav_links(sektionen, request):
+    """Ermittelt den aktiven Menüpunkt präzise anhand von Resolver, URL oder Pfad-Präfix."""
+    if not request:
+        return
+    current_path = getattr(request, "path", "")
+    resolver_match = getattr(request, "resolver_match", None)
+    view_name = getattr(resolver_match, "view_name", "") if resolver_match else ""
+
+    all_links = []
+    for sektion in sektionen:
+        sektion["is_active"] = False
+        for link in sektion["links"]:
+            if "url" not in link:
+                try:
+                    link["url"] = reverse(link["url_name"])
+                except NoReverseMatch:
+                    link["url"] = ""
+            link["is_active"] = False
+            all_links.append(link)
+
+    matched_link = None
+
+    # 1. Direkter Resolver-Match (z. B. "members:member_list")
+    if view_name:
+        for link in all_links:
+            if link["url_name"] == view_name:
+                matched_link = link
+                break
+
+    # 2. Bekannte Unterseiten-Zuordnung (z. B. "members:member_detail" -> "members:member_list")
+    if not matched_link and view_name and view_name in VIEW_FALLBACKS:
+        target_name = VIEW_FALLBACKS[view_name]
+        for link in all_links:
+            if link["url_name"] == target_name:
+                matched_link = link
+                break
+
+    # 3. Exakter Pfadabgleich
+    if not matched_link and current_path:
+        for link in all_links:
+            if link["url"] and link["url"] == current_path:
+                matched_link = link
+                break
+
+    # 4. Längster Pfad-Präfix-Match (ohne Root '/' oder '/dashboard/', um Fehlmatches zu verhindern)
+    if not matched_link and current_path:
+        candidates = []
+        for link in all_links:
+            url = link["url"]
+            if url and url not in ("/", "/dashboard/"):
+                if current_path.startswith(url):
+                    candidates.append((len(url), link))
+        if candidates:
+            candidates.sort(key=lambda c: c[0], reverse=True)
+            matched_link = candidates[0][1]
+
+    if matched_link:
+        matched_link["is_active"] = True
+        for sektion in sektionen:
+            if matched_link in sektion["links"]:
+                sektion["is_active"] = True
+                break
+
+
 def nav(request):
     user = getattr(request, "user", None)
     role = role_of(user)
@@ -129,16 +281,24 @@ def nav(request):
                 continue
             if not _is_nav_item_allowed(url_name, request):
                 continue
+            try:
+                link_url = reverse(url_name)
+            except NoReverseMatch:
+                link_url = ""
             links.append(
                 {
                     "url_name": url_name,
                     "label": label,
                     "icon": icon,
                     "badge": badges.get(badge_key) if badge_key else None,
+                    "url": link_url,
+                    "is_active": False,
                 }
             )
         if links:
-            sektionen.append({"titel": titel, "links": links})
+            sektionen.append({"titel": titel, "links": links, "is_active": False})
+
+    _mark_active_nav_links(sektionen, request)
 
     from .services import get_club_profile
 
@@ -164,4 +324,3 @@ def nav(request):
         "club_youth_hours": (profil.jugend_zeiten if profil and profil.jugend_zeiten else settings.CLUB_YOUTH_HOURS),
         "club_description": (profil.beschreibung if profil and profil.beschreibung else settings.CLUB_DESCRIPTION),
     }
-

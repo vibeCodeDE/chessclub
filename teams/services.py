@@ -179,7 +179,9 @@ def create_season(
 ):
     """Erstellt eine neue Saison und setzt sie optional als aktive Hauptsaison."""
     from django.db import transaction
+
     from core.models import AuditLog
+
     from .models import Season
 
     with transaction.atomic():
@@ -211,7 +213,9 @@ def create_season(
 def set_active_season(season, user=None):
     """Setzt die übergebene Saison atomar als einzige aktive Hauptsaison."""
     from django.db import transaction
+
     from core.models import AuditLog
+
     from .models import Season
 
     with transaction.atomic():
@@ -235,6 +239,7 @@ def set_active_season(season, user=None):
 def archive_season(season, *, force: bool = False, user=None):
     """Versetzt eine Saison in den Status ARCHIVIERT und aktiviert den Schreibschutz."""
     from core.models import AuditLog
+
     from .models import LeagueMatch, Season
 
     open_matches = LeagueMatch.objects.filter(team__saison=season).exclude(
@@ -263,6 +268,7 @@ def archive_season(season, *, force: bool = False, user=None):
 def reopen_season(season, user=None):
     """Reaktiviert eine archivierte Saison."""
     from core.models import AuditLog
+
     from .models import Season
 
     season.status = Season.Status.AKTIV
@@ -282,6 +288,7 @@ def reopen_season(season, user=None):
 def delete_season(season, user=None):
     """Löscht eine Saison, sofern keine Teams oder Turniere zugeordnet sind."""
     from django.core.exceptions import ValidationError
+
     from core.models import AuditLog
 
     if season.teams.exists():
@@ -304,7 +311,9 @@ def delete_season(season, user=None):
 def rollover_teams(*, source_season, target_season, teams_payload: list[dict], user=None):
     """Übernimmt ausgewählte Mannschaften aus der Quell- in die Ziel-Saison."""
     from django.db import transaction
+
     from core.models import AuditLog
+
     from .models import Team
 
     created_teams = []

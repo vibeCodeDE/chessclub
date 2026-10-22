@@ -4,7 +4,8 @@ Gemäß PRD N1.1 (kein Google reCAPTCHA / keine externen Tracker/CDNs),
 N1.6 (Missbrauchsschutz) und ADR-028.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.cache import caches
 from django.test import Client, TestCase, override_settings
@@ -295,6 +296,7 @@ class RatelimitEndpointsTests(TestCase):
     def test_get_ratelimit_ip_funktion(self):
         """Prüft die verifizierte IP-Extraktion via get_ratelimit_ip."""
         from django.test import RequestFactory
+
         from core.middleware import get_ratelimit_ip
 
         factory = RequestFactory()

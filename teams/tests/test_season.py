@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import AuditLog
-from teams.models import Season, Team
+from teams.models import Season
 from teams.services import create_season, set_active_season
 
 

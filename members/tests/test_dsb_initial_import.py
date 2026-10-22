@@ -1,12 +1,13 @@
 """Tests für den DSB-ZPS-Initialimport und Datenübernahme im Onboarding (US2, T015)."""
 
 from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.urls import reverse
 
-from core.models import AuditLog, ClubProfile, OnboardingProgress
+from core.models import AuditLog, OnboardingProgress
 from core.roles import ADMIN_GROUP, MITGLIED_GROUP
 from members.models import Member
 from members.services.dsb_sync import DSBNetworkError, import_dsb_initial

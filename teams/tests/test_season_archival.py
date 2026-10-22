@@ -11,7 +11,7 @@ from django.urls import reverse
 from core.models import AuditLog
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, MITGLIED_GROUP
 from members.models import Member
-from teams.models import LeagueMatch, LineupEntry, Season, Team
+from teams.models import LeagueMatch, Season, Team
 from teams.services import (
     archive_season,
     check_match_edit_allowed,
@@ -45,7 +45,7 @@ class SeasonArchivalServiceTests(TestCase):
         )
 
     def test_archivierung_warnt_bei_ungespielten_begegnungen(self):
-        match_offen = LeagueMatch.objects.create(
+        LeagueMatch.objects.create(
             team=self.team,
             datum=date(2024, 3, 10),
             gegner="SF Offen",

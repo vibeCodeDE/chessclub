@@ -1,7 +1,7 @@
 """Tests für die Funktionärseinladung per E-Mail & Token (US5, T026)."""
 
 from datetime import timedelta
-from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group

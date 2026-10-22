@@ -264,3 +264,26 @@ class ProduktSchmerzpunkteTests(TestCase):
                     )
                 )
 
+
+    def test_responsives_design_und_lokales_hero_asset(self):
+        """Prüft lokales Hero-Bild, CSS-Responsivität (360 px bis 1280 px) und DSGVO-Asset-Integrität."""
+        from pathlib import Path
+
+        hero_pfad = Path(settings.BASE_DIR) / "static/img/chess-hero.jpg"
+        self.assertTrue(hero_pfad.exists(), "Hero-Bild static/img/chess-hero.jpg muss existieren")
+
+        css = (Path(settings.BASE_DIR) / "static/css/landing.css").read_text(encoding="utf-8")
+        self.assertIn("max-width: 480px", css, "CSS muss Breakpoints für kleine Viewports (<= 480px / 360px) besitzen")
+        self.assertIn("max-width: 768px", css, "CSS muss Tablet/Mobile-Breakpoints besitzen")
+        self.assertIn("overflow-x: hidden", css, "Body muss Overflow auf kleinen Bildschirmen verhindern")
+
+    def test_negativ_keine_fremden_schriftarten_oder_tracker(self):
+        """Negativtest: Weder HTML noch CSS binden externe Fonts/CDNs ein (DSGVO N1.1)."""
+        from pathlib import Path
+
+        inhalt = self.client.get("/").content.decode()
+        css = (Path(settings.BASE_DIR) / "static/css/landing.css").read_text(encoding="utf-8")
+        for external in ("fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com", "cdn.jsdelivr.net"):
+            with self.subTest(external=external):
+                self.assertNotIn(external, inhalt)
+                self.assertNotIn(external, css)

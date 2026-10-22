@@ -1,3 +1,5 @@
+import json
+from decimal import Decimal
 import csv
 from datetime import date, datetime, timedelta
 
@@ -358,7 +360,11 @@ def join_info(request):
 @login_required
 def profil(request):
     """Selbstbedienung: eigene Daten ansehen, Änderungswunsch einreichen (PRD M1.4)."""
-    member = Member.objects.filter(user=request.user).first()
+    member = (
+        Member.objects.select_related("beitragskategorie", "sepa_mandat")
+        .filter(user=request.user)
+        .first()
+    )
 
     if request.method == "POST":
         form = ChangeRequestForm(request.POST, member=member)
@@ -381,24 +387,53 @@ def profil(request):
     else:
         form = ChangeRequestForm(member=member)
 
+    posten = (
+        list(
+            MembershipFee.objects.filter(member=member)
+            .prefetch_related("zahlungen")
+            .order_by("-jahr")
+        )
+        if member
+        else []
+    )
+    offener_beitrag_summe = sum((fee.offener_betrag for fee in posten), Decimal("0.00"))
+
+    aufstellungen = (
+        list(
+            member.lineups.select_related("match", "match__team").order_by(
+                "-match__datum"
+            )[:6]
+        )
+        if member
+        else []
+    )
+    aufstellungen_gesamt = member.lineups.count() if member else 0
+
+    editable_values = {}
+    if member:
+        for f in ("strasse", "plz", "ort", "email", "telefon"):
+            editable_values[f] = getattr(member, f, "") or ""
+
     kontext = {
         "member": member,
         "form": form,
         "change_requests": member.change_requests.all() if member else [],
-        "posten": (
-            MembershipFee.objects.filter(member=member).prefetch_related("zahlungen").order_by("-jahr")
-            if member
-            else []
-        ),
+        "posten": posten,
+        "offener_beitrag_summe": offener_beitrag_summe,
         "mandat": getattr(member, "sepa_mandat", None) if member else None,
-        "aufstellungen": (
-            member.lineups.select_related("match", "match__team").order_by("-match__datum")[:6]
+        "aufstellungen": aufstellungen,
+        "aufstellungen_gesamt": aufstellungen_gesamt,
+        "editable_values_json": json.dumps(editable_values),
+        "calendar_url": (
+            request.build_absolute_uri(
+                reverse(
+                    "members:personal_calendar",
+                    kwargs={"token": get_personal_calendar_token(member)},
+                )
+            )
             if member
-            else []
+            else None
         ),
-        "calendar_url": request.build_absolute_uri(
-            reverse("members:personal_calendar", kwargs={"token": get_personal_calendar_token(member)})
-        ) if member else None,
         "has_2fa": hasattr(request.user, "zwei_faktor"),
         "is_admin": request.user.groups.filter(name=ADMIN_GROUP).exists(),
     }

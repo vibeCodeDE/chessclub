@@ -9,7 +9,6 @@ from django.urls import reverse
 
 from core.models import AuditLog
 from members.models import Member
-from members.views import get_personal_calendar_token
 from teams.models import LeagueMatch, LineupEntry, Team
 from tournaments.models import Tournament
 

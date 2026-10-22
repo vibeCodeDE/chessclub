@@ -120,6 +120,7 @@ def set_module_status(module_key: str, aktiv: bool, user=None) -> ModuleSettings
 def get_demo_data_status() -> dict:
     """Ermittelt den aktuellen Zustand der Demo-Daten und prüft auf Schutz vor Datenverlust."""
     from django.contrib.auth import get_user_model
+
     from cashbook.models import CashEntry
     from comms.models import NewsPost
     from dues.models import MembershipFee
@@ -172,6 +173,7 @@ def get_demo_data_status() -> dict:
 def install_demo_data(user=None) -> tuple[bool, str]:
     """Lädt die realistischen Demo-Daten über das Management-Kommando atomar."""
     from django.core.management import call_command
+
     from members.models import Member
 
     if Member.objects.exists():
@@ -202,6 +204,7 @@ def remove_demo_data(user=None, confirm: bool = False) -> tuple[bool, str]:
 
     from django.contrib.auth import get_user_model
     from django.db import transaction
+
     from cashbook.models import CashEntry
     from comms.models import MailLog, NewsPost
     from dues.models import (
@@ -248,10 +251,12 @@ def remove_demo_data(user=None, confirm: bool = False) -> tuple[bool, str]:
 def apply_default_fee_categories(user=None) -> int:
     """Richtet schachspezifische Standard-Beitragskategorien im Onboarding ein."""
     from decimal import Decimal
+
     from django.db import transaction
     from django.utils import timezone
+
     from core.constants import DEFAULT_FEE_CATEGORIES
-    from dues.models import FeeCategory, FeeAmount
+    from dues.models import FeeAmount, FeeCategory
 
     jahr = timezone.localdate().year
     created_count = 0
@@ -280,6 +285,7 @@ def apply_default_fee_categories(user=None) -> int:
 def complete_onboarding(user, cleanup_demodata: bool = False) -> bool:
     """Schließt den Onboarding-Assistenten final ab und bereinigt optional Demo-Daten."""
     from django.utils import timezone
+
     from .models import OnboardingProgress
 
     if cleanup_demodata:
@@ -303,6 +309,7 @@ def get_onboarding_checklist_status(user=None) -> dict:
     """Ermittelt den Erledigungsstatus der Onboarding-Aufgaben für das Vorstandsdashboard."""
     from django.contrib.auth import get_user_model
     from django.urls import reverse
+
     from core.models import ClubProfile, OnboardingProgress, StaffInvitation
     from core.roles import ADMIN_GROUP
     from dues.models import FeeCategory
@@ -389,9 +396,11 @@ def create_staff_invitation(
     """Erzeugt eine Einladung für einen Funktionär und verschickt optional die Einladungsmail."""
     import secrets
     from datetime import timedelta
+
     from django.conf import settings
     from django.core.mail import send_mail as django_send_mail
     from django.utils import timezone
+
     from core.models import ClubProfile, StaffInvitation
 
     token = secrets.token_urlsafe(32)
@@ -453,6 +462,7 @@ def accept_staff_invitation(token: str, username: str, password: str):
     from django.contrib.auth.models import Group
     from django.db import transaction
     from django.utils import timezone
+
     from core.models import StaffInvitation
 
     User = get_user_model()

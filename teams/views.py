@@ -27,7 +27,6 @@ from .services import (
     rollover_teams,
     set_active_season,
     tabelle,
-    validate_match_season_bounds,
 )
 
 TEAM_ROLES = (ADMIN_GROUP, KAPITAEN_GROUP)

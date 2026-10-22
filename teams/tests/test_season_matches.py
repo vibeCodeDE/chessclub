@@ -1,6 +1,6 @@
 """Tests für saisonbezogenen Spielbetrieb und Datumsvalidierung (PRD US2)."""
 
-from datetime import date, timedelta
+from datetime import date
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -9,7 +9,6 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.roles import ADMIN_GROUP, KAPITAEN_GROUP, MITGLIED_GROUP
-from members.models import Member
 from teams.models import LeagueMatch, Season, Team
 from teams.services import validate_match_season_bounds
 

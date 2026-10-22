@@ -210,8 +210,9 @@ class ReverseProxyAndIpTests(TestCase):
 
     def test_remote_addr_middleware_setzt_remote_addr_aus_x_real_ip(self):
         """RemoteAddrMiddleware setzt request.META['REMOTE_ADDR'] aus X-Real-IP."""
-        from core.middleware import RemoteAddrMiddleware
         from django.http import HttpResponse
+
+        from core.middleware import RemoteAddrMiddleware
 
         mw = RemoteAddrMiddleware(lambda req: HttpResponse("ok"))
         request = self.factory.get("/", HTTP_X_REAL_IP="198.51.100.77", REMOTE_ADDR="172.18.0.2")
@@ -220,8 +221,9 @@ class ReverseProxyAndIpTests(TestCase):
 
     def test_remote_addr_middleware_ignoriert_spoofed_x_forwarded_for_negativtest(self):
         """Negativtest: Manipulierte X-Forwarded-For-Header am Anfang der Kette werden ignoriert (SEC-05)."""
-        from core.middleware import RemoteAddrMiddleware
         from django.http import HttpResponse
+
+        from core.middleware import RemoteAddrMiddleware
 
         mw = RemoteAddrMiddleware(lambda req: HttpResponse("ok"))
         # Angreifer schickt gefälschte IP 1.2.3.4, Proxy hängt echte Client-IP 203.0.113.88 an, Docker-Proxy 10.0.0.1

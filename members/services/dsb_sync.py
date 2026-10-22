@@ -472,6 +472,7 @@ class DSBInitialImportResult:
 def import_dsb_initial(vkz: str, user=None) -> DSBInitialImportResult:
     """Importiert alle gemeldeten Spieler eines Vereins aus dem DSB-Wertungsportal."""
     from datetime import date
+
     from members.models import Member
 
     clean_vkz = (vkz or "").strip()
